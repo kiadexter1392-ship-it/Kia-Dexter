@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NEXUS — Gaming Hub</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="nav">
+    <div class="logo"><span>✦</span> NEXUS</div>
+    <nav>
+      <a href="#home">خانه</a><a href="#games">بازی‌ها</a><a href="#news">اخبار</a><a href="#ranking">رنکینگ</a>
+    </nav>
+    <div class="nav-actions">
+      <button id="searchBtn" class="icon-btn" aria-label="جستجو">⌕</button>
+      <button id="themeBtn" class="icon-btn" aria-label="تغییر تم">☾</button>
+      <button class="login" id="loginBtn">ورود</button>
+    </div>
+  </header>
+
+  <main id="home">
+    <section class="hero">
+      <div class="hero-content">
+        <div class="eyebrow">NEXT LEVEL GAMING</div>
+        <h1>دنیای بازی<br><span>از اینجا شروع میشه.</span></h1>
+        <p>آخرین بازی‌ها، اخبار، رتبه‌بندی و تجربه‌ای مخصوص گیمرها.</p>
+        <div class="hero-buttons">
+          <a class="primary" href="#games">مشاهده بازی‌ها ←</a>
+          <a class="secondary" href="#news">آخرین اخبار</a>
+        </div>
+      </div>
+      <div class="hero-art"><div class="orb"></div><div class="controller">🎮</div><div class="grid"></div></div>
+    </section>
+
+    <section class="section" id="games">
+      <div class="section-head"><div><span class="eyebrow">EXPLORE</span><h2>بازی‌های محبوب</h2></div><button id="allGames">همه بازی‌ها ←</button></div>
+      <div class="cards" id="gameCards"></div>
+    </section>
+
+    <section class="section split" id="news">
+      <div>
+        <span class="eyebrow">LATEST</span><h2>آخرین اخبار گیم</h2>
+        <article class="news-card"><div class="news-img">⚡</div><div><span class="tag">NEWS</span><h3>فصل جدید بازی‌های رقابتی از راه رسید</h3><p>رویدادهای تازه و تغییرات مهمی که باید بدانید.</p><small>۲ ساعت پیش</small></div></article>
+        <article class="news-card"><div class="news-img">🚀</div><div><span class="tag">UPDATE</span><h3>آپدیت بزرگ تابستانی منتشر شد</h3><p>محتوای تازه، نقشه‌های جدید و بهبود عملکرد.</p><small>دیروز</small></div></article>
+      </div>
+      <aside class="rank" id="ranking">
+        <span class="eyebrow">LEADERBOARD</span><h2>برترین گیمرها</h2>
+        <div id="rankingList"></div>
+      </aside>
+    </section>
+  </main>
+
+  <footer><strong>✦ NEXUS</strong><span>ساخته شده برای گیمرها.</span><span>© 2026</span></footer>
+
+  <dialog id="modal">
+    <div class="modal-box"><button class="close" id="closeModal">×</button><h2 id="modalTitle">ورود به NEXUS</h2><p>نسخه اول سایت است؛ فرم نمایشی است.</p><input placeholder="نام کاربری"><button class="primary full" id="modalAction">ادامه</button></div>
+  </dialog>
+  <script src="script.js"></script>
+</body>
+</html>
