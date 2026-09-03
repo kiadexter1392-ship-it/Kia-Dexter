@@ -1,0 +1,28 @@
+{
+  "name": "arslan-dojo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "باشگاه آنلاین ارسلان دوجو — دو سایت: پنل مربی و پنل شاگردان (Node.js + SQLite، بدون وابستگی بیرونی)",
+  "main": "coach/server.js",
+  "scripts": {
+    "start": "node start.js",
+    "start:coach": "node coach/server.js",
+    "start:members": "node members/server.js",
+    "test": "node tests/ui-smoke.js",
+    "reset-db": "node scripts/reset-db.js"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "keywords": [
+    "dojo",
+    "martial-arts",
+    "persian",
+    "jalali",
+    "sqlite"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "jsdom": "^27.0.0"
+  }
+}

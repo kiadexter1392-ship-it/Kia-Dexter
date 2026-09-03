@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>پنل مربی — باشگاه آنلاین ارسلان دوجو</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'><circle cx='24' cy='24' r='20' fill='%23e2483d'/></svg>">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css">
+  <link rel="stylesheet" href="/ui/style.css">
+  <link rel="stylesheet" href="/ui/shell.css">
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="side-head">
+        <div class="brand">
+          <span class="mark sm">
+            <svg viewBox="0 0 48 48" aria-hidden="true">
+              <defs>
+                <linearGradient id="ensoG" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stop-color="#ff6b5e"></stop>
+                  <stop offset="100%" stop-color="#d9a441"></stop>
+                </linearGradient>
+              </defs>
+              <path d="M33.5 8.6A19 19 0 1 0 42.6 27.4" fill="none" stroke="url(#ensoG)" stroke-width="4.6" stroke-linecap="round"></path>
+              <circle cx="24" cy="24" r="4.2" fill="url(#ensoG)"></circle>
+            </svg>
+          </span>
+          <div>
+            <div class="name">ارسلان دوجو</div>
+            <div class="sub">پنل مربی</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="side-label">مدیریت باشگاه</div>
+      <button class="nav-item active" data-view="overview"><span class="ic">◈</span> داشبورد</button>
+      <button class="nav-item" data-view="members"><span class="ic">☰</span> شاگردان <span class="count hidden" id="cntMembers"></span></button>
+      <button class="nav-item" data-view="plans"><span class="ic">⚑</span> تمرینات <span class="count hidden" id="cntPlans"></span></button>
+      <button class="nav-item" data-view="progress"><span class="ic">▦</span> جدول پیشرفت</button>
+      <button class="nav-item" data-view="news"><span class="ic">✦</span> اطلاع‌رسانی <span class="count hidden" id="cntNews"></span></button>
+      <button class="nav-item" data-view="settings"><span class="ic">⚙</span> تنظیمات</button>
+
+      <div class="side-foot">
+        <a class="nav-item" id="membersSiteLink" href="#" target="_blank" rel="noopener"><span class="ic">↗</span> سایت شاگردان</a>
+        <button class="nav-item" id="logoutBtn"><span class="ic">⎋</span> خروج از حساب</button>
+        <div class="tiny" style="padding:8px">سایت شماره ۱ از ۲</div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="topbar">
+        <div class="grow">
+          <h1 id="viewTitle">داشبورد</h1>
+          <div class="sub" id="todayLabel">—</div>
+        </div>
+        <button class="btn icon bell" id="bellBtn" title="اعلان‌ها">🔔<span class="dot hidden" id="bellDot">0</span></button>
+        <a class="btn ghost" id="topMembersLink" href="#" target="_blank" rel="noopener">سایت شاگردان ↗</a>
+        <button class="btn primary" id="quickAction">+ ارسال تمرین</button>
+      </div>
+
+      <section class="section active" id="view-overview"></section>
+      <section class="section" id="view-members"></section>
+      <section class="section" id="view-plans"></section>
+      <section class="section" id="view-progress"></section>
+      <section class="section" id="view-news"></section>
+      <section class="section" id="view-settings"></section>
+    </main>
+  </div>
+
+  <script src="/ui/jalali.browser.js"></script>
+  <script src="/ui/ui.js"></script>
+  <script src="/dashboard.js"></script>
+</body>
+</html>

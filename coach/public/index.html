@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>باشگاه آنلاین ارسلان دوجو — پنل مربی</title>
+  <meta name="description" content="پنل مدیریت مربی باشگاه آنلاین ارسلان دوجو: ارسال تمرین، جدول پیشرفت شاگردان و اطلاع‌رسانی">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'><circle cx='24' cy='24' r='20' fill='%23e2483d'/></svg>">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css">
+  <link rel="stylesheet" href="/ui/style.css">
+  <link rel="stylesheet" href="/ui/shell.css">
+</head>
+<body class="landing">
+
+  <header class="landing-nav">
+    <div class="brand">
+      <span class="mark">
+        <svg viewBox="0 0 48 48" aria-hidden="true">
+          <defs>
+            <linearGradient id="ensoG" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#ff6b5e"></stop><stop offset="100%" stop-color="#d9a441"></stop>
+            </linearGradient>
+          </defs>
+          <path d="M33.5 8.6A19 19 0 1 0 42.6 27.4" fill="none" stroke="url(#ensoG)" stroke-width="4.6" stroke-linecap="round"></path>
+          <circle cx="24" cy="24" r="4.2" fill="url(#ensoG)"></circle>
+        </svg>
+      </span>
+      <div>
+        <div class="name">باشگاه آنلاین ارسلان دوجو</div>
+        <div class="sub">ARSLAN DOJO — COACH PANEL</div>
+      </div>
+    </div>
+    <nav class="links">
+      <a href="#features">امکانات</a>
+      <a href="#" id="membersLink">سایت شاگردان</a>
+    </nav>
+  </header>
+
+  <main class="auth-wrap">
+    <div class="auth-wrap-inner" style="width:100%;max-width:1060px;display:grid;grid-template-columns:1fr 1fr;gap:34px;align-items:center">
+      <div>
+        <span class="eyebrow">پنل مدیریت مربی</span>
+        <h1 style="font-size:clamp(28px,4vw,42px);line-height:1.4;margin:16px 0 10px;font-weight:800">
+          باشگاهت را <span style="color:var(--red)">هرجا هستی</span> مدیریت کن
+        </h1>
+        <p class="lead muted" style="max-width:460px">
+          تمرین بفرست، پیشرفت هر شاگرد را ماه‌به‌ماه ثبت کن و اطلاعیه‌ها را در لحظه به همه بچه‌های باشگاه برسان.
+        </p>
+        <div class="col" style="margin-top:22px;gap:12px">
+          <div class="row" style="gap:12px"><span class="badge red">تمرین</span><span class="muted small">ارسال برنامه تمرینی به یک یا همه شاگردان</span></div>
+          <div class="row" style="gap:12px"><span class="badge gold">جدول پیشرفت</span><span class="muted small">جدول ماهانه و سالانه با نمره‌دهی و خروجی اکسل</span></div>
+          <div class="row" style="gap:12px"><span class="badge green">اطلاع‌رسانی</span><span class="muted small">اطلاعیه سراسری یا پیام مستقیم به شاگرد</span></div>
+          <div class="row" style="gap:12px"><span class="badge blue">دسترسی</span><span class="muted small">ورود مستقیم به پنل هر شاگرد از سایت دوم</span></div>
+        </div>
+      </div>
+
+      <section class="card auth-card pad-lg" id="authCard">
+        <div class="center" style="flex-direction:column;gap:8px;margin-bottom:14px">
+          <span class="mark lg">
+            <svg viewBox="0 0 48 48" aria-hidden="true">
+              <defs>
+                <linearGradient id="ensoG2" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stop-color="#ff6b5e"></stop><stop offset="100%" stop-color="#d9a441"></stop>
+                </linearGradient>
+              </defs>
+              <path d="M33.5 8.6A19 19 0 1 0 42.6 27.4" fill="none" stroke="url(#ensoG2)" stroke-width="4.6" stroke-linecap="round"></path>
+              <circle cx="24" cy="24" r="4.2" fill="url(#ensoG2)"></circle>
+            </svg>
+          </span>
+          <h3 style="margin:0">ورود مربی</h3>
+          <p class="muted small" style="margin:0">برای مدیریت باشگاه وارد شوید</p>
+        </div>
+
+        <form id="loginForm" class="col" style="gap:13px">
+          <div class="field">
+            <label for="username">نام کاربری</label>
+            <input id="username" name="username" type="text" autocomplete="username" placeholder="arsalan" required>
+          </div>
+          <div class="field">
+            <label for="password">رمز عبور</label>
+            <input id="password" name="password" type="password" autocomplete="current-password" placeholder="••••••••" required>
+          </div>
+          <button class="btn primary full lg" id="submitBtn" type="submit">ورود به پنل مربی</button>
+          <div class="hint" id="hint">
+            <div>حساب پیش‌فرض مربی: <code id="demoUser">arsalan</code> / <code id="demoPass">arsalan123</code></div>
+            <div class="tiny mt-s">اطلاعات در دیتابیس SQLite روی همین سرور ذخیره می‌شود.</div>
+          </div>
+          <a class="btn ghost full" id="goMembers" href="#">باز کردن سایت شاگردان ←</a>
+        </form>
+      </section>
+    </div>
+  </main>
+
+  <footer class="landing-footer">
+    <span>© باشگاه آنلاین ارسلان دوجو</span>
+    <span>سایت شماره ۱ — پنل مربی</span>
+  </footer>
+
+  <script src="/ui/jalali.browser.js"></script>
+  <script src="/ui/ui.js"></script>
+  <script>
+    (function () {
+      var form = document.getElementById('loginForm');
+      var btn = document.getElementById('submitBtn');
+
+      UI.loadConfig().then(function (cfg) {
+        var members = UI.peerUrl(cfg.memberPort);
+        document.getElementById('membersLink').href = members;
+        document.getElementById('goMembers').href = members;
+      }).catch(function () { /* آفلاین */ });
+
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        btn.disabled = true;
+        btn.innerHTML = '<span class="loader"></span> در حال ورود...';
+        UI.api('/api/login', {
+          method: 'POST',
+          body: { username: document.getElementById('username').value, password: document.getElementById('password').value }
+        }).then(function () {
+          UI.toast('خوش آمدید، در حال انتقال به پنل مربی...', 'ok');
+          setTimeout(function () { location.href = '/dashboard'; }, 450);
+        }).catch(function (err) {
+          UI.toast(err.message, 'warn', 4500);
+          btn.disabled = false;
+          btn.textContent = 'ورود به پنل مربی';
+        });
+      });
+    }());
+  </script>
+  <style>
+    @media (max-width: 900px) { .auth-wrap-inner { grid-template-columns: 1fr !important; } }
+  </style>
+</body>
+</html>

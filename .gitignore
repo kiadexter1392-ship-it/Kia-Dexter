@@ -1,0 +1,15 @@
+# دیتابیس محلی (داده واقعی کاربران)
+data/
+*.db
+*.db-shm
+*.db-wal
+
+# وابستگی‌ها (فقط برای تست)
+node_modules/
+
+# سیستم‌عامل / ادیتور
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log
