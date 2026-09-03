@@ -15,9 +15,6 @@ const DB_PATH = process.env.ARSLAN_DB || path.join(DATA_DIR, 'arslan-dojo.db');
 fs.mkdirSync(DATA_DIR, { recursive: true });
 
 const db = new DatabaseSync(DB_PATH);
-db.exec('PRAGMA busy_timeout = 15000;');
-db.exec('PRAGMA journal_mode = WAL;');
-db.exec('PRAGMA foreign_keys = ON;');
 
 /* خواب همگام (برای تلاش مجدد وقتی دو سرور هم‌زمان دیتابیس را می‌سازند) */
 function sleepSync(ms) {
@@ -33,6 +30,29 @@ function execWithRetry(sql, tries = 20) {
     }
   }
 }
+
+try { db.exec('PRAGMA busy_timeout = 15000;'); } catch { /* غیرحیاتی */ }
+
+/*
+ * تغییر journal_mode به WAL نیازمند قفل انحصاری است و اگر دو سایت هم‌زمان
+ * بالا بیایند ممکن است SQLITE_BUSY برگرداند؛ بنابراین با تلاش مجدد انجام می‌شود
+ * و در بدترین حالت بدون WAL ادامه می‌دهیم (برنامه کار می‌کند).
+ */
+let walEnabled = false;
+for (let attempt = 0; attempt < 25; attempt += 1) {
+  try {
+    db.exec('PRAGMA journal_mode = WAL;');
+    walEnabled = true;
+    break;
+  } catch (err) {
+    const busy = err && (err.errcode === 5 || err.errcode === 6);
+    if (busy && attempt < 24) { sleepSync(100 * (attempt + 1)); continue; }
+    console.warn('[db] فعال‌سازی WAL ممکن نشد؛ با journal_mode پیش‌فرض ادامه می‌دهیم.');
+    break;
+  }
+}
+
+db.exec('PRAGMA foreign_keys = ON;');
 
 /* ------------------------------ ابزار پرس‌وجو ----------------------------- */
 
