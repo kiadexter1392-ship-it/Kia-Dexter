@@ -252,13 +252,13 @@ try {
 /* -------------------------------- رمز عبور -------------------------------- */
 
 function hashPassword(password, salt = crypto.randomBytes(32).toString('hex')) {
-  const hash = crypto.scryptSync(String(password), salt, 64, { N: 32768, r: 8, p: 2 }).toString('hex');
+  const hash = crypto.scryptSync(String(password), salt, 64, { N: 16384, r: 8, p: 1 }).toString('hex');
   return { hash, salt };
 }
 
 function verifyPassword(password, hash, salt) {
   try {
-    const calc = crypto.scryptSync(String(password), salt, 64, { N: 32768, r: 8, p: 2 });
+    const calc = crypto.scryptSync(String(password), salt, 64, { N: 16384, r: 8, p: 1 });
     const given = Buffer.from(String(hash), 'hex');
     return given.length === calc.length && crypto.timingSafeEqual(calc, given);
   } catch {
