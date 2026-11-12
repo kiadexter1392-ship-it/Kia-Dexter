@@ -176,6 +176,12 @@
             <label>رشته ورزشی <span class="req">*</span></label>
             <select name="discipline" id="disciplineSelect" required>
               <option value="">انتخاب رشته...</option>
+              <option value="بوکس">بوکس</option>
+              <option value="کیوکوشین">کیوکوشین</option>
+              <option value="کاراته">کاراته</option>
+              <option value="کراسفیت">کراسفیت</option>
+              <option value="ژیمناستیک">ژیمناستیک</option>
+              <option value="موی تای">موی تای</option>
             </select>
           </div>
           <div class="dojo-field">
@@ -255,12 +261,6 @@
 
       UI.loadConfig().then(function (cfg) {
         document.getElementById('coachLink').href = UI.peerUrl(cfg.coachPort);
-        var sel = document.getElementById('disciplineSelect');
-        (cfg.disciplines || []).forEach(function (d) {
-          var o = document.createElement('option');
-          o.value = d; o.textContent = d;
-          sel.appendChild(o);
-        });
       }).catch(function () { });
 
       fetch('/api/payment').then(function (r) { return r.json(); }).then(function (data) {
@@ -300,16 +300,24 @@
       });
 
       // بررسی تکرار رمز قبل از ارسال فرم ثبت‌نام
-      registerForm.addEventListener('submit', function (e) {
-        var pw = registerForm.querySelector('[name=password]').value;
-        var pw2 = registerForm.querySelector('[name=password2]').value;
-        if (pw !== pw2) {
-          e.preventDefault();
-          UI.toast('تکرار رمز مطابقت ندارد', 'warn');
-        }
-      });
+      try {
+        registerForm.addEventListener('submit', function (e) {
+          var pw = registerForm.querySelector('[name=password]').value;
+          var pw2 = registerForm.querySelector('[name=password2]').value;
+          if (pw !== pw2) {
+            e.preventDefault();
+            if (window.UI && UI.toast) {
+              UI.toast('تکرار رمز مطابقت ندارد', 'warn');
+            } else {
+              alert('تکرار رمز مطابقت ندارد');
+            }
+          }
+        });
+      } catch (err) {
+        console.error('Form handler error:', err);
+      }
 
-      Dojo3D.init();
+      try { Dojo3D.init(); } catch (err) { console.error('Dojo3D error:', err); }
     }());
   </script>
 </body>
