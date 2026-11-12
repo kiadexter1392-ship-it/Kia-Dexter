@@ -32,7 +32,7 @@ function seedIfEmpty() {
     phone: '09120000000',
     password: DEMO.coach.password,
     belt: 'مشکی دان ۴',
-    style: 'کیوکوشین کاراته',
+    style: 'کاراته',
     experience: '۲۰ سال',
     avatar_color: '#e2483d',
     notes: 'مربی و بنیان‌گذار باشگاه ارسلان دوجو',

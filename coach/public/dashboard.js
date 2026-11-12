@@ -320,7 +320,7 @@
             <div class="field"><label>رشته ورزشی</label>
               <select name="discipline">
                 <option value="">—</option>
-                ${(CFG.disciplines || ['بوکس', 'کیوکوشین', 'کاراته', 'کراسفیت']).map((d) => `<option ${(existing && (existing.discipline || existing.style) === d) ? 'selected' : ''}>${esc(d)}</option>`).join('')}
+                ${(CFG.disciplines || ['کاراته', 'کراسفیت', 'بوکس', 'ژیمناستیک', 'موی تای']).map((d) => `<option ${(existing && (existing.discipline || existing.style) === d) ? 'selected' : ''}>${esc(d)}</option>`).join('')}
               </select>
             </div>
             <div class="field"><label>سابقه</label><input name="experience" value="${esc(existing ? existing.experience || '' : '')}"></div>
@@ -545,7 +545,7 @@
             <div class="field"><label>رشته ورزشی</label>
               <select name="sport">
                 <option value="">—</option>
-                ${(CFG.disciplines || ['بوکس', 'کیوکوشین', 'کاراته', 'کراسفیت']).map((d) => `<option ${existing && existing.sport === d ? 'selected' : ''}>${esc(d)}</option>`).join('')}
+                ${(CFG.disciplines || ['کاراته', 'کراسفیت', 'بوکس', 'ژیمناستیک', 'موی تای']).map((d) => `<option ${existing && existing.sport === d ? 'selected' : ''}>${esc(d)}</option>`).join('')}
               </select>
             </div>
             <div class="field"><label>دسته</label>

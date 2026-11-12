@@ -5,7 +5,7 @@
  */
 
 const path = require('node:path');
-const { createServer } = require('../shared/server');
+const { createServer, rateLimit } = require('../shared/server');
 const db = require('../shared/db');
 const { seedIfEmpty, DEMO } = require('../shared/seed');
 const { JALALI_MONTHS, todayJalali, formatJalali, faNum } = require('../shared/jalali');
@@ -82,7 +82,7 @@ app.get('/api/config', (ctx) => {
     membersSiteUrl: process.env.MEMBERS_SITE_URL || null,
     months: JALALI_MONTHS,
     belts: ['سفید', 'زرد', 'نارنجی', 'سبز', 'آبی', 'قهوه‌ای', 'مشکی دان ۱', 'مشکی دان ۲', 'مشکی دان ۳', 'مشکی دان ۴'],
-    disciplines: ['بوکس', 'کیوکوشین', 'کاراته', 'کراسفیت', 'ژیمناستیک', 'موی تای'],
+    disciplines: ['کاراته', 'کراسفیت', 'بوکس', 'ژیمناستیک', 'موی تای'],
     supportPhone: '+989016399804',
     baleLink: 'https://ble.ir/+989016399804'
   });
@@ -91,19 +91,28 @@ app.get('/api/config', (ctx) => {
 /* ------------------------------ ورود و خروج ------------------------------ */
 
 app.post('/api/login', (ctx) => {
+  const ip = ctx.req.headers['x-forwarded-for'] || ctx.req.socket.remoteAddress || '';
+  if (!rateLimit('coach-login:' + ip, 10, 300000)) {
+    return bad(ctx, 'تعداد تلاش بیش از حد — لطفاً ۵ دقیقه صبر کنید', 429);
+  }
   const { username, password } = ctx.body || {};
   const user = db.findByUsername(username);
   if (!user || user.role !== 'coach' || !db.verifyPassword(password, user.password_hash, user.password_salt)) {
     return bad(ctx, 'نام کاربری یا رمز عبور اشتباه است', 401);
   }
   if (!user.active) return bad(ctx, 'این حساب غیرفعال شده است', 403);
-  const { token } = db.createSession(user.id, SITE, 30);
-  ctx.setCookie(token, { maxAgeSeconds: 30 * 86400 });
+  const { token } = db.createSession(user.id, SITE, 90);
+  ctx.setCookie(token, { maxAgeSeconds: 90 * 86400 });
   db.logActivity(user.id, user.full_name, 'وارد پنل مربی شد', null);
   ctx.json({ ok: true, user: db.publicUser(user) });
 });
 
 app.post('/login', (ctx) => {
+  const ip = ctx.req.headers['x-forwarded-for'] || ctx.req.socket.remoteAddress || '';
+  if (!rateLimit('coach-login:' + ip, 10, 300000)) {
+    ctx.redirect('/?error=' + encodeURIComponent('تعداد تلاش بیش از حد — لطفاً ۵ دقیقه صبر کنید'));
+    return;
+  }
   const b = ctx.body || {};
   const user = db.findByUsername(b.username);
   if (!user || user.role !== 'coach' || !db.verifyPassword(b.password, user.password_hash, user.password_salt)) {
@@ -114,8 +123,8 @@ app.post('/login', (ctx) => {
     ctx.redirect('/?error=' + encodeURIComponent('این حساب غیرفعال شده است'));
     return;
   }
-  const { token } = db.createSession(user.id, SITE, 30);
-  ctx.setCookie(token, { maxAgeSeconds: 30 * 86400 });
+  const { token } = db.createSession(user.id, SITE, 90);
+  ctx.setCookie(token, { maxAgeSeconds: 90 * 86400 });
   db.logActivity(user.id, user.full_name, 'وارد پنل مربی شد', null);
   ctx.redirect('/dashboard');
 });
@@ -153,8 +162,8 @@ app.post('/api/password', (ctx) => {
   if (!db.verifyPassword(current, u.password_hash, u.password_salt)) return bad(ctx, 'رمز فعلی درست نیست');
   if (!next || String(next).length < 6) return bad(ctx, 'رمز جدید باید حداقل ۶ حرف باشد');
   db.setPassword(u.id, next);
-  const { token } = db.createSession(u.id, SITE, 30);
-  ctx.setCookie(token, { maxAgeSeconds: 30 * 86400 });
+  const { token } = db.createSession(u.id, SITE, 90);
+  ctx.setCookie(token, { maxAgeSeconds: 90 * 86400 });
   ctx.json({ ok: true });
 });
 

@@ -5,7 +5,7 @@
  */
 
 const path = require('node:path');
-const { createServer } = require('../shared/server');
+const { createServer, rateLimit } = require('../shared/server');
 const db = require('../shared/db');
 const { seedIfEmpty, DEMO } = require('../shared/seed');
 const { JALALI_MONTHS, todayJalali, formatJalali, faNum } = require('../shared/jalali');
@@ -67,7 +67,7 @@ app.get('/impersonate', (ctx) => {
   if (!u) return ctx.redirect('/?error=bad-token');
   db.run('UPDATE impersonations SET used_at = ? WHERE token = ?', db.now(), token);
   const { token: sessionToken } = db.createSession(u.id, SITE, 1);
-  ctx.setCookie(sessionToken, { maxAgeSeconds: 86400 });
+  ctx.setCookie(sessionToken, { maxAgeSeconds: 86400 }); /* 1 day for coach impersonation */
   ctx.redirect('/panel');
 });
 
@@ -82,7 +82,7 @@ app.get('/api/config', (ctx) => {
     coachPort: COACH_PORT,
     months: JALALI_MONTHS,
     belts: ['سفید', 'زرد', 'نارنجی', 'سبز', 'آبی', 'قهوه‌ای', 'مشکی دان ۱', 'مشکی دان ۲'],
-    disciplines: ['بوکس', 'کیوکوشین', 'کاراته', 'کراسفیت', 'ژیمناستیک', 'موی تای'],
+    disciplines: ['کاراته', 'کراسفیت', 'بوکس', 'ژیمناستیک', 'موی تای'],
     supportPhone: '+989016399804',
     baleLink: 'https://ble.ir/+989016399804'
   });
@@ -118,8 +118,8 @@ app.get('/api/faq', (ctx) => {
     ok: true,
     faqs: [
       {
-        q: 'شهریه باشگاه برای رشته بوکس چقدر است؟',
-        a: 'شهریه ماهانه رشته بوکس ۱,۸۰۰ هزار تومان (یک میلیون و هشتصد هزار تومان) می‌باشد. لطفاً شهریه را تا دوازدهم هر ماه پرداخت نمایید و فیش واریزی را از طریق پیام‌رسان بله به شماره +989016399804 ارسال کنید.'
+        q: 'شهریه ماهانه چقدر است؟',
+        a: 'کاراته جوانان و بزرگسالان: ۱,۹۰۰ هزار تومان — کاراته نونهالان: ۱,۸۰۰ هزار تومان — کراسفیت کودک: ۱,۸۰۰ هزار تومان — کراسفیت بزرگسالان و نوجوانان: ۱,۸۰۰ هزار تومان — بوکس: ۱,۸۰۰ هزار تومان — ژیمناستیک: ۱,۵۰۰ هزار تومان — موی تای بانوان: ۱,۵۰۰ هزار تومان. مهلت پرداخت تا ۱۲ هر ماه.'
       },
       {
         q: 'چطور می‌توانم آنلاین شهریه را پرداخت کنم؟',
@@ -184,8 +184,8 @@ function doRegister(ctx, b) {
     join_date: new Date().toISOString().slice(0, 10)
   }, 'member');
 
-  const { token } = db.createSession(user.id, SITE, 30);
-  ctx.setCookie(token, { maxAgeSeconds: 30 * 86400 });
+  const { token } = db.createSession(user.id, SITE, 90);
+  ctx.setCookie(token, { maxAgeSeconds: 90 * 86400 });
 
   db.pushNotification(user.id, {
     type: 'welcome',
@@ -216,6 +216,11 @@ app.post('/api/register', (ctx) => {
 
 /* ثبت‌نام مستقیم (فرم HTML → ریدایرکت) — مرورگر خودش کوکی رو مدیریت می‌کنه */
 app.post('/register', (ctx) => {
+  const ip = ctx.req.headers['x-forwarded-for'] || ctx.req.socket.remoteAddress || '';
+  if (!rateLimit('reg:' + ip, 5, 600000)) {
+    ctx.redirect('/?error=' + encodeURIComponent('تعداد ثبت‌نام بیش از حد — لطفاً ۱۰ دقیقه صبر کنید'));
+    return;
+  }
   const b = ctx.body || {};
   const err = doRegister(ctx, b);
   if (err) {
@@ -226,6 +231,11 @@ app.post('/register', (ctx) => {
 });
 
 app.post('/login', (ctx) => {
+  const ip = ctx.req.headers['x-forwarded-for'] || ctx.req.socket.remoteAddress || '';
+  if (!rateLimit('login:' + ip, 10, 300000)) {
+    ctx.redirect('/?error=' + encodeURIComponent('تعداد تلاش بیش از حد — لطفاً ۵ دقیقه صبر کنید'));
+    return;
+  }
   const b = ctx.body || {};
   const u = db.findByUsername(b.username);
   if (!u || u.role !== 'member' || !db.verifyPassword(b.password, u.password_hash, u.password_salt)) {
@@ -236,8 +246,8 @@ app.post('/login', (ctx) => {
     ctx.redirect('/?error=' + encodeURIComponent('حساب شما غیرفعال است'));
     return;
   }
-  const { token } = db.createSession(u.id, SITE, 30);
-  ctx.setCookie(token, { maxAgeSeconds: 30 * 86400 });
+  const { token } = db.createSession(u.id, SITE, 90);
+  ctx.setCookie(token, { maxAgeSeconds: 90 * 86400 });
   db.logActivity(u.id, u.full_name, 'وارد پنل کاربری شد', null);
   ctx.redirect('/panel');
 });
@@ -249,8 +259,8 @@ app.post('/api/login', (ctx) => {
     return bad(ctx, 'نام کاربری یا رمز عبور اشتباه است', 401);
   }
   if (!u.active) return bad(ctx, 'حساب کاربری شما غیرفعال است؛ با مربی تماس بگیرید', 403);
-  const { token } = db.createSession(u.id, SITE, 30);
-  ctx.setCookie(token, { maxAgeSeconds: 30 * 86400 });
+  const { token } = db.createSession(u.id, SITE, 90);
+  ctx.setCookie(token, { maxAgeSeconds: 90 * 86400 });
   db.logActivity(u.id, u.full_name, 'وارد پنل کاربری شد', null);
   ctx.json({ ok: true, user: db.publicUser(u) });
 });
@@ -302,8 +312,8 @@ app.post('/api/password', (ctx) => {
   if (!db.verifyPassword(current, u.password_hash, u.password_salt)) return bad(ctx, 'رمز فعلی درست نیست');
   if (!next || String(next).length < 6) return bad(ctx, 'رمز جدید باید حداقل ۶ حرف باشد');
   db.setPassword(u.id, next);
-  const { token } = db.createSession(u.id, SITE, 30);
-  ctx.setCookie(token, { maxAgeSeconds: 30 * 86400 });
+  const { token } = db.createSession(u.id, SITE, 90);
+  ctx.setCookie(token, { maxAgeSeconds: 90 * 86400 });
   ctx.json({ ok: true });
 });
 

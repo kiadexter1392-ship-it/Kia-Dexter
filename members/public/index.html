@@ -36,8 +36,8 @@
     <div class="dojo-hero-bg">
       <div class="dojo-scene">
         <div class="dojo-cube" id="heroCube">
-          <div class="dojo-cube-face dojo-cube-front">🥋</div>
-          <div class="dojo-cube-face dojo-cube-back">⚡</div>
+          <div class="dojo-cube-face dojo-cube-front">AD</div>
+          <div class="dojo-cube-face dojo-cube-back">DOJO</div>
           <div class="dojo-cube-face dojo-cube-right">拳</div>
           <div class="dojo-cube-face dojo-cube-left">道</div>
           <div class="dojo-cube-face dojo-cube-top"></div>
@@ -51,8 +51,7 @@
     <div class="dojo-hero-content">
       <h1 class="dojo-title">ارسلان دوجو</h1>
       <p class="dojo-subtitle">
-        بوکس، کیوکوشین، کاراته، کراسفیت، ژیمناستیک و موی‌تای —
-        ثبت‌نام، پیگیری تمرینات و جدول پیشرفت ماهانه.
+        کاراته، کراسفیت، بوکس، ژیمناستیک و موی‌تای
       </p>
       <div class="dojo-cta">
         <a href="#auth" class="dojo-btn dojo-btn-primary">ورود به پنل</a>
@@ -65,16 +64,8 @@
           <div class="dojo-3d-panel-inner">
             <div class="dojo-3d-panel-label">رشته‌ها</div>
             <div class="dojo-3d-panel-list">
-              <span>بوکس</span><span>کیوکوشین</span><span>کاراته</span>
-              <span>کراسفیت</span><span>ژیمناستیک</span><span>موی‌تای</span>
-            </div>
-          </div>
-        </div>
-        <div class="dojo-3d-panel dojo-3d-p2">
-          <div class="dojo-3d-panel-inner">
-            <div class="dojo-3d-panel-label">امکانات پنل</div>
-            <div class="dojo-3d-panel-list">
-              <span>تمرین از مربی</span><span>جدول پیشرفت</span><span>اطلاعیه</span>
+              <span>کاراته</span><span>کراسفیت</span><span>بوکس</span>
+              <span>ژیمناستیک</span><span>موی‌تای</span>
             </div>
           </div>
         </div>
@@ -109,7 +100,7 @@
           <button class="dojo-copy-btn" data-copy="6219861903417334">کپی</button>
         </div>
       </div>
-      <p class="dojo-pricing-note">بعد از واریز، فیش رو از بله به <span class="en">+989016399804</span> بفرستید.</p>
+      <p class="dojo-pricing-note">مهلت پرداخت تا ۱۲ هر ماه — فیش واریزی را از بله به <span class="en">+989016399804</span> ارسال کنید.</p>
     </div>
   </section>
 
@@ -125,7 +116,7 @@
     <div class="dojo-support-grid">
       <div class="dojo-support-card">
         <h3>پیام‌رسان بله</h3>
-        <p>برای ارسال فیش واریزی یا هر سوالی</p>
+        <p>ارسال فیش واریزی و ارتباط با باشگاه</p>
         <a href="https://ble.ir/+989016399804" target="_blank" class="dojo-btn dojo-btn-primary">باز کردن بله</a>
         <div class="dojo-support-phone en">+989016399804</div>
       </div>
@@ -176,10 +167,9 @@
             <label>رشته ورزشی <span class="req">*</span></label>
             <select name="discipline" id="disciplineSelect" required>
               <option value="">انتخاب رشته...</option>
-              <option value="بوکس">بوکس</option>
-              <option value="کیوکوشین">کیوکوشین</option>
               <option value="کاراته">کاراته</option>
               <option value="کراسفیت">کراسفیت</option>
+              <option value="بوکس">بوکس</option>
               <option value="ژیمناستیک">ژیمناستیک</option>
               <option value="موی تای">موی تای</option>
             </select>
@@ -245,13 +235,11 @@
         document.getElementById('dojoLinks').classList.toggle('open');
       });
 
-      // نمایش خطا از URL (بعد از ریدایرکت سرور)
       var params = new URLSearchParams(location.search);
       var err = params.get('error');
       if (err) {
         errorMsg.textContent = err;
         errorMsg.classList.remove('hidden');
-        // اگه خطای ورود بود، تب ورود رو نشون بده
         if (err.includes('نام کاربری') || err.includes('رمز') || err.includes('غیرفعال')) {
           show('login');
         } else {
@@ -305,7 +293,6 @@
         }).catch(function () { UI.toast('کپی نشد', 'warn'); });
       });
 
-      // بررسی تکرار رمز قبل از ارسال فرم ثبت‌نام
       try {
         registerForm.addEventListener('submit', function (e) {
           var pw = registerForm.querySelector('[name=password]').value;

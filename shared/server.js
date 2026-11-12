@@ -84,6 +84,14 @@ function matchRoute(pattern, pathname) {
 
 const SAFE_FILE = /^[A-Za-z0-9._\-/\u0600-\u06FF ]+$/;
 
+const SECURITY_HEADERS = {
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'SAMEORIGIN',
+  'X-XSS-Protection': '1; mode=block',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+  'Permissions-Policy': 'camera=(), microphone=(), geolocation=()'
+};
+
 function sendFile(res, filePath, status = 200) {
   const ext = path.extname(filePath).toLowerCase();
   const type = MIME[ext] || 'application/octet-stream';
@@ -95,9 +103,36 @@ function sendFile(res, filePath, status = 200) {
   res.writeHead(status, {
     'Content-Type': type,
     'Cache-Control': 'no-cache',
-    'X-Content-Type-Options': 'nosniff'
+    ...SECURITY_HEADERS
   });
   stream.pipe(res);
+}
+
+/* -------------------- Rate Limiter (ساده — در حافظه) -------------------- */
+const _rateBuckets = new Map();
+function rateLimit(key, maxAttempts, windowMs) {
+  const now = Date.now();
+  const bucket = _rateBuckets.get(key) || { count: 0, resetAt: now + windowMs };
+  if (now > bucket.resetAt) { bucket.count = 0; bucket.resetAt = now + windowMs; }
+  bucket.count++;
+  _rateBuckets.set(key, bucket);
+  if (bucket.count > maxAttempts) {
+    _rateBuckets.delete(key);
+    return false;
+  }
+  return true;
+}
+
+/* پاک‌سازی دوره‌ای باکت‌های منقضی شده */
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of _rateBuckets) {
+    if (now > v.resetAt) _rateBuckets.delete(k);
+  }
+}, 60000);
+
+function getClientIp(req) {
+  return req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.headers['x-real-ip'] || req.socket.remoteAddress || 'unknown';
 }
 
 function createServer(options = {}) {
@@ -155,7 +190,7 @@ function createServer(options = {}) {
       body,
       cookies: cookieJar,
       setCookie(value, opts = {}) {
-        const parts = [`${cookieName}=${encodeURIComponent(value)}`, 'Path=/', 'SameSite=Lax'];
+        const parts = [`${cookieName}=${encodeURIComponent(value)}`, 'Path=/', 'HttpOnly', 'SameSite=Lax'];
         if (opts.maxAgeSeconds) parts.push(`Max-Age=${opts.maxAgeSeconds}`);
         if (opts.expires) parts.push(`Expires=${opts.expires}`);
         setCookies.push(parts.join('; '));
@@ -226,7 +261,7 @@ function createServer(options = {}) {
       'Content-Type': 'application/json; charset=utf-8',
       'Content-Length': payload.length,
       'Cache-Control': 'no-store',
-      'X-Content-Type-Options': 'nosniff'
+      ...SECURITY_HEADERS
     });
     res.end(payload);
   }
@@ -250,4 +285,4 @@ function createServer(options = {}) {
   return app;
 }
 
-module.exports = { createServer, parseCookies, sendFile, MIME };
+module.exports = { createServer, parseCookies, sendFile, MIME, rateLimit };
