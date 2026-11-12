@@ -135,6 +135,48 @@ app.post('/api/logout', (ctx) => {
   ctx.json({ ok: true });
 });
 
+/* --------------------------- API Key Management --------------------------- */
+
+/* middleware: احراز هویت با API key یا session */
+function coachOrApiKey(ctx) {
+  /* اول session */
+  const u = coach(ctx);
+  if (u) return u;
+  /* بعد API key */
+  const authHeader = ctx.req.headers['authorization'] || '';
+  const apiKey = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : ctx.req.headers['x-api-key'];
+  if (apiKey) {
+    const keyUser = db.apiKeyUser(apiKey);
+    if (keyUser && keyUser.role === 'coach') return keyUser;
+  }
+  return null;
+}
+
+app.get('/api/api-keys', (ctx) => {
+  const u = coach(ctx);
+  if (!u) return ctx.json({ ok: false, error: 'unauthorized' }, 401);
+  ctx.json({ ok: true, keys: db.listApiKeys(u.id).map(k => ({
+    ...k,
+    key: k.key.slice(0, 15) + '...' + k.key.slice(-6) /* فقط بخشی از key نمایش داده بشه */
+  })) });
+});
+
+app.post('/api/api-keys', (ctx) => {
+  const u = coach(ctx);
+  if (!u) return ctx.json({ ok: false, error: 'unauthorized' }, 401);
+  const { name, permissions } = ctx.body || {};
+  const result = db.createApiKey(u.id, name || 'default', permissions || 'read');
+  db.logActivity(u.id, u.full_name, 'API key جدید ساخت', name || 'default');
+  ctx.json({ ok: true, key: result }); /* فقط همین‌بار key کامل نشون داده می‌شه */
+});
+
+app.delete('/api/api-keys/:id', (ctx) => {
+  const u = coach(ctx);
+  if (!u) return ctx.json({ ok: false, error: 'unauthorized' }, 401);
+  db.deleteApiKey(ctx.params.id, u.id);
+  ctx.json({ ok: true });
+});
+
 app.get('/api/me', (ctx) => {
   const u = coach(ctx);
   if (!u) return ctx.json({ ok: false, user: null });
@@ -588,7 +630,43 @@ app.post('/api/notifications/read', (ctx) => {
   ctx.json({ ok: true });
 });
 
+/* =========================== Public API (با API key) ========================= */
+/* این endpoints برای دسترسی از بیرون (اپلیکیشن موبایل، integrations و...) با API key هستن */
+
+app.get('/v1/members', (ctx) => {
+  const u = coachOrApiKey(ctx);
+  if (!u) return ctx.json({ ok: false, error: 'unauthorized' }, 401);
+  ctx.json({ ok: true, members: db.listMembers().map(m => db.publicUser(m)) });
+});
+
+app.get('/v1/plans', (ctx) => {
+  const u = coachOrApiKey(ctx);
+  if (!u) return ctx.json({ ok: false, error: 'unauthorized' }, 401);
+  ctx.json({ ok: true, plans: db.listPlans() });
+});
+
+app.get('/v1/stats', (ctx) => {
+  const u = coachOrApiKey(ctx);
+  if (!u) return ctx.json({ ok: false, error: 'unauthorized' }, 401);
+  ctx.json({ ok: true, stats: db.stats() });
+});
+
+app.get('/v1/progress/:userId', (ctx) => {
+  const u = coachOrApiKey(ctx);
+  if (!u) return ctx.json({ ok: false, error: 'unauthorized' }, 401);
+  const year = Number(ctx.query.year) || todayJalali().jy;
+  const prog = db.progressYear(Number(ctx.params.userId), year);
+  ctx.json({ ok: true, progress: prog });
+});
+
+app.get('/v1/announcements', (ctx) => {
+  const u = coachOrApiKey(ctx);
+  if (!u) return ctx.json({ ok: false, error: 'unauthorized' }, 401);
+  ctx.json({ ok: true, announcements: db.all('SELECT * FROM announcements ORDER BY created_at DESC LIMIT 50') });
+});
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`پنل مربی: http://localhost:${PORT}  |  ورود: ${DEMO.coach.username} / ${DEMO.coach.password}`);
   console.log(`دیتابیس: ${db.DB_PATH}`);
+  console.log(`API endpoints: /v1/members, /v1/plans, /v1/stats, /v1/progress/:id, /v1/announcements`);
 });

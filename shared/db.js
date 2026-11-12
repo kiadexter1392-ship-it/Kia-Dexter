@@ -218,6 +218,17 @@ CREATE TABLE IF NOT EXISTS activity (
   created_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS api_keys (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  key        TEXT UNIQUE NOT NULL,
+  user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name       TEXT NOT NULL DEFAULT 'default',
+  permissions TEXT DEFAULT 'read',
+  active     INTEGER DEFAULT 1,
+  created_at TEXT NOT NULL,
+  last_used  TEXT
+);
+
 CREATE INDEX IF NOT EXISTS idx_progress_user ON progress(user_id, year, month);
 CREATE INDEX IF NOT EXISTS idx_assign_user ON plan_assignments(user_id, status);
 CREATE INDEX IF NOT EXISTS idx_notif_user ON notifications(user_id, read);
@@ -717,6 +728,41 @@ function stats() {
   return { members, activeMembers, plans, done, pending, announcements, selfReports, thisMonth };
 }
 
+/* --------------------------------- API Keys -------------------------------- */
+
+function createApiKey(userId, name = 'default', permissions = 'read') {
+  const key = 'arslan_' + crypto.randomBytes(32).toString('hex');
+  run('INSERT INTO api_keys (key, user_id, name, permissions, created_at) VALUES (?,?,?,?,?)',
+    key, Number(userId), name, permissions, now());
+  return { key, name, permissions };
+}
+
+function apiKeyUser(key) {
+  if (!key || !key.startsWith('arslan_')) return null;
+  const row = get(
+    'SELECT ak.*, u.role FROM api_keys ak JOIN users u ON u.id = ak.user_id WHERE ak.key = ? AND ak.active = 1',
+    key
+  );
+  if (!row) return null;
+  run('UPDATE api_keys SET last_used = ? WHERE key = ?', now(), key);
+  const user = findById(row.user_id);
+  if (!user || !user.active) return null;
+  user.apiPermissions = row.permissions;
+  return user;
+}
+
+function listApiKeys(userId) {
+  return all('SELECT id, key, name, permissions, created_at, last_used FROM api_keys WHERE user_id = ? ORDER BY created_at DESC', Number(userId));
+}
+
+function deleteApiKey(keyId, userId) {
+  run('DELETE FROM api_keys WHERE id = ? AND user_id = ?', Number(keyId), Number(userId));
+}
+
+function revokeApiKey(keyId, userId) {
+  run('UPDATE api_keys SET active = 0 WHERE id = ? AND user_id = ?', Number(keyId), Number(userId));
+}
+
 module.exports = {
   db, DB_PATH, DATA_DIR, sleepSync, execWithRetry,
   all, get, run, now,
@@ -728,5 +774,6 @@ module.exports = {
   pushNotification, notificationsFor, unreadCount, markNotificationsRead,
   createPlan, getPlan, listPlans, updatePlan, deletePlan, plansForUser, setAssignmentStatus,
   METRIC_KEYS, computeOverall, progressRow, progressYear, saveProgress, deleteProgress,
-  saveSelfReport, clubMatrix, logActivity, recentActivity, stats
+  saveSelfReport, clubMatrix, logActivity, recentActivity, stats,
+  createApiKey, apiKeyUser, listApiKeys, deleteApiKey, revokeApiKey
 };
