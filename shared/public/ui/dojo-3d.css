@@ -121,6 +121,7 @@
   color: var(--muted); font-size: 15px; max-width: 460px; line-height: 2;
 }
 .dojo-cta { display: flex; gap: 12px; margin-top: 24px; flex-wrap: wrap; }
+.dojo-btn-install { background: linear-gradient(135deg, #e2483d, #d9a441) !important; color: #fff !important; border: none !important; font-weight: 700; }
 
 /* دکمه‌ها */
 .dojo-btn {

@@ -2,9 +2,16 @@
 <html lang="fa" dir="rtl">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#c9a44e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ارسلان دوجو">
+  <meta name="mobile-web-app-capable" content="yes">
   <title>ارسلان دوجو — باشگاه رزمی</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'><circle cx='24' cy='24' r='20' fill='%23e2483d'/></svg>">
+  <link rel="apple-touch-icon" href="/ui/icons/icon-192.png">
+  <link rel="manifest" href="/manifest.json">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css">
   <link rel="stylesheet" href="/ui/style.css">
   <link rel="stylesheet" href="/ui/shell.css">
@@ -56,6 +63,7 @@
       <div class="dojo-cta">
         <a href="#auth" class="dojo-btn dojo-btn-primary">ورود به پنل</a>
         <a href="#auth" class="dojo-btn dojo-btn-outline" id="registerJump">ثبت‌نام</a>
+        <button class="dojo-btn dojo-btn-outline dojo-btn-install hidden" id="installBtn">نصب اپ</button>
       </div>
     </div>
     <div class="dojo-hero-visual">
@@ -207,6 +215,41 @@
   <script src="/ui/jalali.browser.js"></script>
   <script src="/ui/ui.js"></script>
   <script src="/ui/dojo-3d.js"></script>
+  <script>
+    /* PWA: Service Worker Registration */
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(function(e) { console.log('SW error:', e); });
+    }
+
+    /* PWA: Install Prompt */
+    (function() {
+      var deferredPrompt = null;
+      var installBtn = document.getElementById('installBtn');
+
+      window.addEventListener('beforeinstallprompt', function(e) {
+        e.preventDefault();
+        deferredPrompt = e;
+        if (installBtn) installBtn.classList.remove('hidden');
+      });
+
+      if (installBtn) {
+        installBtn.addEventListener('click', function() {
+          if (!deferredPrompt) return;
+          deferredPrompt.prompt();
+          deferredPrompt.userChoice.then(function(result) {
+            deferredPrompt = null;
+            installBtn.classList.add('hidden');
+          });
+        });
+      }
+
+      window.addEventListener('appinstalled', function() {
+        deferredPrompt = null;
+        if (installBtn) installBtn.classList.add('hidden');
+        if (window.UI && UI.toast) UI.toast('اپ نصب شد!', 'ok');
+      });
+    })();
+  </script>
   <script>
     (function () {
       var loginForm = document.getElementById('loginForm');
