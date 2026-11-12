@@ -402,6 +402,6 @@ app.get('/api/club', (ctx) => {
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`سایت شاگردان: http://localhost:${PORT}  |  نمونه: ali / ${DEMO.memberPassword}`);
+  console.log(`سایت شاگردان: http://localhost:${PORT}`);
   console.log(`دیتابیس: ${db.DB_PATH}`);
 });

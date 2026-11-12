@@ -221,8 +221,8 @@ app.post('/api/members', (ctx) => {
     return bad(ctx, 'نام کاربری باید انگلیسی و حداقل ۳ حرف باشد');
   }
   if (db.findByUsername(b.username)) return bad(ctx, 'این نام کاربری قبلاً گرفته شده است');
-  const password = b.password || DEMO.memberPassword;
-  if (String(password).length < 4) return bad(ctx, 'رمز عبور باید حداقل ۴ حرف باشد');
+  const password = b.password;
+  if (!password || String(password).length < 4) return bad(ctx, 'رمز عبور باید حداقل ۴ حرف باشد');
   const member = db.createUser({ ...b, username: String(b.username).trim().toLowerCase(), password }, 'member');
   db.logActivity(u.id, u.full_name, 'شاگرد جدید ثبت کرد', member.full_name);
 

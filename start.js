@@ -42,8 +42,8 @@ process.on('SIGTERM', () => shutdown(0));
 
 console.log('باشگاه آنلاین ارسلان دوجو');
 console.log('─────────────────────────────────────────────');
-console.log(`  پنل مربی     →  http://localhost:${COACH_PORT}   (arsalan / arsalan123)`);
-console.log(`  پنل شاگردان  →  http://localhost:${MEMBER_PORT}   (ali / 123456)`);
+console.log(`  پنل مربی     →  http://localhost:${COACH_PORT}`);
+console.log(`  پنل شاگردان  →  http://localhost:${MEMBER_PORT}`);
 console.log('─────────────────────────────────────────────');
 
 start('مربی', 'coach/server.js', '31');
