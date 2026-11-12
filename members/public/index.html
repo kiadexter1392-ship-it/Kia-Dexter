@@ -146,19 +146,21 @@
         <button id="tabRegister" type="button">ثبت‌نام</button>
       </div>
 
-      <form id="loginForm" class="dojo-form">
+      <div class="dojo-error hidden" id="errorMsg"></div>
+
+      <form id="loginForm" class="dojo-form" method="POST" action="/login">
         <div class="dojo-field">
           <label>نام کاربری</label>
-          <input id="lUser" type="text" class="en" autocomplete="username" required>
+          <input name="username" type="text" class="en" autocomplete="username" required>
         </div>
         <div class="dojo-field">
           <label>رمز عبور</label>
-          <input id="lPass" type="password" class="en" autocomplete="current-password" required>
+          <input name="password" type="password" class="en" autocomplete="current-password" required>
         </div>
-        <button class="dojo-btn dojo-btn-primary dojo-btn-full" id="loginBtn" type="submit">ورود</button>
+        <button class="dojo-btn dojo-btn-primary dojo-btn-full" type="submit">ورود</button>
       </form>
 
-      <form id="registerForm" class="dojo-form hidden">
+      <form id="registerForm" class="dojo-form hidden" method="POST" action="/register">
         <div class="dojo-grid-2">
           <div class="dojo-field">
             <label>نام و نام خانوادگی <span class="req">*</span></label>
@@ -190,7 +192,7 @@
           <div class="dojo-field"><label>رمز عبور <span class="req">*</span></label><input name="password" type="password" class="en" minlength="6" required></div>
           <div class="dojo-field"><label>تکرار رمز <span class="req">*</span></label><input name="password2" type="password" class="en" minlength="6" required></div>
         </div>
-        <button class="dojo-btn dojo-btn-gold dojo-btn-full" id="registerBtn" type="submit">ثبت‌نام</button>
+        <button class="dojo-btn dojo-btn-gold dojo-btn-full" type="submit">ثبت‌نام</button>
       </form>
     </div>
   </section>
@@ -215,6 +217,7 @@
       var registerForm = document.getElementById('registerForm');
       var tabLogin = document.getElementById('tabLogin');
       var tabRegister = document.getElementById('tabRegister');
+      var errorMsg = document.getElementById('errorMsg');
 
       function show(which) {
         var isLogin = which === 'login';
@@ -235,6 +238,20 @@
       document.getElementById('menuBtn').addEventListener('click', function () {
         document.getElementById('dojoLinks').classList.toggle('open');
       });
+
+      // نمایش خطا از URL (بعد از ریدایرکت سرور)
+      var params = new URLSearchParams(location.search);
+      var err = params.get('error');
+      if (err) {
+        errorMsg.textContent = err;
+        errorMsg.classList.remove('hidden');
+        show('register');
+        document.getElementById('auth').scrollIntoView({ behavior: 'smooth' });
+      }
+      if (params.get('error') === 'bad-token' || params.get('error') === 'expired') {
+        errorMsg.textContent = 'لینک ورود منقضی شده';
+        errorMsg.classList.remove('hidden');
+      }
 
       UI.loadConfig().then(function (cfg) {
         document.getElementById('coachLink').href = UI.peerUrl(cfg.coachPort);
@@ -282,52 +299,14 @@
         }).catch(function () { UI.toast('کپی نشد', 'warn'); });
       });
 
-      var params = new URLSearchParams(location.search);
-      if (params.get('error') === 'bad-token' || params.get('error') === 'expired') {
-        UI.toast('لینک ورود منقضی شده', 'warn', 5000);
-      }
-
-      function busy(btn, on, label) {
-        btn.disabled = on;
-        btn.innerHTML = on ? '<span class="loader"></span> ' + label : btn.dataset.label;
-      }
-
-      var loginBtn = document.getElementById('loginBtn');
-      loginBtn.dataset.label = loginBtn.textContent;
-      loginForm.addEventListener('submit', function (e) {
-        e.preventDefault();
-        busy(loginBtn, true, '...');
-        UI.api('/api/login', {
-          method: 'POST',
-          body: { username: document.getElementById('lUser').value, password: document.getElementById('lPass').value }
-        }).then(function () {
-          setTimeout(function () {
-            window.location.href = '/panel';
-          }, 500);
-        }).catch(function (err) {
-          UI.toast(err.message, 'warn', 5000);
-          busy(loginBtn, false);
-        });
-      });
-
-      var registerBtn = document.getElementById('registerBtn');
-      registerBtn.dataset.label = registerBtn.textContent;
+      // بررسی تکرار رمز قبل از ارسال فرم ثبت‌نام
       registerForm.addEventListener('submit', function (e) {
-        e.preventDefault();
-        var data = {};
-        new FormData(registerForm).forEach(function (v, k) { data[k] = v; });
-        if (data.password !== data.password2) { UI.toast('تکرار رمز مطابقت ندارد', 'warn'); return; }
-        busy(registerBtn, true, '...');
-        UI.api('/api/register', { method: 'POST', body: data }).then(function (result) {
-          UI.toast('ثبت‌نام انجام شد', 'ok');
-          // صبر کوتاه و ریدایرکت مستقیم
-          setTimeout(function () {
-            window.location.href = '/panel';
-          }, 500);
-        }).catch(function (err) {
-          UI.toast(err.message, 'warn', 5500);
-          busy(registerBtn, false);
-        });
+        var pw = registerForm.querySelector('[name=password]').value;
+        var pw2 = registerForm.querySelector('[name=password2]').value;
+        if (pw !== pw2) {
+          e.preventDefault();
+          UI.toast('تکرار رمز مطابقت ندارد', 'warn');
+        }
       });
 
       Dojo3D.init();

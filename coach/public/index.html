@@ -79,16 +79,17 @@
       <div style="text-align:center;margin-bottom:18px">
         <h3 style="margin:0;font-size:17px">ورود مربی</h3>
       </div>
-      <form id="loginForm" class="dojo-form">
+      <div class="dojo-error hidden" id="errorMsg"></div>
+      <form id="loginForm" class="dojo-form" method="POST" action="/login">
         <div class="dojo-field">
           <label>نام کاربری</label>
-          <input id="username" type="text" class="en" autocomplete="username" required>
+          <input name="username" type="text" class="en" autocomplete="username" required>
         </div>
         <div class="dojo-field">
           <label>رمز عبور</label>
-          <input id="password" type="password" class="en" autocomplete="current-password" required>
+          <input name="password" type="password" class="en" autocomplete="current-password" required>
         </div>
-        <button class="dojo-btn dojo-btn-primary dojo-btn-full" id="submitBtn" type="submit">ورود</button>
+        <button class="dojo-btn dojo-btn-primary dojo-btn-full" type="submit">ورود</button>
         <a href="#" id="goMembers" class="dojo-btn dojo-btn-outline dojo-btn-full" style="margin-top:6px">سایت شاگردان ←</a>
       </form>
     </div>
@@ -105,12 +106,19 @@
   <script src="/ui/dojo-3d.js"></script>
   <script>
     (function () {
-      var form = document.getElementById('loginForm');
-      var btn = document.getElementById('submitBtn');
+      var errorMsg = document.getElementById('errorMsg');
 
       document.getElementById('menuBtn').addEventListener('click', function () {
         document.getElementById('dojoLinks').classList.toggle('open');
       });
+
+      // نمایش خطا از URL
+      var params = new URLSearchParams(location.search);
+      var err = params.get('error');
+      if (err) {
+        errorMsg.textContent = err;
+        errorMsg.classList.remove('hidden');
+      }
 
       UI.loadConfig().then(function (cfg) {
         var members = UI.peerUrl(cfg.memberPort);
@@ -118,24 +126,6 @@
         document.getElementById('goMembers').href = members;
         document.getElementById('goMembersBtn').href = members;
       }).catch(function () { });
-
-      form.addEventListener('submit', function (e) {
-        e.preventDefault();
-        btn.disabled = true;
-        btn.innerHTML = '<span class="loader"></span> ...';
-        UI.api('/api/login', {
-          method: 'POST',
-          body: { username: document.getElementById('username').value, password: document.getElementById('password').value }
-        }).then(function () {
-          setTimeout(function () {
-            window.location.href = '/dashboard';
-          }, 500);
-        }).catch(function (err) {
-          UI.toast(err.message, 'warn', 4500);
-          btn.disabled = false;
-          btn.textContent = 'ورود';
-        });
-      });
 
       Dojo3D.init();
     }());

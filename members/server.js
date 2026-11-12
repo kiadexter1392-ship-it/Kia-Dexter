@@ -155,18 +155,17 @@ app.get('/api/faq', (ctx) => {
 
 /* --------------------------- ثبت‌نام و ورود --------------------------- */
 
-app.post('/api/register', (ctx) => {
-  const b = ctx.body || {};
+function doRegister(ctx, b) {
   const full_name = String(b.full_name || '').trim();
   const username = String(b.username || '').trim().toLowerCase();
   const password = String(b.password || '');
 
-  if (full_name.length < 3) return bad(ctx, 'نام و نام خانوادگی را کامل وارد کنید');
-  if (!/^[a-zA-Z0-9._-]{3,20}$/.test(username)) return bad(ctx, 'نام کاربری باید انگلیسی، بدون فاصله و حداقل ۳ حرف باشد');
-  if (db.findByUsername(username)) return bad(ctx, 'این نام کاربری قبلاً ثبت شده است');
-  if (password.length < 6) return bad(ctx, 'رمز عبور باید حداقل ۶ حرف باشد');
-  if (b.phone && !/^[0-9+\-\s]{7,15}$/.test(String(b.phone))) return bad(ctx, 'شماره موبایل معتبر نیست');
-  if (password !== b.password2) return bad(ctx, 'تکرار رمز عبور مطابقت ندارد');
+  if (full_name.length < 3) return 'نام و نام خانوادگی را کامل وارد کنید';
+  if (!/^[a-zA-Z0-9._-]{3,20}$/.test(username)) return 'نام کاربری باید انگلیسی، بدون فاصله و حداقل ۳ حرف باشد';
+  if (db.findByUsername(username)) return 'این نام کاربری قبلاً ثبت شده است';
+  if (password.length < 6) return 'رمز عبور باید حداقل ۶ حرف باشد';
+  if (b.phone && !/^[0-9+\-\s]{7,15}$/.test(String(b.phone))) return 'شماره موبایل معتبر نیست';
+  if (password !== b.password2) return 'تکرار رمز عبور مطابقت ندارد';
 
   const user = db.createUser({
     full_name,
@@ -201,12 +200,46 @@ app.post('/api/register', (ctx) => {
     });
     db.logActivity(coach.id, coach.full_name, 'ثبت‌نام جدید دریافت شد', `${full_name} (@${username})`);
   }
-  // تمرین‌های عمومی باشگاه به شاگرد تازه‌وارد هم می‌رسد
   for (const plan of db.all('SELECT * FROM plans WHERE target_all = 1')) {
     db.run('INSERT OR IGNORE INTO plan_assignments (plan_id, user_id, status, assigned_at) VALUES (?,?,?,?)',
       plan.id, user.id, 'todo', db.now());
   }
-  ctx.json({ ok: true, user: db.publicUser(user) });
+  return null;
+}
+
+app.post('/api/register', (ctx) => {
+  const b = ctx.body || {};
+  const err = doRegister(ctx, b);
+  if (err) return bad(ctx, err);
+  ctx.json({ ok: true, user: db.publicUser(db.findByUsername(String(b.username || '').trim().toLowerCase())) });
+});
+
+/* ثبت‌نام مستقیم (فرم HTML → ریدایرکت) — مرورگر خودش کوکی رو مدیریت می‌کنه */
+app.post('/register', (ctx) => {
+  const b = ctx.body || {};
+  const err = doRegister(ctx, b);
+  if (err) {
+    ctx.redirect('/?error=' + encodeURIComponent(err));
+    return;
+  }
+  ctx.redirect('/panel');
+});
+
+app.post('/login', (ctx) => {
+  const b = ctx.body || {};
+  const u = db.findByUsername(b.username);
+  if (!u || u.role !== 'member' || !db.verifyPassword(b.password, u.password_hash, u.password_salt)) {
+    ctx.redirect('/?error=' + encodeURIComponent('نام کاربری یا رمز عبور اشتباه است'));
+    return;
+  }
+  if (!u.active) {
+    ctx.redirect('/?error=' + encodeURIComponent('حساب شما غیرفعال است'));
+    return;
+  }
+  const { token } = db.createSession(u.id, SITE, 30);
+  ctx.setCookie(token, { maxAgeSeconds: 30 * 86400 });
+  db.logActivity(u.id, u.full_name, 'وارد پنل کاربری شد', null);
+  ctx.redirect('/panel');
 });
 
 app.post('/api/login', (ctx) => {

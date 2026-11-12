@@ -102,6 +102,23 @@ app.post('/api/login', (ctx) => {
   ctx.json({ ok: true, user: db.publicUser(user) });
 });
 
+app.post('/login', (ctx) => {
+  const b = ctx.body || {};
+  const user = db.findByUsername(b.username);
+  if (!user || user.role !== 'coach' || !db.verifyPassword(b.password, user.password_hash, user.password_salt)) {
+    ctx.redirect('/?error=' + encodeURIComponent('نام کاربری یا رمز عبور اشتباه است'));
+    return;
+  }
+  if (!user.active) {
+    ctx.redirect('/?error=' + encodeURIComponent('این حساب غیرفعال شده است'));
+    return;
+  }
+  const { token } = db.createSession(user.id, SITE, 30);
+  ctx.setCookie(token, { maxAgeSeconds: 30 * 86400 });
+  db.logActivity(user.id, user.full_name, 'وارد پنل مربی شد', null);
+  ctx.redirect('/dashboard');
+});
+
 app.post('/api/logout', (ctx) => {
   db.destroySession(ctx.cookies[app.cookieName]);
   ctx.clearCookie();

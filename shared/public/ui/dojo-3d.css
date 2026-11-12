@@ -342,6 +342,11 @@
 .dojo-field input::placeholder { color: #333345; }
 .dojo-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .dojo-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.dojo-error {
+  background: rgba(226,72,61,0.1); border: 1px solid rgba(226,72,61,0.3);
+  border-radius: 10px; padding: 10px 14px; font-size: 13px; color: #ff9d94;
+  margin-bottom: 14px; text-align: center;
+}
 
 /* ==================== فوتر ==================== */
 
