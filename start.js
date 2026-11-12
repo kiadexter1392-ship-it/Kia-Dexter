@@ -10,12 +10,13 @@ const path = require('node:path');
 
 const COACH_PORT = process.env.COACH_PORT || 4173;
 const MEMBER_PORT = process.env.MEMBER_PORT || 4174;
+const MEMBERS_SITE_URL = process.env.MEMBERS_SITE_URL || null;
 
 const children = [];
 
 function start(label, script, color) {
   const child = spawn(process.execPath, [path.join(__dirname, script)], {
-    env: { ...process.env, COACH_PORT, MEMBER_PORT },
+    env: { ...process.env, COACH_PORT, MEMBER_PORT, MEMBERS_SITE_URL },
     stdio: ['ignore', 'pipe', 'pipe']
   });
   const prefix = `\x1b[${color}m[${label}]\x1b[0m `;

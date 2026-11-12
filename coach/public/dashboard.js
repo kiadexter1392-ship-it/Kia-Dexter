@@ -46,8 +46,9 @@
       return;
     }
 
+    const membersUrl = CFG.membersSiteUrl || peerUrl(CFG.memberPort);
     const links = [document.getElementById('membersSiteLink'), document.getElementById('topMembersLink')];
-    links.forEach((a) => { a.href = peerUrl(CFG.memberPort); });
+    links.forEach((a) => { a.href = membersUrl; });
 
     bindNav();
     await refreshBase();
@@ -461,7 +462,7 @@
   async function impersonate(m) {
     try {
       const r = await api(`/api/members/${m.id}/impersonate`, { method: 'POST' });
-      const url = `${peerUrl(CFG.memberPort)}/impersonate?token=${r.token}`;
+      const url = `${membersUrl}/impersonate?token=${r.token}`;
       window.open(url, '_blank', 'noopener');
       toast('پنل شاگرد در تب جدید باز شد', 'ok');
     } catch (err) { toast(err.message, 'warn'); }
@@ -1166,8 +1167,8 @@
           <div class="card">
             <div class="card-head"><div class="card-title"><span class="dot" style="background:var(--blue)"></span> اتصال به سایت شاگردان</div></div>
             <p class="small muted">سایت دوم (پنل شاگردان) روی همین دیتابیس اجرا می‌شود. هر شاگردی که اینجا ثبت کنید، بلافاصله در سایت دوم قابل ورود است.</p>
-            <a class="btn" href="${esc(peerUrl(CFG.memberPort))}" target="_blank" rel="noopener">باز کردن سایت شاگردان ↗</a>
-            <div class="tiny mt-s">آدرس: <span class="en">${esc(peerUrl(CFG.memberPort))}</span></div>
+            <a class="btn" href="${esc(membersUrl)}" target="_blank" rel="noopener">باز کردن سایت شاگردان ↗</a>
+            <div class="tiny mt-s">آدرس: <span class="en">${esc(membersUrl)}</span></div>
           </div>
 
           <div class="card">

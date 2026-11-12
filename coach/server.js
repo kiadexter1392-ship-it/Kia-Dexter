@@ -79,6 +79,7 @@ app.get('/api/config', (ctx) => {
     jalaliYear: j.jy,
     jalaliMonth: j.jm,
     memberPort: MEMBER_PORT,
+    membersSiteUrl: process.env.MEMBERS_SITE_URL || null,
     months: JALALI_MONTHS,
     belts: ['سفید', 'زرد', 'نارنجی', 'سبز', 'آبی', 'قهوه‌ای', 'مشکی دان ۱', 'مشکی دان ۲', 'مشکی دان ۳', 'مشکی دان ۴'],
     disciplines: ['بوکس', 'کیوکوشین', 'کاراته', 'کراسفیت', 'ژیمناستیک', 'موی تای'],
