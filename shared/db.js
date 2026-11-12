@@ -12,6 +12,11 @@ const { DatabaseSync } = require('node:sqlite');
 const DATA_DIR = process.env.ARSLAN_DATA_DIR || path.join(__dirname, '..', 'data');
 const DB_PATH = process.env.ARSLAN_DB || path.join(DATA_DIR, 'arslan-dojo.db');
 
+/* اگر env var RESET_DB=1 ست شده باشد، دیتابیس قبلی پاک می‌شود */
+if (process.env.RESET_DB === '1') {
+  try { fs.unlinkSync(DB_PATH); console.log('[DB] دیتابیس قبلی پاک شد'); } catch { /* نبود که مشکلی نیست */ }
+}
+
 fs.mkdirSync(DATA_DIR, { recursive: true });
 
 const db = new DatabaseSync(DB_PATH);
