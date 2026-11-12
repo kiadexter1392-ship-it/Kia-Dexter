@@ -5,7 +5,7 @@
  */
 
 const path = require('node:path');
-const { createServer, rateLimit } = require('../shared/server');
+const { createServer, rateLimit, sanitize } = require('../shared/server');
 const db = require('../shared/db');
 const { seedIfEmpty, DEMO } = require('../shared/seed');
 const { JALALI_MONTHS, todayJalali, formatJalali, faNum } = require('../shared/jalali');

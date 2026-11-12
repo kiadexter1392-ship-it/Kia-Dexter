@@ -84,6 +84,12 @@ function matchRoute(pattern, pathname) {
 
 const SAFE_FILE = /^[A-Za-z0-9._\-/\u0600-\u06FF ]+$/;
 
+/* Input sanitization */
+function sanitize(input) {
+  if (typeof input !== "string") return input;
+  return input.replace(/[<>]/g, "").replace(/javascript:/gi, "").replace(/on\w+\s*=/gi, "").trim().slice(0, 5000);
+}
+
 const SECURITY_HEADERS = {
   'X-Content-Type-Options': 'nosniff',
   'X-Frame-Options': 'SAMEORIGIN',
@@ -285,4 +291,4 @@ function createServer(options = {}) {
   return app;
 }
 
-module.exports = { createServer, parseCookies, sendFile, MIME, rateLimit };
+module.exports = { createServer, parseCookies, sendFile, MIME, rateLimit, sanitize };

@@ -1,14 +1,16 @@
 {
-  "name": "ارسلان دوجو — باشگاه رزمی",
+  "name": "ارسلان دوجو",
   "short_name": "ارسلان دوجو",
-  "description": "باشگاه آنلاین ارسلان دوجو — کاراته، کراسفیت، بوکس، ژیمناستیک، موی تای",
+  "description": "باشگاه آنلاین ارسلان دوجو",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0a0a0a",
+  "background_color": "#1a1a1a",
   "theme_color": "#c9a44e",
   "orientation": "portrait-primary",
   "lang": "fa",
   "dir": "rtl",
+  "scope": "/",
+  "categories": ["sports", "fitness"],
   "icons": [
     {
       "src": "/ui/icons/icon-192.png",
@@ -22,5 +24,6 @@
       "type": "image/png",
       "purpose": "any maskable"
     }
-  ]
+  ],
+  "screenshots": []
 }

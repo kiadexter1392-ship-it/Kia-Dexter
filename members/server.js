@@ -5,7 +5,7 @@
  */
 
 const path = require('node:path');
-const { createServer, rateLimit } = require('../shared/server');
+const { createServer, rateLimit, sanitize } = require('../shared/server');
 const db = require('../shared/db');
 const { seedIfEmpty, DEMO } = require('../shared/seed');
 const { JALALI_MONTHS, todayJalali, formatJalali, faNum } = require('../shared/jalali');
@@ -157,8 +157,8 @@ app.get('/api/faq', (ctx) => {
 /* --------------------------- ثبت‌نام و ورود --------------------------- */
 
 function doRegister(ctx, b) {
-  const full_name = String(b.full_name || '').trim();
-  const username = String(b.username || '').trim().toLowerCase();
+  const full_name = sanitize(String(b.full_name || ''));
+  const username = String(b.username || '').trim().toLowerCase().replace(/[^a-z0-9._-]/g, '').slice(0, 30);
   const password = String(b.password || '');
 
   if (full_name.length < 3) return 'نام و نام خانوادگی را کامل وارد کنید';

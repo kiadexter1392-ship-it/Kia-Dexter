@@ -3,21 +3,22 @@
    ============================================================ */
 
 :root {
-  --bg: #08080c;
-  --bg-2: #0d0d13;
-  --panel: #14141c;
-  --panel-2: #1b1b25;
-  --panel-3: #23232f;
-  --line: #2b2b39;
-  --line-soft: #21212c;
-  --text: #eeeaf3;
-  --muted: #9696ac;
-  --muted-2: #6d6d84;
+  --bg: #1a1a1a;
+  --bg-2: #242424;
+  --panel: #2a2a2a;
+  --panel-2: #333333;
+  --panel-3: #3d3d3d;
+  --line: #444444;
+  --line-soft: #383838;
+  --text: #f0e6d3;
+  --muted: #a8a090;
+  --muted-2: #888078;
   --red: #e2483d;
   --red-2: #ff6b5e;
   --red-soft: rgba(226, 72, 61, 0.14);
-  --gold: #d9a441;
-  --gold-soft: rgba(217, 164, 65, 0.14);
+  --gold: #c9a44e;
+  --gold-2: #e0c070;
+  --gold-soft: rgba(201, 164, 78, 0.14);
   --green: #46b07a;
   --green-soft: rgba(70, 176, 122, 0.14);
   --blue: #4d9fd8;
