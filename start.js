@@ -72,7 +72,7 @@ if (PORT) {
   /* Railway: یک پورت، دو سرویس با reverse proxy */
   const proxyServer = http.createServer((req, res) => {
     /* مسیرهای اختصاصی شاگردان */
-    const memberPaths = ['/impersonate', '/register', '/panel', '/api/payment', '/api/faq'];
+    const memberPaths = ['/impersonate', '/register', '/login', '/panel', '/api/payment', '/api/faq', '/api/register', '/api/login', '/api/logout', '/api/me', '/api/plans', '/api/assignments', '/api/progress', '/api/self-report', '/api/announcements', '/api/notifications', '/api/club', '/api/password'];
     const isMemberPath = memberPaths.some(p => req.url.startsWith(p));
 
     if (isMemberPath) {
