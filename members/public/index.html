@@ -301,7 +301,9 @@
           method: 'POST',
           body: { username: document.getElementById('lUser').value, password: document.getElementById('lPass').value }
         }).then(function () {
-          window.location.assign('/panel');
+          setTimeout(function () {
+            window.location.href = '/panel';
+          }, 500);
         }).catch(function (err) {
           UI.toast(err.message, 'warn', 5000);
           busy(loginBtn, false);
@@ -318,7 +320,10 @@
         busy(registerBtn, true, '...');
         UI.api('/api/register', { method: 'POST', body: data }).then(function (result) {
           UI.toast('ثبت‌نام انجام شد', 'ok');
-          window.location.assign('/panel');
+          // صبر کوتاه و ریدایرکت مستقیم
+          setTimeout(function () {
+            window.location.href = '/panel';
+          }, 500);
         }).catch(function (err) {
           UI.toast(err.message, 'warn', 5500);
           busy(registerBtn, false);

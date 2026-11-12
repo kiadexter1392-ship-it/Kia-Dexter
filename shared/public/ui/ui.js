@@ -10,7 +10,7 @@
   /* ----------------------------- درخواست HTTP ---------------------------- */
 
   async function api(path, options = {}) {
-    const opts = { method: options.method || 'GET', headers: {}, credentials: 'same-origin' };
+    const opts = { method: options.method || 'GET', headers: {}, credentials: 'include' };
     if (options.body !== undefined) {
       opts.headers['Content-Type'] = 'application/json';
       opts.body = JSON.stringify(options.body);

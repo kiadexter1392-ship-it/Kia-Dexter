@@ -127,7 +127,9 @@
           method: 'POST',
           body: { username: document.getElementById('username').value, password: document.getElementById('password').value }
         }).then(function () {
-          window.location.assign('/dashboard');
+          setTimeout(function () {
+            window.location.href = '/dashboard';
+          }, 500);
         }).catch(function (err) {
           UI.toast(err.message, 'warn', 4500);
           btn.disabled = false;
