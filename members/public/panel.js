@@ -16,6 +16,8 @@
     plans: 'تمرینات من',
     progress: 'جدول پیشرفت من',
     news: 'اطلاعیه‌ها و اعلان‌ها',
+    payment: 'پرداخت شهریه',
+    support: 'پشتیبانی',
     profile: 'پروفایل من'
   };
 
@@ -65,6 +67,8 @@
       else if (view === 'plans') await renderPlans(box);
       else if (view === 'progress') await renderProgress(box);
       else if (view === 'news') await renderNews(box);
+      else if (view === 'payment') await renderPayment(box);
+      else if (view === 'support') await renderSupport(box);
       else if (view === 'profile') renderProfile(box);
     } catch (err) {
       box.innerHTML = `<div class="card empty"><span class="big">⚠</span>${esc(err.message)}</div>`;
@@ -513,6 +517,151 @@
     pollBell();
   }
 
+  /* ============================= پرداخت شهریه ============================ */
+
+  async function renderPayment(box) {
+    let paymentData, faqData;
+    try {
+      const [p, f] = await Promise.all([api('/api/payment'), api('/api/faq')]);
+      paymentData = p; faqData = f;
+    } catch (err) {
+      box.innerHTML = '<div class="card empty"><span class="big">⚠</span>' + esc(err.message) + '</div>';
+      return;
+    }
+
+    box.innerHTML = `
+      <div class="stack">
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title"><span class="dot" style="background:var(--gold);box-shadow:0 0 10px var(--gold)"></span> 💳 شماره کارت‌های شهریه</div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px">
+            ${paymentData.cards.map(function (c) {
+              return '<div style="background:linear-gradient(135deg,#1a1a2e,#16213e);border:1px solid rgba(77,159,216,0.2);border-radius:16px;padding:22px">' +
+                '<div style="font-size:11px;color:var(--muted-2);margin-bottom:8px">' + esc(c.label) + '</div>' +
+                '<div class="en" style="font-size:18px;font-weight:700;letter-spacing:2px;font-family:monospace;margin-bottom:10px">' +
+                  c.number.replace(/(.{4})/g, '$1 ').trim() +
+                '</div>' +
+                '<div style="font-weight:600">' + esc(c.holder) + '</div>' +
+                '<button class="btn sm ghost" style="margin-top:10px" data-copy="' + c.number + '">📋 کپی شماره کارت</button>' +
+              '</div>';
+            }).join('')}
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title"><span class="dot"></span> 📋 تعرفه شهریه ماهانه</div>
+          </div>
+          <div class="table-wrap">
+            <table class="data">
+              <thead><tr><th>رشته</th><th>شهریه (هزار تومان)</th><th>پرداخت</th></tr></thead>
+              <tbody>
+                ${paymentData.pricing.map(function (p) {
+                  return '<tr>' +
+                    '<td class="bold">' + esc(p.discipline) + '</td>' +
+                    '<td><span class="badge gold">' + esc(p.price) + ' هزار تومان</span></td>' +
+                    '<td><a href="' + esc(paymentData.baleLink) + '" target="_blank" class="btn sm primary">ارسال فیش</a></td>' +
+                  '</tr>';
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+          <p class="tiny" style="margin-top:12px">📌 مهلت پرداخت شهریه تا ۱۲ هر ماه. لطفاً پس از واریز فیش را از بله ارسال نمایید.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title"><span class="dot" style="background:var(--blue);box-shadow:0 0 10px var(--blue)"></span> ❓ سوالات متداول</div>
+          </div>
+          <div id="panelFaq">
+            ${(faqData.faqs || []).map(function (f, i) {
+              return '<div style="border-bottom:1px solid var(--line-soft);padding:12px 0">' +
+                '<div style="font-weight:600;cursor:pointer;font-size:13.5px" data-faq-toggle="' + i + '">' + esc(f.q) + ' ▾</div>' +
+                '<div class="small muted" style="margin-top:6px;display:none;line-height:2" data-faq-body="' + i + '">' + esc(f.a) + '</div>' +
+              '</div>';
+            }).join('')}
+          </div>
+        </div>
+      </div>`;
+
+    // کپی شماره کارت
+    box.querySelectorAll('[data-copy]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        navigator.clipboard.writeText(btn.dataset.copy).then(function () {
+          toast('شماره کارت کپی شد', 'ok');
+        }).catch(function () {
+          toast('کپی نشد', 'warn');
+        });
+      });
+    });
+
+    // باز/بسته کردن FAQ
+    box.querySelectorAll('[data-faq-toggle]').forEach(function (el) {
+      el.addEventListener('click', function () {
+        var idx = el.dataset.faqToggle;
+        var body = box.querySelector('[data-faq-body="' + idx + '"]');
+        body.style.display = body.style.display === 'none' ? 'block' : 'none';
+      });
+    });
+  }
+
+  /* ============================== پشتیبانی ============================== */
+
+  async function renderSupport(box) {
+    let faqData;
+    try { faqData = await api('/api/faq'); } catch { faqData = { faqs: [] }; }
+
+    box.innerHTML = `
+      <div class="stack">
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title"><span class="dot" style="background:var(--green);box-shadow:0 0 10px var(--green)"></span> 📞 راه‌های ارتباطی</div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px">
+            <div style="text-align:center;padding:24px;background:var(--bg-2);border-radius:16px;border:1px solid var(--line)">
+              <div style="font-size:36px;margin-bottom:12px">📱</div>
+              <h4 style="margin:0 0 8px">پیام‌رسان بله</h4>
+              <p class="muted small" style="margin:0 0 14px">سریع‌ترین راه ارتباط با ما</p>
+              <a href="https://ble.ir/+989016399804" target="_blank" class="btn primary">باز کردن بله</a>
+              <div class="en tiny" style="margin-top:10px;color:var(--gold)">+989016399804</div>
+            </div>
+            <div style="text-align:center;padding:24px;background:var(--bg-2);border-radius:16px;border:1px solid var(--line)">
+              <div style="font-size:36px;margin-bottom:12px">📞</div>
+              <h4 style="margin:0 0 8px">تماس تلفنی</h4>
+              <p class="muted small" style="margin:0 0 14px">در ساعات اداری</p>
+              <a href="tel:+989016399804" class="btn ghost">تماس بگیرید</a>
+              <div class="en tiny" style="margin-top:10px;color:var(--gold)">+989016399804</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title"><span class="dot" style="background:var(--blue);box-shadow:0 0 10px var(--blue)"></span> ❓ سوالات متداول</div>
+          </div>
+          <div id="supportFaq">
+            ${(faqData.faqs || []).map(function (f, i) {
+              return '<div style="border-bottom:1px solid var(--line-soft);padding:14px 0">' +
+                '<div style="font-weight:600;cursor:pointer;font-size:14px" data-sfaq-toggle="' + i + '">' + esc(f.q) + ' ◂</div>' +
+                '<div class="small muted" style="margin-top:8px;display:none;line-height:2.2" data-sfaq-body="' + i + '">' + esc(f.a) + '</div>' +
+              '</div>';
+            }).join('')}
+          </div>
+        </div>
+      </div>`;
+
+    box.querySelectorAll('[data-sfaq-toggle]').forEach(function (el) {
+      el.addEventListener('click', function () {
+        var idx = el.dataset.sfaqToggle;
+        var body = box.querySelector('[data-sfaq-body="' + idx + '"]');
+        var isOpen = body.style.display === 'block';
+        body.style.display = isOpen ? 'none' : 'block';
+        el.textContent = faqData.faqs[idx].q + (isOpen ? ' ◂' : ' ▾');
+      });
+    });
+  }
+
   /* ============================== پروفایل =============================== */
 
   function renderProfile(box) {
@@ -536,12 +685,14 @@
             <div class="grid-3">
               <div class="field"><label>قد (سانتی‌متر)</label><input name="height_cm" type="number" value="${ME.height_cm || ''}"></div>
               <div class="field"><label>وزن (کیلوگرم)</label><input name="weight_kg" type="number" step="0.1" value="${ME.weight_kg || ''}"></div>
-              <div class="field"><label>کمربند</label>
-                <select name="belt">${belts.map((b) => `<option ${ME.belt === b ? 'selected' : ''}>${esc(b)}</option>`).join('')}</select>
+              <div class="field"><label>رشته ورزشی</label>
+                <select name="discipline">
+                  <option value="">—</option>
+                  ${(CFG.disciplines || ['بوکس', 'کیوکوشین', 'کاراته', 'کراسفیت']).map((d) => `<option ${(ME.discipline || ME.style) === d ? 'selected' : ''}>${esc(d)}</option>`).join('')}
+                </select>
               </div>
             </div>
             <div class="grid-2">
-              <div class="field"><label>سبک تمرینی</label><input name="style" value="${esc(ME.style || '')}"></div>
               <div class="field"><label>سابقه تمرین</label><input name="experience" value="${esc(ME.experience || '')}"></div>
             </div>
             <div><button class="btn primary" type="submit">ذخیره تغییرات</button></div>

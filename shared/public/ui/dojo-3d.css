@@ -1,0 +1,384 @@
+/* ============================================================
+   ارسلان دوجو — طراحی سه‌بعدی واقعی با CSS 3D Transforms
+   ============================================================ */
+
+.dojo-landing { overflow-x: hidden; }
+
+/* ==================== ناوبری ==================== */
+
+.dojo-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 28px;
+  background: rgba(8, 8, 12, 0.6); backdrop-filter: blur(20px) saturate(1.5);
+  position: sticky; top: 0; z-index: 50;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.dojo-brand { display: flex; align-items: center; gap: 10px; }
+.dojo-logo { width: 36px; height: 36px; display: inline-flex; }
+.dojo-logo svg { width: 100%; height: 100%; }
+.dojo-brand-name { font-weight: 800; font-size: 15px; }
+.dojo-brand-sub { font-size: 9.5px; color: var(--muted-2); letter-spacing: 2px; }
+.dojo-links { display: flex; gap: 18px; }
+.dojo-links a { font-size: 13px; color: var(--muted); font-weight: 600; transition: color 0.2s; }
+.dojo-links a:hover { color: #fff; }
+.dojo-nav-actions { display: flex; gap: 8px; align-items: center; }
+.dojo-nav-btn {
+  font-size: 12px; padding: 6px 14px; border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.03);
+  color: var(--muted); font-weight: 600; transition: 0.2s;
+}
+.dojo-nav-btn:hover { color: #fff; border-color: rgba(226,72,61,0.3); }
+.dojo-menu-btn { display: none; background: none; border: none; color: #fff; font-size: 20px; cursor: pointer; }
+
+/* ==================== هیرو ==================== */
+
+.dojo-hero {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 40px;
+  padding: 50px 28px 70px; max-width: 1200px; margin: 0 auto;
+  align-items: center; min-height: 80vh;
+  perspective: 1200px;
+}
+
+/* پس‌زمینه سه‌بعدی */
+.dojo-hero-bg {
+  position: fixed; inset: 0; z-index: -1; overflow: hidden;
+  perspective: 800px; transform-style: preserve-3d;
+}
+
+/* مکعب سه‌بعدی واقعی */
+.dojo-scene {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  perspective: 600px;
+  width: 200px; height: 200px;
+}
+.dojo-cube {
+  width: 200px; height: 200px;
+  position: relative;
+  transform-style: preserve-3d;
+  animation: cubeRotate 25s linear infinite;
+}
+.dojo-cube-face {
+  position: absolute; width: 200px; height: 200px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 60px;
+  background: rgba(14, 14, 20, 0.5);
+  border: 1px solid rgba(226, 72, 61, 0.15);
+  backdrop-filter: blur(4px);
+  opacity: 0.6;
+}
+.dojo-cube-front  { transform: translateZ(100px); }
+.dojo-cube-back   { transform: rotateY(180deg) translateZ(100px); }
+.dojo-cube-right  { transform: rotateY(90deg) translateZ(100px); }
+.dojo-cube-left   { transform: rotateY(-90deg) translateZ(100px); }
+.dojo-cube-top    { transform: rotateX(90deg) translateZ(100px); }
+.dojo-cube-bottom { transform: rotateX(-90deg) translateZ(100px); }
+
+@keyframes cubeRotate {
+  0%   { transform: rotateX(-15deg) rotateY(0deg); }
+  25%  { transform: rotateX(5deg) rotateY(90deg); }
+  50%  { transform: rotateX(-10deg) rotateY(180deg); }
+  75%  { transform: rotateX(5deg) rotateY(270deg); }
+  100% { transform: rotateX(-15deg) rotateY(360deg); }
+}
+
+/* لایه‌های عمقی */
+.dojo-depth-layer {
+  position: absolute; border-radius: 50%;
+  transform-style: preserve-3d;
+}
+.dojo-depth-1 {
+  width: 600px; height: 600px; top: -15%; right: -10%;
+  background: radial-gradient(circle, rgba(226,72,61,0.12), transparent 70%);
+  transform: translateZ(-200px);
+  animation: depthFloat 18s ease-in-out infinite;
+}
+.dojo-depth-2 {
+  width: 400px; height: 400px; bottom: 5%; left: -5%;
+  background: radial-gradient(circle, rgba(217,164,65,0.06), transparent 70%);
+  transform: translateZ(-100px);
+  animation: depthFloat 22s ease-in-out infinite reverse;
+}
+.dojo-depth-3 {
+  width: 300px; height: 300px; top: 30%; left: 40%;
+  background: radial-gradient(circle, rgba(77,159,216,0.05), transparent 70%);
+  transform: translateZ(-300px);
+  animation: depthFloat 15s ease-in-out infinite 3s;
+}
+@keyframes depthFloat {
+  0%, 100% { transform: translateZ(-200px) translateY(0); }
+  50% { transform: translateZ(-200px) translateY(-30px); }
+}
+
+.dojo-hero-content { z-index: 2; }
+.dojo-title {
+  font-size: clamp(36px, 5vw, 56px); line-height: 1.2;
+  margin: 0 0 16px; font-weight: 900; letter-spacing: -0.5px;
+  background: linear-gradient(135deg, #fff 0%, #ccc 50%, var(--red-2) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.dojo-subtitle {
+  color: var(--muted); font-size: 15px; max-width: 460px; line-height: 2;
+}
+.dojo-cta { display: flex; gap: 12px; margin-top: 24px; flex-wrap: wrap; }
+
+/* دکمه‌ها */
+.dojo-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 11px 22px; border-radius: 10px; font-weight: 700; font-size: 13.5px;
+  cursor: pointer; transition: all 0.2s; border: none; text-decoration: none;
+}
+.dojo-btn-primary {
+  background: linear-gradient(135deg, var(--red), #b8221a);
+  color: #fff; box-shadow: 0 6px 20px -6px rgba(226,72,61,0.5);
+}
+.dojo-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 28px -6px rgba(226,72,61,0.6); }
+.dojo-btn-outline {
+  background: transparent; border: 1px solid rgba(255,255,255,0.1); color: var(--text);
+}
+.dojo-btn-outline:hover { border-color: rgba(255,255,255,0.25); background: rgba(255,255,255,0.03); }
+.dojo-btn-gold {
+  background: linear-gradient(135deg, var(--gold), #b8862c);
+  color: #1a1208; box-shadow: 0 6px 20px -6px rgba(217,164,65,0.5);
+}
+.dojo-btn-gold:hover { transform: translateY(-2px); }
+.dojo-btn-full { width: 100%; }
+.dojo-btn-sm { padding: 7px 14px; font-size: 12px; }
+
+/* ویژوال سه‌بعدی - پنل‌های معلق با عمق */
+.dojo-hero-visual {
+  position: relative; display: flex; align-items: center; justify-content: center;
+  min-height: 340px; perspective: 800px; z-index: 2;
+}
+.dojo-3d-scene {
+  position: relative; width: 100%; max-width: 360px; height: 300px;
+  transform-style: preserve-3d;
+}
+.dojo-3d-panel {
+  position: absolute; border-radius: 16px;
+  background: linear-gradient(160deg, rgba(20,20,28,0.85), rgba(10,10,16,0.92));
+  border: 1px solid rgba(255,255,255,0.07);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 20px 50px -15px rgba(0,0,0,0.7);
+  transform-style: preserve-3d;
+  transition: transform 0.4s ease;
+}
+.dojo-3d-p1 {
+  width: 240px; padding: 20px; top: 10px; right: 20px;
+  transform: rotateY(-12deg) rotateX(5deg) translateZ(40px);
+  animation: panel3D1 8s ease-in-out infinite;
+}
+.dojo-3d-p2 {
+  width: 200px; padding: 16px; bottom: 20px; left: 0;
+  transform: rotateY(8deg) rotateX(-3deg) translateZ(-20px);
+  animation: panel3D2 10s ease-in-out infinite;
+}
+@keyframes panel3D1 {
+  0%, 100% { transform: rotateY(-12deg) rotateX(5deg) translateZ(40px); }
+  50% { transform: rotateY(-8deg) rotateX(3deg) translateZ(50px) translateY(-8px); }
+}
+@keyframes panel3D2 {
+  0%, 100% { transform: rotateY(8deg) rotateX(-3deg) translateZ(-20px); }
+  50% { transform: rotateY(12deg) rotateX(-5deg) translateZ(-10px) translateY(6px); }
+}
+.dojo-3d-panel-inner { position: relative; z-index: 1; }
+.dojo-3d-panel-label {
+  font-size: 10px; letter-spacing: 1px; color: var(--red-2); font-weight: 700;
+  margin-bottom: 10px; text-transform: uppercase;
+}
+.dojo-3d-panel-list { display: flex; flex-direction: column; gap: 6px; }
+.dojo-3d-panel-list span {
+  font-size: 13px; padding: 5px 10px; border-radius: 6px;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.04);
+}
+
+/* ==================== بخش‌ها ==================== */
+
+.dojo-section {
+  padding: 60px 28px; max-width: 1200px; margin: 0 auto;
+  scroll-margin-top: 70px;
+}
+.dojo-section h2 {
+  font-size: 22px; font-weight: 800; margin: 0 0 28px;
+}
+.dojo-section h3 { font-size: 17px; font-weight: 700; margin: 32px 0 18px; }
+
+/* ==================== شهریه ==================== */
+
+.dojo-pricing-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px;
+}
+.dojo-price-card {
+  background: linear-gradient(160deg, rgba(20,20,28,0.7), rgba(12,12,18,0.8));
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 14px; padding: 20px; text-align: center;
+  transition: all 0.25s;
+}
+.dojo-price-card:hover {
+  transform: translateY(-3px); border-color: rgba(255,255,255,0.1);
+  box-shadow: 0 14px 36px -12px rgba(0,0,0,0.5);
+}
+.dojo-price-name { font-size: 13.5px; font-weight: 700; margin-bottom: 8px; }
+.dojo-price-amount { font-size: 28px; font-weight: 900; color: var(--gold); margin-bottom: 4px; }
+.dojo-price-unit { font-size: 10.5px; color: var(--muted-2); margin-bottom: 14px; }
+
+/* کارت بانکی */
+.dojo-cards-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px;
+  max-width: 740px; margin: 0 auto;
+}
+.dojo-bank-card {
+  border-radius: 18px; padding: 24px; position: relative; overflow: hidden;
+  min-height: 170px; display: flex; flex-direction: column; justify-content: space-between;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+.dojo-bank-card:hover {
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: 0 20px 50px -18px rgba(0,0,0,0.7);
+}
+.dojo-bank-male { background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460); border: 1px solid rgba(77,159,216,0.15); }
+.dojo-bank-female { background: linear-gradient(135deg, #2d1b3d, #3d1f6d, #5b2d8e); border: 1px solid rgba(160,108,213,0.15); }
+.dojo-bank-chip {
+  width: 38px; height: 28px; border-radius: 5px;
+  background: linear-gradient(135deg, #d4af37, #f0d060); margin-bottom: 14px;
+}
+.dojo-bank-number {
+  font-size: 19px; font-weight: 700; letter-spacing: 2.5px;
+  direction: ltr; text-align: left; font-family: 'Courier New', monospace;
+  margin-bottom: 14px;
+}
+.dojo-bank-name { font-weight: 700; font-size: 13.5px; }
+.dojo-bank-label { font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 3px; }
+.dojo-copy-btn {
+  position: absolute; bottom: 14px; left: 14px;
+  background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1);
+  color: #fff; padding: 5px 12px; border-radius: 6px; font-size: 11px;
+  cursor: pointer; transition: 0.2s; font-weight: 600;
+}
+.dojo-copy-btn:hover { background: rgba(255,255,255,0.16); }
+.dojo-pricing-note {
+  text-align: center; margin-top: 18px; font-size: 12.5px; color: var(--muted);
+  padding: 12px; background: rgba(255,255,255,0.02); border-radius: 10px;
+  border: 1px dashed rgba(255,255,255,0.05);
+}
+
+/* ==================== FAQ ==================== */
+
+.dojo-faq { max-width: 740px; display: flex; flex-direction: column; gap: 8px; }
+.dojo-faq-item {
+  background: rgba(16,16,22,0.6); border: 1px solid rgba(255,255,255,0.04);
+  border-radius: 12px; overflow: hidden; transition: border-color 0.25s;
+}
+.dojo-faq-item.open { border-color: rgba(226,72,61,0.15); }
+.dojo-faq-q {
+  width: 100%; padding: 14px 18px; text-align: right;
+  background: none; border: none; color: var(--text);
+  font-size: 13.5px; font-weight: 600; cursor: pointer;
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+}
+.dojo-faq-q:hover { color: var(--red-2); }
+.dojo-faq-arrow { font-size: 13px; transition: transform 0.25s; flex: none; }
+.dojo-faq-item.open .dojo-faq-arrow { transform: rotate(-90deg); }
+.dojo-faq-a {
+  max-height: 0; overflow: hidden; transition: max-height 0.3s ease, padding 0.3s;
+  padding: 0 18px;
+}
+.dojo-faq-item.open .dojo-faq-a { max-height: 300px; padding: 0 18px 14px; }
+.dojo-faq-a p { margin: 0; font-size: 12.5px; color: var(--muted); line-height: 2.1; }
+
+/* ==================== پشتیبانی ==================== */
+
+.dojo-support-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px;
+  max-width: 600px;
+}
+.dojo-support-card {
+  padding: 24px; border-radius: 14px;
+  background: rgba(16,16,22,0.6); border: 1px solid rgba(255,255,255,0.05);
+  transition: all 0.25s;
+}
+.dojo-support-card:hover { transform: translateY(-3px); border-color: rgba(255,255,255,0.08); }
+.dojo-support-card h3 { font-size: 14px; font-weight: 700; margin: 0 0 6px; }
+.dojo-support-card p { font-size: 12px; color: var(--muted); margin: 0 0 14px; }
+.dojo-support-phone { margin-top: 10px; font-size: 12px; color: var(--gold); direction: ltr; }
+
+/* ==================== ورود / ثبت‌نام ==================== */
+
+.dojo-auth-section {
+  padding: 60px 28px; max-width: 1200px; margin: 0 auto;
+  display: flex; justify-content: center; scroll-margin-top: 70px;
+}
+.dojo-auth-card {
+  width: 100%; max-width: 520px;
+  background: linear-gradient(160deg, rgba(18,18,26,0.85), rgba(10,10,16,0.92));
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 20px; padding: 28px;
+  box-shadow: 0 30px 70px -25px rgba(0,0,0,0.6);
+}
+.dojo-auth-tabs {
+  display: flex; gap: 4px; background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.05); border-radius: 10px;
+  padding: 4px; margin-bottom: 20px;
+}
+.dojo-auth-tabs button {
+  flex: 1; padding: 9px; border-radius: 8px; border: none;
+  background: transparent; cursor: pointer; font-weight: 700;
+  color: var(--muted); transition: 0.2s; font-size: 13.5px;
+}
+.dojo-auth-tabs button.active { background: rgba(226,72,61,0.1); color: var(--red-2); }
+
+.dojo-form { display: flex; flex-direction: column; gap: 12px; }
+.dojo-field { display: flex; flex-direction: column; gap: 5px; }
+.dojo-field label { font-size: 12px; color: var(--muted); font-weight: 600; }
+.dojo-field .req { color: var(--red); }
+.dojo-field input, .dojo-field select {
+  background: rgba(8,8,12,0.5); border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 10px; padding: 11px 13px; color: var(--text);
+  outline: none; transition: 0.2s; width: 100%; font-size: 13.5px;
+}
+.dojo-field input:focus, .dojo-field select:focus {
+  border-color: var(--red); box-shadow: 0 0 0 2px rgba(226,72,61,0.1);
+}
+.dojo-field input::placeholder { color: #333345; }
+.dojo-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.dojo-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+
+/* ==================== فوتر ==================== */
+
+.dojo-footer {
+  padding: 24px 28px; border-top: 1px solid rgba(255,255,255,0.04); margin-top: 30px;
+}
+.dojo-footer-inner {
+  max-width: 1200px; margin: 0 auto;
+  display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
+}
+.dojo-footer-brand strong { font-size: 14px; }
+.dojo-footer-links { display: flex; gap: 18px; }
+.dojo-footer-links a { font-size: 12.5px; color: var(--muted); }
+.dojo-footer-links a:hover { color: #fff; }
+
+/* ==================== ریسپانسیو ==================== */
+
+@media (max-width: 900px) {
+  .dojo-hero { grid-template-columns: 1fr; min-height: auto; padding: 30px 18px 50px; }
+  .dojo-hero-visual { display: none; }
+  .dojo-scene { transform: translate(-50%, -50%) scale(0.6); }
+}
+@media (max-width: 700px) {
+  .dojo-nav { padding: 10px 14px; }
+  .dojo-links { display: none; position: absolute; top: 100%; left: 0; right: 0;
+    background: rgba(8,8,12,0.96); backdrop-filter: blur(16px);
+    flex-direction: column; padding: 14px; gap: 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .dojo-links.open { display: flex; }
+  .dojo-menu-btn { display: block; }
+  .dojo-section { padding: 40px 16px; }
+  .dojo-grid-2, .dojo-grid-3 { grid-template-columns: 1fr; }
+  .dojo-pricing-grid { grid-template-columns: 1fr 1fr; }
+  .dojo-cards-grid { grid-template-columns: 1fr; }
+  .dojo-auth-card { padding: 20px 16px; }
+}
+@media (max-width: 420px) {
+  .dojo-pricing-grid { grid-template-columns: 1fr; }
+}

@@ -218,6 +218,21 @@ CREATE INDEX IF NOT EXISTS idx_assign_user ON plan_assignments(user_id, status);
 CREATE INDEX IF NOT EXISTS idx_notif_user ON notifications(user_id, read);
 `);
 
+/* -------- مهاجرت: افزودن ستون discipline در صورت نبود -------- */
+try {
+  const cols = all("PRAGMA table_info('users')").map(c => c.name);
+  if (!cols.includes('discipline')) {
+    db.exec("ALTER TABLE users ADD COLUMN discipline TEXT DEFAULT NULL;");
+  }
+} catch { /* نادیده */ }
+
+try {
+  const cols2 = all("PRAGMA table_info('plans')").map(c => c.name);
+  if (!cols2.includes('sport')) {
+    db.exec("ALTER TABLE plans ADD COLUMN sport TEXT DEFAULT NULL;");
+  }
+} catch { /* نادیده */ }
+
 /* -------------------------------- رمز عبور -------------------------------- */
 
 function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) {
@@ -266,6 +281,7 @@ function publicUser(u) {
     join_date: u.join_date,
     notes: u.notes,
     avatar_color: u.avatar_color,
+    discipline: u.discipline || null,
     active: !!u.active,
     created_at: u.created_at
   };
@@ -278,8 +294,8 @@ function createUser(data, role = 'member') {
   const color = data.avatar_color || colors[(data.full_name || 'a').length % colors.length];
   const info = run(
     `INSERT INTO users (role, full_name, username, phone, password_hash, password_salt, gender, birth_date, age,
-      weight_kg, height_cm, belt, style, experience, join_date, notes, avatar_color, active, created_at, updated_at)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      weight_kg, height_cm, belt, style, experience, join_date, notes, avatar_color, active, created_at, updated_at, discipline)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     role,
     String(data.full_name || '').trim(),
     String(data.username || '').trim().toLowerCase(),
@@ -292,14 +308,15 @@ function createUser(data, role = 'member') {
     data.weight_kg ? Number(data.weight_kg) : null,
     data.height_cm ? Number(data.height_cm) : null,
     data.belt || 'سفید',
-    data.style || null,
+    data.style || data.discipline || null,
     data.experience || null,
     data.join_date || ts.slice(0, 10),
     data.notes || null,
     color,
     data.active === undefined ? 1 : (data.active ? 1 : 0),
     ts,
-    ts
+    ts,
+    data.discipline || data.style || null
   );
   return findById(info.lastInsertRowid);
 }
@@ -308,7 +325,7 @@ function updateUser(id, data) {
   const fields = [];
   const values = [];
   const allowed = ['full_name', 'phone', 'gender', 'birth_date', 'age', 'weight_kg', 'height_cm',
-    'belt', 'style', 'experience', 'notes', 'active', 'avatar_color', 'join_date'];
+    'belt', 'style', 'experience', 'notes', 'active', 'avatar_color', 'join_date', 'discipline'];
   for (const key of allowed) {
     if (data[key] !== undefined) {
       fields.push(`${key} = ?`);
@@ -488,12 +505,12 @@ function markNotificationsRead(userId) {
 
 /* -------------------------------- تمرینات -------------------------------- */
 
-function createPlan({ author_id, title, body, category, difficulty, starts_on, due_on, duration, targets = [], all_members = false }) {
+function createPlan({ author_id, title, body, category, difficulty, starts_on, due_on, duration, targets = [], all_members = false, sport = null }) {
   const info = run(
-    `INSERT INTO plans (author_id, title, body, category, difficulty, starts_on, due_on, duration, target_all, created_at)
-     VALUES (?,?,?,?,?,?,?,?,?,?)`,
+    `INSERT INTO plans (author_id, title, body, category, difficulty, starts_on, due_on, duration, target_all, created_at, sport)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
     author_id || null, title, body || '', category || 'تمرین', difficulty || 'متوسط',
-    starts_on || null, due_on || null, duration || null, all_members || targets.length === 0 ? 1 : 0, now()
+    starts_on || null, due_on || null, duration || null, all_members || targets.length === 0 ? 1 : 0, now(), sport || null
   );
   const id = Number(info.lastInsertRowid);
   const ids = all_members || targets.length === 0 ? listMembers({ active: 1 }).map((m) => m.id) : targets;

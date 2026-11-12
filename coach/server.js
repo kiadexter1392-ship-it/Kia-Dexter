@@ -80,7 +80,10 @@ app.get('/api/config', (ctx) => {
     jalaliMonth: j.jm,
     memberPort: MEMBER_PORT,
     months: JALALI_MONTHS,
-    belts: ['سفید', 'زرد', 'نارنجی', 'سبز', 'آبی', 'قهوه‌ای', 'مشکی دان ۱', 'مشکی دان ۲', 'مشکی دان ۳', 'مشکی دان ۴']
+    belts: ['سفید', 'زرد', 'نارنجی', 'سبز', 'آبی', 'قهوه‌ای', 'مشکی دان ۱', 'مشکی دان ۲', 'مشکی دان ۳', 'مشکی دان ۴'],
+    disciplines: ['بوکس', 'کیوکوشین', 'کاراته', 'کراسفیت', 'ژیمناستیک', 'موی تای'],
+    supportPhone: '+989016399804',
+    baleLink: 'https://ble.ir/+989016399804'
   });
 });
 
@@ -311,7 +314,8 @@ app.post('/api/plans', (ctx) => {
     due_on: b.due_on,
     duration: b.duration,
     targets,
-    all_members: !!b.all_members
+    all_members: !!b.all_members,
+    sport: b.sport || null
   });
   db.logActivity(u.id, u.full_name, 'تمرین ارسال کرد', `${plan.title} — ${plan.total} شاگرد`);
   ctx.json({ ok: true, plan });

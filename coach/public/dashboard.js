@@ -316,8 +316,13 @@
             <div class="field"><label>جنسیت</label>
               <select name="gender"><option value="">—</option><option ${existing && existing.gender === 'مرد' ? 'selected' : ''}>مرد</option><option ${existing && existing.gender === 'زن' ? 'selected' : ''}>زن</option></select>
             </div>
-            <div class="field"><label>سبک تمرینی</label><input name="style" value="${esc(existing ? existing.style || '' : '')}" placeholder="کیوکوشین"></div>
-            <div class="field"><label>سابقه</label><input name="experience" value="${esc(existing ? existing.experience || '' : '')}" placeholder="۲ سال"></div>
+            <div class="field"><label>رشته ورزشی</label>
+              <select name="discipline">
+                <option value="">—</option>
+                ${(CFG.disciplines || ['بوکس', 'کیوکوشین', 'کاراته', 'کراسفیت']).map((d) => `<option ${(existing && (existing.discipline || existing.style) === d) ? 'selected' : ''}>${esc(d)}</option>`).join('')}
+              </select>
+            </div>
+            <div class="field"><label>سابقه</label><input name="experience" value="${esc(existing ? existing.experience || '' : '')}"></div>
           </div>
           ${isEdit ? '' : `<div class="field"><label>رمز عبور اولیه</label><input name="password" class="en" value="123456"><div class="tiny">شاگرد می‌تواند بعداً از پنل خودش رمز را عوض کند.</div></div>`}
           <div class="field"><label>یادداشت مربی</label><textarea name="notes" placeholder="مثلاً: روی انعطاف بیشتر کار کند">${esc(existing ? existing.notes || '' : '')}</textarea></div>
@@ -536,12 +541,21 @@
             <div class="field"><label>مدت زمان</label><input name="duration" value="${esc(existing ? existing.duration || '' : '')}" placeholder="۶۰ دقیقه"></div>
           </div>
           <div class="grid-3">
+            <div class="field"><label>رشته ورزشی</label>
+              <select name="sport">
+                <option value="">—</option>
+                ${(CFG.disciplines || ['بوکس', 'کیوکوشین', 'کاراته', 'کراسفیت']).map((d) => `<option ${existing && existing.sport === d ? 'selected' : ''}>${esc(d)}</option>`).join('')}
+              </select>
+            </div>
             <div class="field"><label>دسته</label>
               <select name="category">${['تمرین', 'بدنسازی', 'تکنیک', 'کاتا', 'مبارزه', 'کشش و انعطاف'].map((c) => `<option ${existing && existing.category === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select>
             </div>
             <div class="field"><label>سختی</label>
               <select name="difficulty">${['سبک', 'متوسط', 'سنگین'].map((c) => `<option ${existing && existing.difficulty === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select>
             </div>
+          </div>
+          <div class="grid-2">
+            <div class="field"><label>مدت زمان</label><input name="duration" value="${esc(existing ? existing.duration || '' : '')}" placeholder="۶۰ دقیقه"></div>
             <div class="field"><label>مهلت انجام (شمسی)</label>${jalaliDateField('due', existing ? existing.due_on : null)}</div>
           </div>
           <div class="field"><label>شرح تمرین</label>
@@ -1131,8 +1145,8 @@
               <div class="field"><label>نام کاربری</label><input class="en" value="${esc(ME.username)}" disabled></div>
             </div>
             <div class="grid-2">
-              <div class="field"><label>شماره تماس</label><input name="phone" class="en" value="${esc(ME.phone || '')}"></div>
               <div class="field"><label>درجه / کمربند</label><input name="belt" value="${esc(ME.belt || '')}"></div>
+              <div class="field"><label>سبک</label><input name="style" value="${esc(ME.style || '')}"></div>
             </div>
             <div class="field"><label>درباره مربی</label><textarea name="notes" rows="3">${esc(ME.notes || '')}</textarea></div>
             <div><button class="btn primary" type="submit">ذخیره</button></div>
