@@ -251,12 +251,18 @@
       if (err) {
         errorMsg.textContent = err;
         errorMsg.classList.remove('hidden');
-        show('register');
+        // اگه خطای ورود بود، تب ورود رو نشون بده
+        if (err.includes('نام کاربری') || err.includes('رمز') || err.includes('غیرفعال')) {
+          show('login');
+        } else {
+          show('register');
+        }
         document.getElementById('auth').scrollIntoView({ behavior: 'smooth' });
       }
       if (params.get('error') === 'bad-token' || params.get('error') === 'expired') {
         errorMsg.textContent = 'لینک ورود منقضی شده';
         errorMsg.classList.remove('hidden');
+        show('login');
       }
 
       UI.loadConfig().then(function (cfg) {
