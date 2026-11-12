@@ -155,7 +155,7 @@ function createServer(options = {}) {
       body,
       cookies: cookieJar,
       setCookie(value, opts = {}) {
-        const parts = [`${cookieName}=${encodeURIComponent(value)}`, 'Path=/', 'HttpOnly', 'SameSite=Lax'];
+        const parts = [`${cookieName}=${encodeURIComponent(value)}`, 'Path=/', 'SameSite=None', 'Secure'];
         if (opts.maxAgeSeconds) parts.push(`Max-Age=${opts.maxAgeSeconds}`);
         if (opts.expires) parts.push(`Expires=${opts.expires}`);
         setCookies.push(parts.join('; '));

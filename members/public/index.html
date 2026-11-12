@@ -301,7 +301,7 @@
           method: 'POST',
           body: { username: document.getElementById('lUser').value, password: document.getElementById('lPass').value }
         }).then(function () {
-          setTimeout(function () { location.href = '/panel'; }, 300);
+          window.location.assign('/panel');
         }).catch(function (err) {
           UI.toast(err.message, 'warn', 5000);
           busy(loginBtn, false);
@@ -316,8 +316,9 @@
         new FormData(registerForm).forEach(function (v, k) { data[k] = v; });
         if (data.password !== data.password2) { UI.toast('تکرار رمز مطابقت ندارد', 'warn'); return; }
         busy(registerBtn, true, '...');
-        UI.api('/api/register', { method: 'POST', body: data }).then(function () {
-          setTimeout(function () { location.href = '/panel'; }, 300);
+        UI.api('/api/register', { method: 'POST', body: data }).then(function (result) {
+          UI.toast('ثبت‌نام انجام شد', 'ok');
+          window.location.assign('/panel');
         }).catch(function (err) {
           UI.toast(err.message, 'warn', 5500);
           busy(registerBtn, false);
