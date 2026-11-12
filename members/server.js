@@ -11,6 +11,7 @@ const { seedIfEmpty, DEMO } = require('../shared/seed');
 const { JALALI_MONTHS, todayJalali, formatJalali, faNum } = require('../shared/jalali');
 
 const PORT = Number(process.env.MEMBER_PORT || 4174);
+const USE_PROXY = !!process.env.PORT;
 const COACH_PORT = Number(process.env.COACH_PORT || 4173);
 const SITE = 'member';
 const PUBLIC_DIR = path.join(__dirname, 'public');
