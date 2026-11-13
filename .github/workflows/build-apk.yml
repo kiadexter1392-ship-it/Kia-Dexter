@@ -38,25 +38,25 @@ jobs:
         working-directory: mobile
         run: npx expo prebuild --platform android --no-install
 
-      - name: Pin Kotlin version
+      - name: Fix Kotlin version
         working-directory: mobile/android
         run: |
-          sed -i "s/kotlinVersion = .*/kotlinVersion = '1.9.25'/" build.gradle 2>/dev/null
-          grep -r "kotlin" build.gradle | head -5
+          # Set Kotlin version in project build.gradle
+          sed -i "s/kotlinVersion = '[^']*'/kotlinVersion = '1.9.25'/" build.gradle
+          # Also set in gradle.properties as fallback
+          echo "kotlinVersion=1.9.25" >> gradle.properties
+          grep -n "kotlin" build.gradle | head -10
 
       - name: Build Debug APK
         working-directory: mobile/android
         run: ./gradlew assembleDebug --no-daemon 2>&1 | tee /tmp/build.log; exit ${PIPESTATUS[0]}
-
-      - name: Extract Kotlin errors
-        if: failure()
-        run: grep -E "^e:|error:|Error" /tmp/build.log | head -50
 
       - name: Find APK
         id: apk
         run: |
           APK=$(find mobile/android -name "*.apk" -type f 2>/dev/null | head -1)
           echo "path=$APK" >> $GITHUB_OUTPUT
+          echo "Found: $APK"
 
       - name: Upload APK
         if: steps.apk.outputs.path != ''
