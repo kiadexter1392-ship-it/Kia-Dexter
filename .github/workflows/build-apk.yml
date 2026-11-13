@@ -38,21 +38,68 @@ jobs:
         working-directory: mobile
         run: npx expo prebuild --platform android --no-install
 
-      - name: Fix Kotlin compose compatibility
+      - name: Fix Kotlin version
+        working-directory: mobile/android
+        run: echo "android.kotlinVersion=1.9.24" >> gradle.properties
+
+      - name: Create app icon
         working-directory: mobile/android
         run: |
-          # Add compose compiler option to suppress kotlin version check
-          echo "android.kotlinVersion=1.9.24" >> gradle.properties
-          # Also add compose compiler option
-          cat >> gradle.properties << 'PROPS'
-          android.experimental.enableNewResourceShrinker=false
-          kotlin.suppressKotlinVersionCompatibilityCheck=true
-          PROPS
-          cat gradle.properties
+          mkdir -p app/src/main/res/mipmap-mdpi
+          mkdir -p app/src/main/res/mipmap-hdpi
+          mkdir -p app/src/main/res/mipmap-xhdpi
+          mkdir -p app/src/main/res/mipmap-xxhdpi
+          mkdir -p app/src/main/res/mipmap-xxxhdpi
+          # Create simple PNG icons (1x1 gold pixel expanded)
+          for size in 48 72 96 144 192; do
+            python3 -c "
+import struct, zlib
+def create_png(size, path):
+    # Simple gold circle PNG
+    pixels = []
+    for y in range(size):
+        row = []
+        for x in range(size):
+            cx, cy = size//2, size//2
+            r = size//2 - 2
+            dist = ((x-cx)**2 + (y-cy)**2)**0.5
+            if dist <= r:
+                row.extend([212, 168, 83, 255])  # Gold
+            else:
+                row.extend([0, 0, 0, 0])  # Transparent
+        pixels.append(bytes([0] + row))
+    raw = b''.join(pixels)
+    def chunk(ctype, data):
+        c = ctype + data
+        return struct.pack('>I', len(data)) + c + struct.pack('>I', zlib.crc32(c) & 0xffffffff)
+    png = b'\x89PNG\r\n\x1a\n'
+    png += chunk(b'IHDR', struct.pack('>IIBBBBB', size, size, 8, 6, 0, 0, 0))
+    png += chunk(b'IDAT', zlib.compress(raw))
+    png += chunk(b'IEND', b'')
+    with open(path, 'wb') as f: f.write(png)
+create_png($size, 'app/src/main/res/mipmap-mdpi/ic_launcher.png')
+" 2>/dev/null
+          done
+          cp app/src/main/res/mipmap-mdpi/ic_launcher.png app/src/main/res/mipmap-mdpi/ic_launcher_round.png
+          cp app/src/main/res/mipmap-mdpi/ic_launcher.png app/src/main/res/mipmap-hdpi/ic_launcher.png
+          cp app/src/main/res/mipmap-mdpi/ic_launcher.png app/src/main/res/mipmap-hdpi/ic_launcher_round.png
+          cp app/src/main/res/mipmap-mdpi/ic_launcher.png app/src/main/res/mipmap-xhdpi/ic_launcher.png
+          cp app/src/main/res/mipmap-mdpi/ic_launcher.png app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
+          cp app/src/main/res/mipmap-mdpi/ic_launcher.png app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+          cp app/src/main/res/mipmap-mdpi/ic_launcher.png app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
+          cp app/src/main/res/mipmap-mdpi/ic_launcher.png app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+          cp app/src/main/res/mipmap-mdpi/ic_launcher.png app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
+          echo "Icons created"
 
-      - name: Build Debug APK
+      - name: Bundle JS for release
+        working-directory: mobile
+        run: |
+          mkdir -p android/app/src/main/assets
+          npx react-native bundle --platform android --dev false --entry-file App.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res/
+
+      - name: Build APK
         working-directory: mobile/android
-        run: ./gradlew assembleDebug --no-daemon -PsuppressKotlinVersionCompatibilityCheck=true 2>&1 | tee /tmp/build.log; exit ${PIPESTATUS[0]}
+        run: ./gradlew assembleDebug --no-daemon 2>&1 | tee /tmp/build.log; exit ${PIPESTATUS[0]}
 
       - name: Find APK
         id: apk
