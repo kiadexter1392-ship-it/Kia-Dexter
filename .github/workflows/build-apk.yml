@@ -38,21 +38,42 @@ jobs:
         working-directory: mobile
         run: npx expo prebuild --platform android --no-install
 
+      - name: List build outputs
+        working-directory: mobile/android
+        run: |
+          echo "=== build/outputs ==="
+          find app/build/outputs -type f 2>/dev/null || echo "not found"
+          echo "=== app/build ==="
+          find app/build -name "*.apk" -o -name "*.aab" 2>/dev/null || echo "none"
+
       - name: Build Debug APK
         working-directory: mobile/android
         run: |
           chmod +x ./gradlew
           ./gradlew assembleDebug --no-daemon --info 2>&1 | tail -100
 
-      - name: Find APK
-        id: find-apk
+      - name: Find APK or AAB
+        id: find-artifact
+        working-directory: mobile/android
         run: |
-          APK=$(find /home/runner/work -name "*debug*.apk" 2>/dev/null | head -1)
-          echo "apk_path=$APK" >> $GITHUB_OUTPUT
-          echo "Found: $APK"
+          APK=$(find . -name "*.apk" -type f 2>/dev/null | head -1)
+          AAB=$(find . -name "*.aab" -type f 2>/dev/null | head -1)
+          if [ -n "$APK" ]; then
+            echo "artifact_path=$APK" >> $GITHUB_OUTPUT
+            echo "type=apk" >> $GITHUB_OUTPUT
+            echo "Found APK: $APK"
+          elif [ -n "$AAB" ]; then
+            echo "artifact_path=$AAB" >> $GITHUB_OUTPUT
+            echo "type=aab" >> $GITHUB_OUTPUT
+            echo "Found AAB: $AAB"
+          else
+            echo "No artifact found!"
+            find . -type f -name "*.apk" -o -name "*.aab" 2>/dev/null
+            exit 1
+          fi
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: ArslanDojo-debug.apk
-          path: ${{ steps.find-apk.outputs.apk_path }}
+          name: ArslanDojo-${{ steps.find-artifact.outputs.type }}
+          path: ${{ steps.find-artifact.outputs.artifact_path }}
