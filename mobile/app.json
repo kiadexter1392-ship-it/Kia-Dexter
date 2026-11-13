@@ -8,6 +8,7 @@
     "splash": {
       "backgroundColor": "#1a1a1a"
     },
+    "icon": "./src/assets/icon.png",
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
