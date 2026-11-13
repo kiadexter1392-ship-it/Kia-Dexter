@@ -21,72 +21,24 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Setup Java 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: Set ANDROID_HOME
-        run: echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> $GITHUB_ENV
-
       - name: Install dependencies
         working-directory: mobile
         run: npm install
 
-      - name: Generate native Android project
+      - name: Install EAS CLI
+        run: npm install -g eas-cli
+
+      - name: Build with EAS
         working-directory: mobile
-        run: npx expo prebuild --platform android --no-install
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: eas build --platform android --profile preview --non-interactive --no-wait
 
-      - name: Fix Kotlin version
-        working-directory: mobile/android
-        run: echo "android.kotlinVersion=1.9.24" >> gradle.properties
-
-      - name: Add signing config
-        working-directory: mobile/android/app
+      - name: Get Build Status
+        working-directory: mobile
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
-          # Add debug signing config for release builds
-          cat >> build.gradle << 'GRADLE'
-
-  signingConfigs {
-      debug {
-          storeFile file('debug.keystore')
-          storePassword 'android'
-          keyAlias 'androiddebugkey'
-          keyPassword 'android'
-      }
-      release {
-          storeFile file('debug.keystore')
-          storePassword 'android'
-          keyAlias 'androiddebugkey'
-          keyPassword 'android'
-      }
-  }
-GRADLE
-          # Patch buildTypes to use signing
-          sed -i 's/buildTypes {/buildTypes {\n        release {\n            signingConfig signingConfigs.release\n            minifyEnabled false\n        }/' build.gradle
-
-      - name: Build APK
-        working-directory: mobile/android
-        run: ./gradlew assembleRelease --no-daemon -x lint 2>&1 | tee /tmp/build.log; exit ${PIPESTATUS[0]}
-
-      - name: Find APK
-        id: apk
-        run: |
-          APK=$(find mobile/android -name "*.apk" -type f 2>/dev/null | head -1)
-          echo "path=$APK" >> $GITHUB_OUTPUT
-          echo "Found: $APK"
-
-      - name: Upload APK
-        if: steps.apk.outputs.path != ''
-        uses: actions/upload-artifact@v4
-        with:
-          name: ArslanDojo-release.apk
-          path: ${{ steps.apk.outputs.path }}
-
-      - name: Upload build log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-log.txt
-          path: /tmp/build.log
+          BUILD_ID=$(eas build:list --limit 1 --json | jq -r '.[0].id')
+          echo "Build ID: $BUILD_ID"
+          echo "Check status at: https://expo.dev/accounts/kia.dexter/projects/arslan-dojo/builds/$BUILD_ID"
