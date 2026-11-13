@@ -38,24 +38,21 @@ jobs:
         working-directory: mobile
         run: npx expo prebuild --platform android --no-install
 
-      - name: Create local.properties
-        working-directory: mobile/android
-        run: echo "sdk.dir=/usr/local/lib/android/sdk" > local.properties
-
       - name: Build Debug APK
         working-directory: mobile/android
         run: |
           chmod +x ./gradlew
           ./gradlew assembleDebug --no-daemon
 
-      - name: Find APK
-        working-directory: mobile/android
-        run: find . -name "*.apk" -type f
+      - name: Find and copy APK
+        run: |
+          cd mobile/android
+          APK_PATH=$(find . -name "*debug*.apk" -type f | head -1)
+          echo "Found APK: $APK_PATH"
+          cp "$APK_PATH" ../ArslanDojo-debug.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: ArslanDojo-debug.apk
-          path: |
-            mobile/android/app/build/outputs/**/*.apk
-            mobile/android/**/*.apk
+          path: mobile/ArslanDojo-debug.apk
