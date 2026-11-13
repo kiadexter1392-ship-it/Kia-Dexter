@@ -38,13 +38,19 @@ jobs:
         working-directory: mobile
         run: npx expo prebuild --platform android --no-install
 
+      - name: Pin Kotlin version
+        working-directory: mobile/android
+        run: |
+          sed -i "s/kotlinVersion = .*/kotlinVersion = '1.9.25'/" build.gradle 2>/dev/null
+          grep -r "kotlin" build.gradle | head -5
+
       - name: Build Debug APK
         working-directory: mobile/android
-        run: ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee /tmp/build.log; echo "EXIT:${PIPESTATUS[0]}"
+        run: ./gradlew assembleDebug --no-daemon 2>&1 | tee /tmp/build.log; exit ${PIPESTATUS[0]}
 
-      - name: Save build log
-        if: always()
-        run: cp /tmp/build.log build-log.txt 2>/dev/null || echo "no log"
+      - name: Extract Kotlin errors
+        if: failure()
+        run: grep -E "^e:|error:|Error" /tmp/build.log | head -50
 
       - name: Find APK
         id: apk
@@ -64,4 +70,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: build-log.txt
-          path: build-log.txt
+          path: /tmp/build.log
