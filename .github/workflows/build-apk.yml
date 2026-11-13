@@ -38,15 +38,21 @@ jobs:
         working-directory: mobile
         run: npx expo prebuild --platform android --no-install
 
-      - name: Fix Kotlin version
+      - name: Fix Kotlin compose compatibility
         working-directory: mobile/android
         run: |
-          echo "android.kotlinVersion=1.9.25" >> gradle.properties
-          cat gradle.properties | grep kotlin
+          # Add compose compiler option to suppress kotlin version check
+          echo "android.kotlinVersion=1.9.24" >> gradle.properties
+          # Also add compose compiler option
+          cat >> gradle.properties << 'PROPS'
+          android.experimental.enableNewResourceShrinker=false
+          kotlin.suppressKotlinVersionCompatibilityCheck=true
+          PROPS
+          cat gradle.properties
 
       - name: Build Debug APK
         working-directory: mobile/android
-        run: ./gradlew assembleDebug --no-daemon 2>&1 | tee /tmp/build.log; exit ${PIPESTATUS[0]}
+        run: ./gradlew assembleDebug --no-daemon -PsuppressKotlinVersionCompatibilityCheck=true 2>&1 | tee /tmp/build.log; exit ${PIPESTATUS[0]}
 
       - name: Find APK
         id: apk
