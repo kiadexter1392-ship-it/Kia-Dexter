@@ -42,7 +42,31 @@ jobs:
         working-directory: mobile/android
         run: echo "android.kotlinVersion=1.9.24" >> gradle.properties
 
-      - name: Build Release APK
+      - name: Add signing config
+        working-directory: mobile/android/app
+        run: |
+          # Add debug signing config for release builds
+          cat >> build.gradle << 'GRADLE'
+
+  signingConfigs {
+      debug {
+          storeFile file('debug.keystore')
+          storePassword 'android'
+          keyAlias 'androiddebugkey'
+          keyPassword 'android'
+      }
+      release {
+          storeFile file('debug.keystore')
+          storePassword 'android'
+          keyAlias 'androiddebugkey'
+          keyPassword 'android'
+      }
+  }
+GRADLE
+          # Patch buildTypes to use signing
+          sed -i 's/buildTypes {/buildTypes {\n        release {\n            signingConfig signingConfigs.release\n            minifyEnabled false\n        }/' build.gradle
+
+      - name: Build APK
         working-directory: mobile/android
         run: ./gradlew assembleRelease --no-daemon -x lint 2>&1 | tee /tmp/build.log; exit ${PIPESTATUS[0]}
 
