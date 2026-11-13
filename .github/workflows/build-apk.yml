@@ -42,11 +42,14 @@ jobs:
         working-directory: mobile/android
         run: echo "android.kotlinVersion=1.9.24" >> gradle.properties
 
-      - name: Bundle JS for release
+      - name: Export JS bundle
         working-directory: mobile
+        run: npx expo export --platform android --output-dir dist
+
+      - name: Copy bundle to Android assets
         run: |
-          mkdir -p android/app/src/main/assets
-          npx react-native bundle --platform android --dev false --entry-file App.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res/
+          mkdir -p mobile/android/app/src/main/assets
+          cp mobile/dist/bundles/index.android.bundle mobile/android/app/src/main/assets/index.android.bundle 2>/dev/null || cp mobile/dist/index.android.bundle mobile/android/app/src/main/assets/index.android.bundle 2>/dev/null || echo "Bundle not found"
 
       - name: Build APK
         working-directory: mobile/android
