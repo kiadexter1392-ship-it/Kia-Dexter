@@ -38,28 +38,30 @@ jobs:
         working-directory: mobile
         run: npx expo prebuild --platform android --no-install
 
-      - name: Set Gradle JVM args
-        working-directory: mobile/android
-        run: echo "org.gradle.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=512m" >> gradle.properties
-
       - name: Build Debug APK
         working-directory: mobile/android
-        run: ./gradlew assembleDebug --no-daemon --max-workers=1 --stacktrace
+        run: ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee /tmp/build.log; echo "EXIT:${PIPESTATUS[0]}"
 
-      - name: Find and upload APK
+      - name: Save build log
+        if: always()
+        run: cp /tmp/build.log build-log.txt 2>/dev/null || echo "no log"
+
+      - name: Find APK
+        id: apk
         run: |
-          APK=$(find mobile/android -name "*.apk" -type f | head -1)
-          echo "APK found: $APK"
-          if [ -z "$APK" ]; then
-            echo "ERROR: No APK found!"
-            find mobile/android -type f -name "*.apk" 2>/dev/null
-            find mobile/android/app/build -type f 2>/dev/null | head -20
-            exit 1
-          fi
-          cp "$APK" ArslanDojo-debug.apk
+          APK=$(find mobile/android -name "*.apk" -type f 2>/dev/null | head -1)
+          echo "path=$APK" >> $GITHUB_OUTPUT
 
       - name: Upload APK
+        if: steps.apk.outputs.path != ''
         uses: actions/upload-artifact@v4
         with:
           name: ArslanDojo-debug.apk
-          path: ArslanDojo-debug.apk
+          path: ${{ steps.apk.outputs.path }}
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log.txt
+          path: build-log.txt
