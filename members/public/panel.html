@@ -2,9 +2,15 @@
 <html lang="fa" dir="rtl">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#c9a44e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ارسلان دوجو">
   <title>پنل شاگرد — باشگاه آنلاین ارسلان دوجو</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'><circle cx='24' cy='24' r='20' fill='%23d9a441'/></svg>">
+  <link rel="apple-touch-icon" href="/ui/icons/icon-192.png">
+  <link rel="manifest" href="/manifest.json">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css">
   <link rel="stylesheet" href="/ui/style.css">
   <link rel="stylesheet" href="/ui/shell.css">
@@ -38,6 +44,8 @@
       <button class="nav-item" data-view="plans"><span class="ic">⚑</span> تمرینات من <span class="count hidden" id="cntPlans"></span></button>
       <button class="nav-item" data-view="progress"><span class="ic">▦</span> جدول پیشرفت</button>
       <button class="nav-item" data-view="news"><span class="ic">✦</span> اطلاعیه‌ها <span class="count hidden" id="cntNews"></span></button>
+      <button class="nav-item" data-view="payment"><span class="ic">💳</span> پرداخت شهریه</button>
+      <button class="nav-item" data-view="support"><span class="ic">📞</span> پشتیبانی</button>
       <button class="nav-item" data-view="profile"><span class="ic">☺</span> پروفایل من</button>
 
       <div class="side-foot">
@@ -64,6 +72,8 @@
       <section class="section" id="view-plans"></section>
       <section class="section" id="view-progress"></section>
       <section class="section" id="view-news"></section>
+      <section class="section" id="view-payment"></section>
+      <section class="section" id="view-support"></section>
       <section class="section" id="view-profile"></section>
     </main>
   </div>
@@ -71,5 +81,10 @@
   <script src="/ui/jalali.browser.js"></script>
   <script src="/ui/ui.js"></script>
   <script src="/panel.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(function(e) {});
+    }
+  </script>
 </body>
 </html>

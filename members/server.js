@@ -5,12 +5,13 @@
  */
 
 const path = require('node:path');
-const { createServer } = require('../shared/server');
+const { createServer, rateLimit, sanitize } = require('../shared/server');
 const db = require('../shared/db');
 const { seedIfEmpty, DEMO } = require('../shared/seed');
 const { JALALI_MONTHS, todayJalali, formatJalali, faNum } = require('../shared/jalali');
 
 const PORT = Number(process.env.MEMBER_PORT || 4174);
+const USE_PROXY = !!process.env.PORT;
 const COACH_PORT = Number(process.env.COACH_PORT || 4173);
 const SITE = 'member';
 const PUBLIC_DIR = path.join(__dirname, 'public');
@@ -67,7 +68,7 @@ app.get('/impersonate', (ctx) => {
   if (!u) return ctx.redirect('/?error=bad-token');
   db.run('UPDATE impersonations SET used_at = ? WHERE token = ?', db.now(), token);
   const { token: sessionToken } = db.createSession(u.id, SITE, 1);
-  ctx.setCookie(sessionToken, { maxAgeSeconds: 86400 });
+  ctx.setCookie(sessionToken, { maxAgeSeconds: 86400 }); /* 1 day for coach impersonation */
   ctx.redirect('/panel');
 });
 
@@ -81,24 +82,91 @@ app.get('/api/config', (ctx) => {
     jalaliMonth: j.jm,
     coachPort: COACH_PORT,
     months: JALALI_MONTHS,
-    belts: ['سفید', 'زرد', 'نارنجی', 'سبز', 'آبی', 'قهوه‌ای', 'مشکی دان ۱', 'مشکی دان ۲']
+    belts: ['سفید', 'زرد', 'نارنجی', 'سبز', 'آبی', 'قهوه‌ای', 'مشکی دان ۱', 'مشکی دان ۲'],
+    disciplines: ['کاراته', 'کراسفیت', 'بوکس', 'ژیمناستیک', 'موی تای'],
+    supportPhone: '+989016399804',
+    baleLink: 'https://ble.ir/+989016399804'
+  });
+});
+
+/* --------------------------- اطلاعات پرداخت و شهریه --------------------------- */
+
+app.get('/api/payment', (ctx) => {
+  ctx.json({
+    ok: true,
+    cards: [
+      { number: '6219861938986279', holder: 'نوید احمدی', label: 'شماره کارت شهریه آقایان' },
+      { number: '6219861903417334', holder: 'خانم توکلی شانجانی', label: 'شماره کارت شهریه بانوان' }
+    ],
+    pricing: [
+      { discipline: 'کاراته جوانان و بزرگسالان', price: '۱,۹۰۰', priceNum: 1900 },
+      { discipline: 'کاراته نونهالان', price: '۱,۸۰۰', priceNum: 1800 },
+      { discipline: 'کراسفیت کودک', price: '۱,۸۰۰', priceNum: 1800 },
+      { discipline: 'کراسفیت بزرگسالان و نوجوانان', price: '۱,۸۰۰', priceNum: 1800 },
+      { discipline: 'بوکس', price: '۱,۸۰۰', priceNum: 1800 },
+      { discipline: 'ژیمناستیک', price: '۱,۵۰۰', priceNum: 1500 },
+      { discipline: 'موی تای بانوان', price: '۱,۵۰۰', priceNum: 1500 }
+    ],
+    supportPhone: '+989016399804',
+    baleLink: 'https://ble.ir/+989016399804'
+  });
+});
+
+/* --------------------------- سوالات متداول --------------------------- */
+
+app.get('/api/faq', (ctx) => {
+  ctx.json({
+    ok: true,
+    faqs: [
+      {
+        q: 'شهریه ماهانه چقدر است؟',
+        a: 'کاراته جوانان و بزرگسالان: ۱,۹۰۰ هزار تومان — کاراته نونهالان: ۱,۸۰۰ هزار تومان — کراسفیت کودک: ۱,۸۰۰ هزار تومان — کراسفیت بزرگسالان و نوجوانان: ۱,۸۰۰ هزار تومان — بوکس: ۱,۸۰۰ هزار تومان — ژیمناستیک: ۱,۵۰۰ هزار تومان — موی تای بانوان: ۱,۵۰۰ هزار تومان. مهلت پرداخت تا ۱۲ هر ماه.'
+      },
+      {
+        q: 'چطور می‌توانم آنلاین شهریه را پرداخت کنم؟',
+        a: 'برای پرداخت آنلاین شهریه، می‌توانید مبلغ مورد نظر را به شماره کارت ۶۲۱۹-۸۶۱۹-۳۸۹۸-۶۲۷۹ به نام نوید احمدی (مخصوص آقایان) یا شماره کارت ۶۲۱۹-۸۶۱۹-۰۳۴۱-۷۳۳۴ به نام خانم توکلی شانجانی (مخصوص بانوان) واریز کنید. پس از واریز، لطفاً فیش واریزی را از طریق پیام‌رسان بله به شماره +989016399804 ارسال نمایید.'
+      },
+      {
+        q: 'ساعت کلاس‌های باشگاه چگونه است؟',
+        a: 'ساعت کلاس‌ها بسته به رشته و گروه سنی متفاوت است. کلاس بزرگسالان معمولاً شنبه و دوشنبه ساعت ۱۸ تا ۲۰ و کلاس نوجوانان یکشنبه و سه‌شنبه ساعت ۱۷ تا ۱۸:۳۰ برگزار می‌شود. برای اطلاع از ساعت دقیق کلاس رشته خود، از بخش پشتیبانی با ما تماس بگیرید.'
+      },
+      {
+        q: 'آیا امکان ثبت‌نام آزمایشی (یک جلسه رایگان) وجود دارد؟',
+        a: 'بله، شما می‌توانید یک جلسه به عنوان مهمان در کلاس مورد نظر شرکت کنید تا با محیط باشگاه و سبک تمرین آشنا شوید. برای هماهنگی با بخش پشتیبانی از طریق بله به شماره +989016399804 پیام دهید.'
+      },
+      {
+        q: 'مهلت پرداخت شهریه تا چه زمانی است؟',
+        a: 'مهلت پرداخت شهریه هر ماه تا دوازدهم همان ماه می‌باشد. لطفاً پس از واریز، فیش واریزی را حتماً ارسال نمایید تا نام شما در لیست حاضرین ثبت شود.'
+      },
+      {
+        q: 'آیا امکان تغییر رشته وجود دارد؟',
+        a: 'بله، شما می‌توانید با هماهنگی مربی و اطلاع به بخش پشتیبانی، رشته ورزشی خود را تغییر دهید. برای این کار از طریق پیام‌رسان بله با ما در ارتباط باشید.'
+      },
+      {
+        q: 'چگونه جدول پیشرفت من پر می‌شود؟',
+        a: 'جدول پیشرفت ماهانه توسط مربی و بر اساس عملکرد شما در تمرینات پر می‌شود. شاخص‌هایی مانند استقامت، قدرت، تکنیک، انعطاف و انضباط هر ماه ارزیابی و نمره‌دهی می‌شوند. شما همچنین می‌توانید خودارزیابی ماهانه ثبت کنید.'
+      },
+      {
+        q: 'اگر تمرین را نتوانم به‌موقع انجام دهم چه کنم؟',
+        a: 'در صورت عدم امکان انجام تمرین در مهلت مقرر، می‌توانید از طریق یادداشت در پنل کاربری یا تماس با مربی از طریق بله، موضوع را اطلاع دهید. مربی می‌تواند مهلت را تمدید یا برنامه جایگزین ارائه دهد.'
+      }
+    ]
   });
 });
 
 /* --------------------------- ثبت‌نام و ورود --------------------------- */
 
-app.post('/api/register', (ctx) => {
-  const b = ctx.body || {};
-  const full_name = String(b.full_name || '').trim();
-  const username = String(b.username || '').trim().toLowerCase();
+function doRegister(ctx, b) {
+  const full_name = sanitize(String(b.full_name || ''));
+  const username = String(b.username || '').trim().toLowerCase().replace(/[^a-z0-9._-]/g, '').slice(0, 30);
   const password = String(b.password || '');
 
-  if (full_name.length < 3) return bad(ctx, 'نام و نام خانوادگی را کامل وارد کنید');
-  if (!/^[a-zA-Z0-9._-]{3,20}$/.test(username)) return bad(ctx, 'نام کاربری باید انگلیسی، بدون فاصله و حداقل ۳ حرف باشد');
-  if (db.findByUsername(username)) return bad(ctx, 'این نام کاربری قبلاً ثبت شده است');
-  if (password.length < 6) return bad(ctx, 'رمز عبور باید حداقل ۶ حرف باشد');
-  if (b.phone && !/^[0-9+\-\s]{7,15}$/.test(String(b.phone))) return bad(ctx, 'شماره موبایل معتبر نیست');
-  if (password !== b.password2) return bad(ctx, 'تکرار رمز عبور مطابقت ندارد');
+  if (full_name.length < 3) return 'نام و نام خانوادگی را کامل وارد کنید';
+  if (!/^[a-zA-Z0-9._-]{3,20}$/.test(username)) return 'نام کاربری باید انگلیسی، بدون فاصله و حداقل ۳ حرف باشد';
+  if (db.findByUsername(username)) return 'این نام کاربری قبلاً ثبت شده است';
+  if (password.length < 6) return 'رمز عبور باید حداقل ۶ حرف باشد';
+  if (b.phone && !/^[0-9+\-\s]{7,15}$/.test(String(b.phone))) return 'شماره موبایل معتبر نیست';
+  if (password !== b.password2) return 'تکرار رمز عبور مطابقت ندارد';
 
   const user = db.createUser({
     full_name,
@@ -111,13 +179,14 @@ app.post('/api/register', (ctx) => {
     weight_kg: b.weight_kg,
     height_cm: b.height_cm,
     belt: b.belt || 'سفید',
-    style: b.style || null,
+    discipline: b.discipline || b.style || null,
+    style: b.discipline || b.style || null,
     experience: b.experience || null,
     join_date: new Date().toISOString().slice(0, 10)
   }, 'member');
 
-  const { token } = db.createSession(user.id, SITE, 30);
-  ctx.setCookie(token, { maxAgeSeconds: 30 * 86400 });
+  const { token } = db.createSession(user.id, SITE, 90);
+  ctx.setCookie(token, { maxAgeSeconds: 90 * 86400 });
 
   db.pushNotification(user.id, {
     type: 'welcome',
@@ -132,12 +201,56 @@ app.post('/api/register', (ctx) => {
     });
     db.logActivity(coach.id, coach.full_name, 'ثبت‌نام جدید دریافت شد', `${full_name} (@${username})`);
   }
-  // تمرین‌های عمومی باشگاه به شاگرد تازه‌وارد هم می‌رسد
   for (const plan of db.all('SELECT * FROM plans WHERE target_all = 1')) {
     db.run('INSERT OR IGNORE INTO plan_assignments (plan_id, user_id, status, assigned_at) VALUES (?,?,?,?)',
       plan.id, user.id, 'todo', db.now());
   }
-  ctx.json({ ok: true, user: db.publicUser(user) });
+  return null;
+}
+
+app.post('/api/register', (ctx) => {
+  const b = ctx.body || {};
+  const err = doRegister(ctx, b);
+  if (err) return bad(ctx, err);
+  ctx.json({ ok: true, user: db.publicUser(db.findByUsername(String(b.username || '').trim().toLowerCase())) });
+});
+
+/* ثبت‌نام مستقیم (فرم HTML → ریدایرکت) — مرورگر خودش کوکی رو مدیریت می‌کنه */
+app.post('/register', (ctx) => {
+  const ip = ctx.req.headers['x-forwarded-for'] || ctx.req.socket.remoteAddress || '';
+  if (!rateLimit('reg:' + ip, 5, 600000)) {
+    ctx.redirect('/?error=' + encodeURIComponent('تعداد ثبت‌نام بیش از حد — لطفاً ۱۰ دقیقه صبر کنید'));
+    return;
+  }
+  const b = ctx.body || {};
+  const err = doRegister(ctx, b);
+  if (err) {
+    ctx.redirect('/?error=' + encodeURIComponent(err));
+    return;
+  }
+  ctx.redirect('/panel');
+});
+
+app.post('/login', (ctx) => {
+  const ip = ctx.req.headers['x-forwarded-for'] || ctx.req.socket.remoteAddress || '';
+  if (!rateLimit('login:' + ip, 10, 300000)) {
+    ctx.redirect('/?error=' + encodeURIComponent('تعداد تلاش بیش از حد — لطفاً ۵ دقیقه صبر کنید'));
+    return;
+  }
+  const b = ctx.body || {};
+  const u = db.findByUsername(b.username);
+  if (!u || u.role !== 'member' || !db.verifyPassword(b.password, u.password_hash, u.password_salt)) {
+    ctx.redirect('/?error=' + encodeURIComponent('نام کاربری یا رمز عبور اشتباه است'));
+    return;
+  }
+  if (!u.active) {
+    ctx.redirect('/?error=' + encodeURIComponent('حساب شما غیرفعال است'));
+    return;
+  }
+  const { token } = db.createSession(u.id, SITE, 90);
+  ctx.setCookie(token, { maxAgeSeconds: 90 * 86400 });
+  db.logActivity(u.id, u.full_name, 'وارد پنل کاربری شد', null);
+  ctx.redirect('/panel');
 });
 
 app.post('/api/login', (ctx) => {
@@ -147,8 +260,8 @@ app.post('/api/login', (ctx) => {
     return bad(ctx, 'نام کاربری یا رمز عبور اشتباه است', 401);
   }
   if (!u.active) return bad(ctx, 'حساب کاربری شما غیرفعال است؛ با مربی تماس بگیرید', 403);
-  const { token } = db.createSession(u.id, SITE, 30);
-  ctx.setCookie(token, { maxAgeSeconds: 30 * 86400 });
+  const { token } = db.createSession(u.id, SITE, 90);
+  ctx.setCookie(token, { maxAgeSeconds: 90 * 86400 });
   db.logActivity(u.id, u.full_name, 'وارد پنل کاربری شد', null);
   ctx.json({ ok: true, user: db.publicUser(u) });
 });
@@ -200,8 +313,8 @@ app.post('/api/password', (ctx) => {
   if (!db.verifyPassword(current, u.password_hash, u.password_salt)) return bad(ctx, 'رمز فعلی درست نیست');
   if (!next || String(next).length < 6) return bad(ctx, 'رمز جدید باید حداقل ۶ حرف باشد');
   db.setPassword(u.id, next);
-  const { token } = db.createSession(u.id, SITE, 30);
-  ctx.setCookie(token, { maxAgeSeconds: 30 * 86400 });
+  const { token } = db.createSession(u.id, SITE, 90);
+  ctx.setCookie(token, { maxAgeSeconds: 90 * 86400 });
   ctx.json({ ok: true });
 });
 
@@ -300,6 +413,6 @@ app.get('/api/club', (ctx) => {
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`سایت شاگردان: http://localhost:${PORT}  |  نمونه: ali / ${DEMO.memberPassword}`);
+  console.log(`سایت شاگردان: http://localhost:${PORT}`);
   console.log(`دیتابیس: ${db.DB_PATH}`);
 });
