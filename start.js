@@ -71,15 +71,16 @@ console.log('──────────────────────�
 if (PORT) {
   /* Railway: یک پورت، دو سرویس با reverse proxy */
   const proxyServer = http.createServer((req, res) => {
-    /* مسیرهای اختصاصی شاگردان */
-    const memberPaths = ['/impersonate', '/register', '/login', '/panel', '/api/payment', '/api/faq', '/api/register', '/api/login', '/api/logout', '/api/me', '/api/plans', '/api/assignments', '/api/progress', '/api/self-report', '/api/announcements', '/api/notifications', '/api/club', '/api/password'];
-    const isMemberPath = memberPaths.some(p => req.url.startsWith(p));
+    const url = req.url;
 
-    if (isMemberPath) {
-      return proxy(MEMBER_PORT)(req, res);
+    /* مسیرهای پنل مربی (با پیشوند /coach) */
+    if (url.startsWith('/coach') || url.startsWith('/v1/')) {
+      req.url = url.replace(/^\/coach/, '') || '/';
+      return proxy(COACH_PORT)(req, res);
     }
-    /* بقیه مسیرها → مربی (پیش‌فرض) */
-    proxy(COACH_PORT)(req, res);
+
+    /* بقیه مسیرها → شاگردان (پیش‌فرض) */
+    proxy(MEMBER_PORT)(req, res);
   });
   proxyServer.listen(PORT, '0.0.0.0', () => {
     console.log(`  پروکسی      →  http://0.0.0.0:${PORT}`);
