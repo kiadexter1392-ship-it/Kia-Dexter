@@ -41,11 +41,8 @@ jobs:
       - name: Fix Kotlin version
         working-directory: mobile/android
         run: |
-          # Set Kotlin version in project build.gradle
-          sed -i "s/kotlinVersion = '[^']*'/kotlinVersion = '1.9.25'/" build.gradle
-          # Also set in gradle.properties as fallback
-          echo "kotlinVersion=1.9.25" >> gradle.properties
-          grep -n "kotlin" build.gradle | head -10
+          echo "android.kotlinVersion=1.9.25" >> gradle.properties
+          cat gradle.properties | grep kotlin
 
       - name: Build Debug APK
         working-directory: mobile/android
