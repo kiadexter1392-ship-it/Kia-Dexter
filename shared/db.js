@@ -12,6 +12,11 @@ const { DatabaseSync } = require('node:sqlite');
 const DATA_DIR = process.env.ARSLAN_DATA_DIR || path.join(__dirname, '..', 'data');
 const DB_PATH = process.env.ARSLAN_DB || path.join(DATA_DIR, 'arslan-dojo.db');
 
+/* اگر env var RESET_DB=1 ست شده باشد، دیتابیس قبلی پاک می‌شود */
+if (process.env.RESET_DB === '1') {
+  try { fs.unlinkSync(DB_PATH); console.log('[DB] دیتابیس قبلی پاک شد'); } catch { /* نبود که مشکلی نیست */ }
+}
+
 fs.mkdirSync(DATA_DIR, { recursive: true });
 
 const db = new DatabaseSync(DB_PATH);
@@ -213,10 +218,36 @@ CREATE TABLE IF NOT EXISTS activity (
   created_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS api_keys (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  key        TEXT UNIQUE NOT NULL,
+  user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name       TEXT NOT NULL DEFAULT 'default',
+  permissions TEXT DEFAULT 'read',
+  active     INTEGER DEFAULT 1,
+  created_at TEXT NOT NULL,
+  last_used  TEXT
+);
+
 CREATE INDEX IF NOT EXISTS idx_progress_user ON progress(user_id, year, month);
 CREATE INDEX IF NOT EXISTS idx_assign_user ON plan_assignments(user_id, status);
 CREATE INDEX IF NOT EXISTS idx_notif_user ON notifications(user_id, read);
 `);
+
+/* -------- مهاجرت: افزودن ستون discipline در صورت نبود -------- */
+try {
+  const cols = all("PRAGMA table_info('users')").map(c => c.name);
+  if (!cols.includes('discipline')) {
+    db.exec("ALTER TABLE users ADD COLUMN discipline TEXT DEFAULT NULL;");
+  }
+} catch { /* نادیده */ }
+
+try {
+  const cols2 = all("PRAGMA table_info('plans')").map(c => c.name);
+  if (!cols2.includes('sport')) {
+    db.exec("ALTER TABLE plans ADD COLUMN sport TEXT DEFAULT NULL;");
+  }
+} catch { /* نادیده */ }
 
 /* -------------------------------- رمز عبور -------------------------------- */
 
@@ -266,6 +297,7 @@ function publicUser(u) {
     join_date: u.join_date,
     notes: u.notes,
     avatar_color: u.avatar_color,
+    discipline: u.discipline || null,
     active: !!u.active,
     created_at: u.created_at
   };
@@ -278,8 +310,8 @@ function createUser(data, role = 'member') {
   const color = data.avatar_color || colors[(data.full_name || 'a').length % colors.length];
   const info = run(
     `INSERT INTO users (role, full_name, username, phone, password_hash, password_salt, gender, birth_date, age,
-      weight_kg, height_cm, belt, style, experience, join_date, notes, avatar_color, active, created_at, updated_at)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      weight_kg, height_cm, belt, style, experience, join_date, notes, avatar_color, active, created_at, updated_at, discipline)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     role,
     String(data.full_name || '').trim(),
     String(data.username || '').trim().toLowerCase(),
@@ -292,14 +324,15 @@ function createUser(data, role = 'member') {
     data.weight_kg ? Number(data.weight_kg) : null,
     data.height_cm ? Number(data.height_cm) : null,
     data.belt || 'سفید',
-    data.style || null,
+    data.style || data.discipline || null,
     data.experience || null,
     data.join_date || ts.slice(0, 10),
     data.notes || null,
     color,
     data.active === undefined ? 1 : (data.active ? 1 : 0),
     ts,
-    ts
+    ts,
+    data.discipline || data.style || null
   );
   return findById(info.lastInsertRowid);
 }
@@ -308,7 +341,7 @@ function updateUser(id, data) {
   const fields = [];
   const values = [];
   const allowed = ['full_name', 'phone', 'gender', 'birth_date', 'age', 'weight_kg', 'height_cm',
-    'belt', 'style', 'experience', 'notes', 'active', 'avatar_color', 'join_date'];
+    'belt', 'style', 'experience', 'notes', 'active', 'avatar_color', 'join_date', 'discipline'];
   for (const key of allowed) {
     if (data[key] !== undefined) {
       fields.push(`${key} = ?`);
@@ -488,12 +521,12 @@ function markNotificationsRead(userId) {
 
 /* -------------------------------- تمرینات -------------------------------- */
 
-function createPlan({ author_id, title, body, category, difficulty, starts_on, due_on, duration, targets = [], all_members = false }) {
+function createPlan({ author_id, title, body, category, difficulty, starts_on, due_on, duration, targets = [], all_members = false, sport = null }) {
   const info = run(
-    `INSERT INTO plans (author_id, title, body, category, difficulty, starts_on, due_on, duration, target_all, created_at)
-     VALUES (?,?,?,?,?,?,?,?,?,?)`,
+    `INSERT INTO plans (author_id, title, body, category, difficulty, starts_on, due_on, duration, target_all, created_at, sport)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
     author_id || null, title, body || '', category || 'تمرین', difficulty || 'متوسط',
-    starts_on || null, due_on || null, duration || null, all_members || targets.length === 0 ? 1 : 0, now()
+    starts_on || null, due_on || null, duration || null, all_members || targets.length === 0 ? 1 : 0, now(), sport || null
   );
   const id = Number(info.lastInsertRowid);
   const ids = all_members || targets.length === 0 ? listMembers({ active: 1 }).map((m) => m.id) : targets;
@@ -695,6 +728,41 @@ function stats() {
   return { members, activeMembers, plans, done, pending, announcements, selfReports, thisMonth };
 }
 
+/* --------------------------------- API Keys -------------------------------- */
+
+function createApiKey(userId, name = 'default', permissions = 'read') {
+  const key = 'arslan_' + crypto.randomBytes(32).toString('hex');
+  run('INSERT INTO api_keys (key, user_id, name, permissions, created_at) VALUES (?,?,?,?,?)',
+    key, Number(userId), name, permissions, now());
+  return { key, name, permissions };
+}
+
+function apiKeyUser(key) {
+  if (!key || !key.startsWith('arslan_')) return null;
+  const row = get(
+    'SELECT ak.*, u.role FROM api_keys ak JOIN users u ON u.id = ak.user_id WHERE ak.key = ? AND ak.active = 1',
+    key
+  );
+  if (!row) return null;
+  run('UPDATE api_keys SET last_used = ? WHERE key = ?', now(), key);
+  const user = findById(row.user_id);
+  if (!user || !user.active) return null;
+  user.apiPermissions = row.permissions;
+  return user;
+}
+
+function listApiKeys(userId) {
+  return all('SELECT id, key, name, permissions, created_at, last_used FROM api_keys WHERE user_id = ? ORDER BY created_at DESC', Number(userId));
+}
+
+function deleteApiKey(keyId, userId) {
+  run('DELETE FROM api_keys WHERE id = ? AND user_id = ?', Number(keyId), Number(userId));
+}
+
+function revokeApiKey(keyId, userId) {
+  run('UPDATE api_keys SET active = 0 WHERE id = ? AND user_id = ?', Number(keyId), Number(userId));
+}
+
 module.exports = {
   db, DB_PATH, DATA_DIR, sleepSync, execWithRetry,
   all, get, run, now,
@@ -706,5 +774,6 @@ module.exports = {
   pushNotification, notificationsFor, unreadCount, markNotificationsRead,
   createPlan, getPlan, listPlans, updatePlan, deletePlan, plansForUser, setAssignmentStatus,
   METRIC_KEYS, computeOverall, progressRow, progressYear, saveProgress, deleteProgress,
-  saveSelfReport, clubMatrix, logActivity, recentActivity, stats
+  saveSelfReport, clubMatrix, logActivity, recentActivity, stats,
+  createApiKey, apiKeyUser, listApiKeys, deleteApiKey, revokeApiKey
 };

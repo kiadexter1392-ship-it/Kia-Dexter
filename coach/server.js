@@ -5,7 +5,7 @@
  */
 
 const path = require('node:path');
-const { createServer } = require('../shared/server');
+const { createServer, rateLimit, sanitize } = require('../shared/server');
 const db = require('../shared/db');
 const { seedIfEmpty, DEMO } = require('../shared/seed');
 const { JALALI_MONTHS, todayJalali, formatJalali, faNum } = require('../shared/jalali');
@@ -79,29 +79,101 @@ app.get('/api/config', (ctx) => {
     jalaliYear: j.jy,
     jalaliMonth: j.jm,
     memberPort: MEMBER_PORT,
+    membersSiteUrl: process.env.MEMBERS_SITE_URL || null,
     months: JALALI_MONTHS,
-    belts: ['سفید', 'زرد', 'نارنجی', 'سبز', 'آبی', 'قهوه‌ای', 'مشکی دان ۱', 'مشکی دان ۲', 'مشکی دان ۳', 'مشکی دان ۴']
+    belts: ['سفید', 'زرد', 'نارنجی', 'سبز', 'آبی', 'قهوه‌ای', 'مشکی دان ۱', 'مشکی دان ۲', 'مشکی دان ۳', 'مشکی دان ۴'],
+    disciplines: ['کاراته', 'کراسفیت', 'بوکس', 'ژیمناستیک', 'موی تای'],
+    supportPhone: '+989016399804',
+    baleLink: 'https://ble.ir/+989016399804'
   });
 });
 
 /* ------------------------------ ورود و خروج ------------------------------ */
 
 app.post('/api/login', (ctx) => {
+  const ip = ctx.req.headers['x-forwarded-for'] || ctx.req.socket.remoteAddress || '';
+  if (!rateLimit('coach-login:' + ip, 10, 300000)) {
+    return bad(ctx, 'تعداد تلاش بیش از حد — لطفاً ۵ دقیقه صبر کنید', 429);
+  }
   const { username, password } = ctx.body || {};
   const user = db.findByUsername(username);
   if (!user || user.role !== 'coach' || !db.verifyPassword(password, user.password_hash, user.password_salt)) {
     return bad(ctx, 'نام کاربری یا رمز عبور اشتباه است', 401);
   }
   if (!user.active) return bad(ctx, 'این حساب غیرفعال شده است', 403);
-  const { token } = db.createSession(user.id, SITE, 30);
-  ctx.setCookie(token, { maxAgeSeconds: 30 * 86400 });
+  const { token } = db.createSession(user.id, SITE, 90);
+  ctx.setCookie(token, { maxAgeSeconds: 90 * 86400 });
   db.logActivity(user.id, user.full_name, 'وارد پنل مربی شد', null);
   ctx.json({ ok: true, user: db.publicUser(user) });
+});
+
+app.post('/login', (ctx) => {
+  const ip = ctx.req.headers['x-forwarded-for'] || ctx.req.socket.remoteAddress || '';
+  if (!rateLimit('coach-login:' + ip, 10, 300000)) {
+    ctx.redirect('/?error=' + encodeURIComponent('تعداد تلاش بیش از حد — لطفاً ۵ دقیقه صبر کنید'));
+    return;
+  }
+  const b = ctx.body || {};
+  const user = db.findByUsername(b.username);
+  if (!user || user.role !== 'coach' || !db.verifyPassword(b.password, user.password_hash, user.password_salt)) {
+    ctx.redirect('/?error=' + encodeURIComponent('نام کاربری یا رمز عبور اشتباه است'));
+    return;
+  }
+  if (!user.active) {
+    ctx.redirect('/?error=' + encodeURIComponent('این حساب غیرفعال شده است'));
+    return;
+  }
+  const { token } = db.createSession(user.id, SITE, 90);
+  ctx.setCookie(token, { maxAgeSeconds: 90 * 86400 });
+  db.logActivity(user.id, user.full_name, 'وارد پنل مربی شد', null);
+  ctx.redirect('/dashboard');
 });
 
 app.post('/api/logout', (ctx) => {
   db.destroySession(ctx.cookies[app.cookieName]);
   ctx.clearCookie();
+  ctx.json({ ok: true });
+});
+
+/* --------------------------- API Key Management --------------------------- */
+
+/* middleware: احراز هویت با API key یا session */
+function coachOrApiKey(ctx) {
+  /* اول session */
+  const u = coach(ctx);
+  if (u) return u;
+  /* بعد API key */
+  const authHeader = ctx.req.headers['authorization'] || '';
+  const apiKey = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : ctx.req.headers['x-api-key'];
+  if (apiKey) {
+    const keyUser = db.apiKeyUser(apiKey);
+    if (keyUser && keyUser.role === 'coach') return keyUser;
+  }
+  return null;
+}
+
+app.get('/api/api-keys', (ctx) => {
+  const u = coach(ctx);
+  if (!u) return ctx.json({ ok: false, error: 'unauthorized' }, 401);
+  ctx.json({ ok: true, keys: db.listApiKeys(u.id).map(k => ({
+    ...k,
+    key: k.key.slice(0, 15) + '...' + k.key.slice(-6) /* فقط بخشی از key نمایش داده بشه */
+  })) });
+});
+
+app.post('/api/api-keys', (ctx) => {
+  const u = coach(ctx);
+  if (!u) return ctx.json({ ok: false, error: 'unauthorized' }, 401);
+  const { name, permissions } = ctx.body || {};
+  const result = db.createApiKey(u.id, name || 'default', permissions || 'read');
+  db.logActivity(u.id, u.full_name, 'API key جدید ساخت', name || 'default');
+  ctx.json({ ok: true, key: result }); /* فقط همین‌بار key کامل نشون داده می‌شه */
+});
+
+app.delete('/api/api-keys/:id', (ctx) => {
+  const u = coach(ctx);
+  if (!u) return ctx.json({ ok: false, error: 'unauthorized' }, 401);
+  db.deleteApiKey(ctx.params.id, u.id);
   ctx.json({ ok: true });
 });
 
@@ -132,8 +204,8 @@ app.post('/api/password', (ctx) => {
   if (!db.verifyPassword(current, u.password_hash, u.password_salt)) return bad(ctx, 'رمز فعلی درست نیست');
   if (!next || String(next).length < 6) return bad(ctx, 'رمز جدید باید حداقل ۶ حرف باشد');
   db.setPassword(u.id, next);
-  const { token } = db.createSession(u.id, SITE, 30);
-  ctx.setCookie(token, { maxAgeSeconds: 30 * 86400 });
+  const { token } = db.createSession(u.id, SITE, 90);
+  ctx.setCookie(token, { maxAgeSeconds: 90 * 86400 });
   ctx.json({ ok: true });
 });
 
@@ -201,8 +273,8 @@ app.post('/api/members', (ctx) => {
     return bad(ctx, 'نام کاربری باید انگلیسی و حداقل ۳ حرف باشد');
   }
   if (db.findByUsername(b.username)) return bad(ctx, 'این نام کاربری قبلاً گرفته شده است');
-  const password = b.password || DEMO.memberPassword;
-  if (String(password).length < 4) return bad(ctx, 'رمز عبور باید حداقل ۴ حرف باشد');
+  const password = b.password;
+  if (!password || String(password).length < 4) return bad(ctx, 'رمز عبور باید حداقل ۴ حرف باشد');
   const member = db.createUser({ ...b, username: String(b.username).trim().toLowerCase(), password }, 'member');
   db.logActivity(u.id, u.full_name, 'شاگرد جدید ثبت کرد', member.full_name);
 
@@ -311,7 +383,8 @@ app.post('/api/plans', (ctx) => {
     due_on: b.due_on,
     duration: b.duration,
     targets,
-    all_members: !!b.all_members
+    all_members: !!b.all_members,
+    sport: b.sport || null
   });
   db.logActivity(u.id, u.full_name, 'تمرین ارسال کرد', `${plan.title} — ${plan.total} شاگرد`);
   ctx.json({ ok: true, plan });
@@ -557,7 +630,43 @@ app.post('/api/notifications/read', (ctx) => {
   ctx.json({ ok: true });
 });
 
+/* =========================== Public API (با API key) ========================= */
+/* این endpoints برای دسترسی از بیرون (اپلیکیشن موبایل، integrations و...) با API key هستن */
+
+app.get('/v1/members', (ctx) => {
+  const u = coachOrApiKey(ctx);
+  if (!u) return ctx.json({ ok: false, error: 'unauthorized' }, 401);
+  ctx.json({ ok: true, members: db.listMembers().map(m => db.publicUser(m)) });
+});
+
+app.get('/v1/plans', (ctx) => {
+  const u = coachOrApiKey(ctx);
+  if (!u) return ctx.json({ ok: false, error: 'unauthorized' }, 401);
+  ctx.json({ ok: true, plans: db.listPlans() });
+});
+
+app.get('/v1/stats', (ctx) => {
+  const u = coachOrApiKey(ctx);
+  if (!u) return ctx.json({ ok: false, error: 'unauthorized' }, 401);
+  ctx.json({ ok: true, stats: db.stats() });
+});
+
+app.get('/v1/progress/:userId', (ctx) => {
+  const u = coachOrApiKey(ctx);
+  if (!u) return ctx.json({ ok: false, error: 'unauthorized' }, 401);
+  const year = Number(ctx.query.year) || todayJalali().jy;
+  const prog = db.progressYear(Number(ctx.params.userId), year);
+  ctx.json({ ok: true, progress: prog });
+});
+
+app.get('/v1/announcements', (ctx) => {
+  const u = coachOrApiKey(ctx);
+  if (!u) return ctx.json({ ok: false, error: 'unauthorized' }, 401);
+  ctx.json({ ok: true, announcements: db.all('SELECT * FROM announcements ORDER BY created_at DESC LIMIT 50') });
+});
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`پنل مربی: http://localhost:${PORT}  |  ورود: ${DEMO.coach.username} / ${DEMO.coach.password}`);
   console.log(`دیتابیس: ${db.DB_PATH}`);
+  console.log(`API endpoints: /v1/members, /v1/plans, /v1/stats, /v1/progress/:id, /v1/announcements`);
 });
