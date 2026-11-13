@@ -42,17 +42,17 @@ jobs:
         working-directory: mobile/android
         run: |
           chmod +x ./gradlew
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew assembleDebug --no-daemon --info 2>&1 | tail -100
 
-      - name: Find and copy APK
+      - name: Find APK
+        id: find-apk
         run: |
-          cd mobile/android
-          APK_PATH=$(find . -name "*debug*.apk" -type f | head -1)
-          echo "Found APK: $APK_PATH"
-          cp "$APK_PATH" ../ArslanDojo-debug.apk
+          APK=$(find /home/runner/work -name "*debug*.apk" 2>/dev/null | head -1)
+          echo "apk_path=$APK" >> $GITHUB_OUTPUT
+          echo "Found: $APK"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: ArslanDojo-debug.apk
-          path: mobile/ArslanDojo-debug.apk
+          path: ${{ steps.find-apk.outputs.apk_path }}
