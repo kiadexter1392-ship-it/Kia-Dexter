@@ -42,14 +42,6 @@ jobs:
         working-directory: mobile/android
         run: echo "android.kotlinVersion=1.9.24" >> gradle.properties
 
-      - name: Create app icon
-        working-directory: mobile/android
-        run: |
-          for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
-            mkdir -p app/src/main/res/mipmap-$d
-          done
-          node -e "const fs=require('fs');const s=192;let p='';for(let y=0;y<s;y++){p+='\x00';for(let x=0;x<s;x++){const cx=s/2,cy=s/2,r=s/2-4,d=Math.hypot(x-cx,y-cy);if(d<=r)p+='\xd4\xa8\x53\xff';else p+='\x00\x00\x00\x00';}};const zlib=require('zlib');const crc=require('zlib').crc32||((b)=>{let c=0;for(let i=0;i<b.length;i++)c=(c*31+b[i])&0xffffffff;return c;});function chunk(t,d){const cd=Buffer.concat([Buffer.from(t),Buffer.from(d)]);return Buffer.concat([Buffer.alloc(4).writeUInt32BE(d.length,0),cd,Buffer.alloc(4).writeUInt32BE(crc(cd.toString('binary'))&0xffffffff,0)]);};const raw=Buffer.from(p,'binary');const png=Buffer.concat([Buffer.from('\x89PNG\r\n\x1a\n','binary'),chunk('IHDR',Buffer.concat([Buffer.alloc(4).writeUInt32BE(s,0),Buffer.alloc(4).writeUInt32BE(s,0),Buffer.from([8,6,0,0,0])])),chunk('IDAT',zlib.deflateSync(raw)),chunk('IEND',Buffer.alloc(0))]);for(const d of['mdpi','hdpi','xhdpi','xxhdpi','xxxhdpi']){fs.writeFileSync('app/src/main/res/mipmap-'+d+'/ic_launcher.png',png);fs.writeFileSync('app/src/main/res/mipmap-'+d+'/ic_launcher_round.png',png);};console.log('Icons created');"
-
       - name: Bundle JS for release
         working-directory: mobile
         run: |
