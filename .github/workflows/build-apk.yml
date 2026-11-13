@@ -28,16 +28,19 @@ jobs:
       - name: Install EAS CLI
         run: npm install -g eas-cli
 
+      - name: Init EAS Project
+        working-directory: mobile
+        run: eas init --account kia.dexter --non-interactive
+        env:
+          EXPO_TOKEN: 63-IGN-9xHj_SAivS21BueK3EWONXi6rOuuEJSD-
+
       - name: Build with EAS
         working-directory: mobile
         run: eas build --platform android --profile preview --non-interactive --no-wait
         env:
           EXPO_TOKEN: 63-IGN-9xHj_SAivS21BueK3EWONXi6rOuuEJSD-
 
-      - name: Wait for Build
-        working-directory: mobile
+      - name: Build Info
         run: |
-          echo "Build submitted! Check status at:"
-          echo "https://expo.dev/accounts/kia.dexter/projects/arslan-dojo/builds"
-        env:
-          EXPO_TOKEN: 63-IGN-9xHj_SAivS21BueK3EWONXi6rOuuEJSD-
+          echo "Build submitted!"
+          echo "Check status: https://expo.dev/accounts/kia.dexter/projects/arslan-dojo/builds"
