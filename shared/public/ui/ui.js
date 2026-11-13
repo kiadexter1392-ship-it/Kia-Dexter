@@ -9,13 +9,16 @@
 
   /* ----------------------------- درخواست HTTP ---------------------------- */
 
+  /* تشخیص پیشوند مسیر (برای Railway: پنل مربی زیر /coach) */
+  const PATH_PREFIX = location.pathname.startsWith('/coach') ? '/coach' : '';
+
   async function api(path, options = {}) {
     const opts = { method: options.method || 'GET', headers: {}, credentials: 'include' };
     if (options.body !== undefined) {
       opts.headers['Content-Type'] = 'application/json';
       opts.body = JSON.stringify(options.body);
     }
-    const res = await fetch(path, opts);
+    const res = await fetch(PATH_PREFIX + path, opts);
     let data = {};
     try { data = await res.json(); } catch { data = {}; }
     if (!res.ok || data.ok === false) {
@@ -157,6 +160,6 @@
 
   root.UI = {
     fa, esc, api, toast, modal, closeModal, confirmBox,
-    heatClass, initials, avatar, STATUS, METRICS, peerUrl, loadConfig, nl2br
+    heatClass, initials, avatar, STATUS, METRICS, peerUrl, loadConfig, nl2br, PATH_PREFIX
   };
 }(window));
