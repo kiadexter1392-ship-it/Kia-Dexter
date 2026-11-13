@@ -45,51 +45,10 @@ jobs:
       - name: Create app icon
         working-directory: mobile/android
         run: |
-          mkdir -p app/src/main/res/mipmap-mdpi
-          mkdir -p app/src/main/res/mipmap-hdpi
-          mkdir -p app/src/main/res/mipmap-xhdpi
-          mkdir -p app/src/main/res/mipmap-xxhdpi
-          mkdir -p app/src/main/res/mipmap-xxxhdpi
-          # Create simple PNG icons (1x1 gold pixel expanded)
-          for size in 48 72 96 144 192; do
-            python3 -c "
-import struct, zlib
-def create_png(size, path):
-    # Simple gold circle PNG
-    pixels = []
-    for y in range(size):
-        row = []
-        for x in range(size):
-            cx, cy = size//2, size//2
-            r = size//2 - 2
-            dist = ((x-cx)**2 + (y-cy)**2)**0.5
-            if dist <= r:
-                row.extend([212, 168, 83, 255])  # Gold
-            else:
-                row.extend([0, 0, 0, 0])  # Transparent
-        pixels.append(bytes([0] + row))
-    raw = b''.join(pixels)
-    def chunk(ctype, data):
-        c = ctype + data
-        return struct.pack('>I', len(data)) + c + struct.pack('>I', zlib.crc32(c) & 0xffffffff)
-    png = b'\x89PNG\r\n\x1a\n'
-    png += chunk(b'IHDR', struct.pack('>IIBBBBB', size, size, 8, 6, 0, 0, 0))
-    png += chunk(b'IDAT', zlib.compress(raw))
-    png += chunk(b'IEND', b'')
-    with open(path, 'wb') as f: f.write(png)
-create_png($size, 'app/src/main/res/mipmap-mdpi/ic_launcher.png')
-" 2>/dev/null
+          for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
+            mkdir -p app/src/main/res/mipmap-$d
           done
-          cp app/src/main/res/mipmap-mdpi/ic_launcher.png app/src/main/res/mipmap-mdpi/ic_launcher_round.png
-          cp app/src/main/res/mipmap-mdpi/ic_launcher.png app/src/main/res/mipmap-hdpi/ic_launcher.png
-          cp app/src/main/res/mipmap-mdpi/ic_launcher.png app/src/main/res/mipmap-hdpi/ic_launcher_round.png
-          cp app/src/main/res/mipmap-mdpi/ic_launcher.png app/src/main/res/mipmap-xhdpi/ic_launcher.png
-          cp app/src/main/res/mipmap-mdpi/ic_launcher.png app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
-          cp app/src/main/res/mipmap-mdpi/ic_launcher.png app/src/main/res/mipmap-xxhdpi/ic_launcher.png
-          cp app/src/main/res/mipmap-mdpi/ic_launcher.png app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
-          cp app/src/main/res/mipmap-mdpi/ic_launcher.png app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-          cp app/src/main/res/mipmap-mdpi/ic_launcher.png app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
-          echo "Icons created"
+          node -e "const fs=require('fs');const s=192;let p='';for(let y=0;y<s;y++){p+='\x00';for(let x=0;x<s;x++){const cx=s/2,cy=s/2,r=s/2-4,d=Math.hypot(x-cx,y-cy);if(d<=r)p+='\xd4\xa8\x53\xff';else p+='\x00\x00\x00\x00';}};const zlib=require('zlib');const crc=require('zlib').crc32||((b)=>{let c=0;for(let i=0;i<b.length;i++)c=(c*31+b[i])&0xffffffff;return c;});function chunk(t,d){const cd=Buffer.concat([Buffer.from(t),Buffer.from(d)]);return Buffer.concat([Buffer.alloc(4).writeUInt32BE(d.length,0),cd,Buffer.alloc(4).writeUInt32BE(crc(cd.toString('binary'))&0xffffffff,0)]);};const raw=Buffer.from(p,'binary');const png=Buffer.concat([Buffer.from('\x89PNG\r\n\x1a\n','binary'),chunk('IHDR',Buffer.concat([Buffer.alloc(4).writeUInt32BE(s,0),Buffer.alloc(4).writeUInt32BE(s,0),Buffer.from([8,6,0,0,0])])),chunk('IDAT',zlib.deflateSync(raw)),chunk('IEND',Buffer.alloc(0))]);for(const d of['mdpi','hdpi','xhdpi','xxhdpi','xxxhdpi']){fs.writeFileSync('app/src/main/res/mipmap-'+d+'/ic_launcher.png',png);fs.writeFileSync('app/src/main/res/mipmap-'+d+'/ic_launcher_round.png',png);};console.log('Icons created');"
 
       - name: Bundle JS for release
         working-directory: mobile
