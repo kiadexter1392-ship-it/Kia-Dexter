@@ -30,15 +30,14 @@ jobs:
 
       - name: Build with EAS
         working-directory: mobile
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: eas build --platform android --profile preview --non-interactive --no-wait
-
-      - name: Get Build Status
-        working-directory: mobile
         env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EXPO_TOKEN: 63-IGN-9xHj_SAivS21BueK3EWONXi6rOuuEJSD-
+
+      - name: Wait for Build
+        working-directory: mobile
         run: |
-          BUILD_ID=$(eas build:list --limit 1 --json | jq -r '.[0].id')
-          echo "Build ID: $BUILD_ID"
-          echo "Check status at: https://expo.dev/accounts/kia.dexter/projects/arslan-dojo/builds/$BUILD_ID"
+          echo "Build submitted! Check status at:"
+          echo "https://expo.dev/accounts/kia.dexter/projects/arslan-dojo/builds"
+        env:
+          EXPO_TOKEN: 63-IGN-9xHj_SAivS21BueK3EWONXi6rOuuEJSD-
