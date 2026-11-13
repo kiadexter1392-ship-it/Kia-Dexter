@@ -251,7 +251,7 @@ try {
 
 /* -------------------------------- رمز عبور -------------------------------- */
 
-function hashPassword(password, salt = crypto.randomBytes(32).toString('hex')) {
+function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) {
   const hash = crypto.scryptSync(String(password), salt, 64, { N: 16384, r: 8, p: 1 }).toString('hex');
   return { hash, salt };
 }
