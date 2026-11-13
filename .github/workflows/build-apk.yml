@@ -27,8 +27,8 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Set ANDROID_HOME
+        run: echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> $GITHUB_ENV
 
       - name: Install dependencies
         working-directory: mobile
