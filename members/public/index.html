@@ -89,26 +89,63 @@
     <div class="dojo-pricing-grid" id="pricingGrid"></div>
 
     <div class="dojo-cards-section">
-      <h3>شماره کارت‌ها</h3>
+      <h3>شماره کارت‌ها <span class="flip-hint">برای دیدن شماره کارت، روی کارت بزنید</span></h3>
       <div class="dojo-cards-grid">
-        <div class="dojo-bank-card dojo-bank-male">
-          <div class="dojo-bank-chip"></div>
-          <div class="dojo-bank-number">6219 8619 3898 6279</div>
-          <div class="dojo-bank-info">
-            <div class="dojo-bank-name">نوید احمدی</div>
-            <div class="dojo-bank-label">شهریه آقایان</div>
+
+        <!-- کارت آقایان -->
+        <div class="flip-card" onclick="this.classList.toggle('flipped')">
+          <div class="flip-card-inner">
+            <!-- جلو -->
+            <div class="flip-card-front dojo-bank-male">
+              <div class="flip-card-chip"></div>
+              <div class="flip-card-brand">ARSLAN DOJO</div>
+              <div class="flip-card-name">نوید احمدی</div>
+              <div class="flip-card-type">
+                <span class="type-icon">👔</span>
+                شهریه آقایان
+              </div>
+              <div class="flip-card-hint">↻ بزنید تا شماره کارت بیاد</div>
+            </div>
+            <!-- پشت -->
+            <div class="flip-card-back dojo-bank-male">
+              <div class="flip-card-stripe"></div>
+              <div class="flip-card-cvv-label">شماره کارت</div>
+              <div class="flip-card-number">6219 8619 3898 6279</div>
+              <button class="flip-card-copy" data-copy="6219861938986279" onclick="event.stopPropagation();">
+                <span class="copy-icon">📋</span> کپی شماره کارت
+              </button>
+              <div class="flip-card-name-small">نوید احمدی — آقایان</div>
+            </div>
           </div>
-          <button class="dojo-copy-btn" data-copy="6219861938986279">کپی</button>
         </div>
-        <div class="dojo-bank-card dojo-bank-female">
-          <div class="dojo-bank-chip"></div>
-          <div class="dojo-bank-number">6219 8619 0341 7334</div>
-          <div class="dojo-bank-info">
-            <div class="dojo-bank-name">خانم توکلی شانجانی</div>
-            <div class="dojo-bank-label">شهریه بانوان</div>
+
+        <!-- کارت بانوان -->
+        <div class="flip-card" onclick="this.classList.toggle('flipped')">
+          <div class="flip-card-inner">
+            <!-- جلو -->
+            <div class="flip-card-front dojo-bank-female">
+              <div class="flip-card-chip"></div>
+              <div class="flip-card-brand">ARSLAN DOJO</div>
+              <div class="flip-card-name">خانم توکلی شانجانی</div>
+              <div class="flip-card-type">
+                <span class="type-icon">👗</span>
+                شهریه بانوان
+              </div>
+              <div class="flip-card-hint">↻ بزنید تا شماره کارت بیاد</div>
+            </div>
+            <!-- پشت -->
+            <div class="flip-card-back dojo-bank-female">
+              <div class="flip-card-stripe"></div>
+              <div class="flip-card-cvv-label">شماره کارت</div>
+              <div class="flip-card-number">6219 8619 0341 7334</div>
+              <button class="flip-card-copy" data-copy="6219861903417334" onclick="event.stopPropagation();">
+                <span class="copy-icon">📋</span> کپی شماره کارت
+              </button>
+              <div class="flip-card-name-small">خانم توکلی شانجانی — بانوان</div>
+            </div>
           </div>
-          <button class="dojo-copy-btn" data-copy="6219861903417334">کپی</button>
         </div>
+
       </div>
       <p class="dojo-pricing-note">مهلت پرداخت تا ۱۲ هر ماه — فیش واریزی را از بله به <span class="en">+989016399804</span> ارسال کنید.</p>
     </div>
@@ -347,7 +384,7 @@
       }).catch(function () { });
 
       document.addEventListener('click', function (e) {
-        var btn = e.target.closest('.dojo-copy-btn');
+        var btn = e.target.closest('.flip-card-copy');
         if (!btn) return;
         navigator.clipboard.writeText(btn.dataset.copy).then(function () {
           UI.toast('کپی شد', 'ok');
