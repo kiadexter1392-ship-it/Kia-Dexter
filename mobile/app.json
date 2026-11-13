@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "ارسلان دوجو",
+    "name": "Arslan Dojo",
     "slug": "arslan-dojo",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -18,9 +18,6 @@
         "backgroundColor": "#1a1a1a"
       },
       "package": "com.arsalandojo.app"
-    },
-    "plugins": [
-      "expo-secure-store"
-    ]
+    }
   }
 }
