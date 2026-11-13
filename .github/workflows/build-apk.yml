@@ -38,21 +38,16 @@ jobs:
         working-directory: mobile
         run: npx expo prebuild --platform android --no-install
 
-      - name: Create local.properties
-        working-directory: mobile/android
-        run: echo "sdk.dir=/usr/local/lib/android/sdk" > local.properties
-
       - name: Build Debug APK
         working-directory: mobile/android
-        run: ./gradlew assembleDebug --rerun-tasks --no-daemon
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleDebug --no-daemon 2>&1 | tee /tmp/gradle.log
+          echo "EXIT CODE: $?"
 
-      - name: List all outputs
-        run: find /home/runner/work -name "*.apk" -o -name "*.aab" 2>/dev/null
+      - name: Show Gradle output
+        if: always()
+        run: tail -200 /tmp/gradle.log 2>/dev/null || echo "No gradle log found"
 
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: ArslanDojo-debug
-          path: |
-            **/*.apk
-            **/*.aab
+      - name: Find APK
+        run: find /home/runner/work -name "*.apk" 2>/dev/null || echo "No APK found"
