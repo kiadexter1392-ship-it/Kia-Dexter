@@ -4,7 +4,7 @@
 (function () {
   'use strict';
 
-  const { api, toast, modal, closeModal, confirmBox, esc, fa, STATUS, METRICS, heatClass, avatar, nl2br, peerUrl } = UI;
+  const { api, toast, modal, closeModal, confirmBox, esc, fa, STATUS, METRICS, heatClass, avatar, nl2br, peerUrl, PATH_PREFIX } = UI;
   const J = window.Jalali;
 
   let CFG = null;
@@ -42,7 +42,7 @@
       if (!me.user) throw Object.assign(new Error('not logged in'), { status: 401 });
       ME = me.user;
     } catch (err) {
-      location.href = '/';
+      location.href = PATH_PREFIX + '/';
       return;
     }
 
@@ -74,7 +74,7 @@
     });
     document.getElementById('logoutBtn').addEventListener('click', async () => {
       await api('/api/logout', { method: 'POST' });
-      location.href = '/';
+      location.href = PATH_PREFIX + '/';
     });
     document.getElementById('quickAction').addEventListener('click', () => planForm());
     document.getElementById('bellBtn').addEventListener('click', bellBox);
