@@ -1,19 +1,16 @@
 import React from 'react';
 import { View, Text, StyleSheet, StatusBar } from 'react-native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 export default function App() {
   return (
-    <SafeAreaProvider>
-      <View style={styles.container}>
-        <StatusBar barStyle="light-content" />
-        <View style={styles.logo}>
-          <Text style={styles.logoText}>AD</Text>
-        </View>
-        <Text style={styles.title}>ارسلان دوجو</Text>
-        <Text style={styles.subtitle}>نسخه ۱.۰.۰</Text>
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" />
+      <View style={styles.logo}>
+        <Text style={styles.logoText}>AD</Text>
       </View>
-    </SafeAreaProvider>
+      <Text style={styles.title}>ارسلان دوجو</Text>
+      <Text style={styles.subtitle}>نسخه ۱.۰.۰</Text>
+    </View>
   );
 }
 
