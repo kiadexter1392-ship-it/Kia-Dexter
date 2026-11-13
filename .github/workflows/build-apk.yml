@@ -11,7 +11,7 @@ on:
 jobs:
   build-apk:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -38,16 +38,28 @@ jobs:
         working-directory: mobile
         run: npx expo prebuild --platform android --no-install
 
+      - name: Set Gradle JVM args
+        working-directory: mobile/android
+        run: echo "org.gradle.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=512m" >> gradle.properties
+
       - name: Build Debug APK
         working-directory: mobile/android
+        run: ./gradlew assembleDebug --no-daemon --max-workers=1 --stacktrace
+
+      - name: Find and upload APK
         run: |
-          chmod +x ./gradlew
-          ./gradlew assembleDebug --no-daemon 2>&1 | tee /tmp/gradle.log
-          echo "EXIT CODE: $?"
+          APK=$(find mobile/android -name "*.apk" -type f | head -1)
+          echo "APK found: $APK"
+          if [ -z "$APK" ]; then
+            echo "ERROR: No APK found!"
+            find mobile/android -type f -name "*.apk" 2>/dev/null
+            find mobile/android/app/build -type f 2>/dev/null | head -20
+            exit 1
+          fi
+          cp "$APK" ArslanDojo-debug.apk
 
-      - name: Show Gradle output
-        if: always()
-        run: tail -200 /tmp/gradle.log 2>/dev/null || echo "No gradle log found"
-
-      - name: Find APK
-        run: find /home/runner/work -name "*.apk" 2>/dev/null || echo "No APK found"
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ArslanDojo-debug.apk
+          path: ArslanDojo-debug.apk
