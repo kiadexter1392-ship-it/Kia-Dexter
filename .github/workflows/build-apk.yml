@@ -46,10 +46,16 @@ jobs:
         working-directory: mobile/android
         run: |
           chmod +x ./gradlew
-          ./gradlew assembleDebug --no-daemon --info 2>&1 | tail -100
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Find APK
+        working-directory: mobile/android
+        run: find . -name "*.apk" -type f
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: ArslanDojo-debug.apk
-          path: mobile/android/app/build/outputs/apk/debug/*.apk
+          path: |
+            mobile/android/app/build/outputs/**/*.apk
+            mobile/android/**/*.apk
