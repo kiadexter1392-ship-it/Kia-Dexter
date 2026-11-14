@@ -200,12 +200,6 @@
 <!-- SCRIPTS -->
 <script src="/ui/jalali.browser.js"></script>
 <script src="/ui/ui.js"></script>
-<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-<script src="https://unpkg.com/htm@3.1.1/dist/htm.umd.js"></script>
-<script>
-  var html = htm.bind(React.createElement);
-</script>
 <script src="/CardStack.js"></script>
 <script>
 (function() {
@@ -267,18 +261,15 @@
     document.getElementById('coachLink').href = UI.peerUrl(cfg.coachPort);
   }).catch(function() {});
 
-  /* ── Pricing CardStack ── */
+  /* ── Pricing CardStack (vanilla JS) ── */
   fetch('/api/payment').then(function(r) { return r.json(); }).then(function(d) {
     if (!d.ok) return;
     var cards = d.pricing.slice(0, 6).map(function(p) {
       return { discipline: p.discipline, price: p.price };
     });
     var root = document.getElementById('cardStackRoot');
-    if (root && window.CardStack) {
-      var domRoot = ReactDOM.createRoot(root);
-      domRoot.render(React.createElement(window.CardStack, {
-        spread: 85, bounce: 50, scatter: 30, count: cards.length, cards: cards
-      }));
+    if (root && window.CardStack && window.CardStack.mount) {
+      window.CardStack.mount(root, { cards: cards });
     }
   }).catch(function() {});
 
