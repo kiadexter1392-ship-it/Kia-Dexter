@@ -55,9 +55,9 @@
     <div class="section-label">شهریه ماهانه</div>
     <div class="section-title">شماره کارت‌ها</div>
 
-    <div class="pricing-grid" id="pricingGrid"></div>
+      <div id="cardStackRoot"></div>
 
-    <div class="cards-row">
+      <div class="cards-row">
       <div class="bank-card-wrap" onclick="this.classList.toggle('flipped')">
         <div class="bank-card-inner">
           <div class="bank-face bank-front-male">
@@ -153,7 +153,13 @@
 
 <script src="/ui/jalali.browser.js"></script>
 <script src="/ui/ui.js"></script>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/htm@3.1.1/dist/htm.umd.js"></script>
 <script>
+  const html = htm.bind(React.createElement);
+</script>
+<script src="/CardStack.js"></script>
 function doCopy(btn, num) {
   navigator.clipboard.writeText(num).then(function() {
     btn.innerHTML = '<span>✅</span> کپی شد';
@@ -187,13 +193,18 @@ UI.loadConfig().then(function(cfg) {
   document.getElementById('coachLink').href = UI.peerUrl(cfg.coachPort);
 }).catch(function(){});
 
-// Pricing
-fetch('/api/payment').then(function(r){return r.json()}).then(function(d){
-  if(!d.ok) return;
-  document.getElementById('pricingGrid').innerHTML = d.pricing.map(function(p){
-    return '<div class="price-card"><div class="price-name">'+p.discipline+'</div><div class="price-amount">'+p.price+'</div><div class="price-unit">هزار تومان / ماه</div><a href="https://ble.ir/+989016399804" target="_blank" class="price-btn">پرداخت</a></div>';
-  }).join('');
-}).catch(function(){});
+      // Pricing — CardStack
+      fetch('/api/payment').then(function(r){return r.json()}).then(function(d){
+        if(!d.ok) return;
+        var cards = d.pricing.slice(0, 6).map(function(p) {
+          return { discipline: p.discipline, price: p.price };
+        });
+        var root = document.getElementById('cardStackRoot');
+        if (root && window.CardStack) {
+          var domRoot = ReactDOM.createRoot(root);
+          domRoot.render(React.createElement(window.CardStack, { spread: 85, bounce: 50, scatter: 30, count: cards.length, cards: cards }));
+        }
+      }).catch(function(){});
 
 // Login
 document.getElementById('loginForm').onsubmit = function(e) {
