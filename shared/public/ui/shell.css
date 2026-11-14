@@ -420,3 +420,86 @@
   .btn { padding: 8px 14px; font-size: 13px; }
   .btn.sm { padding: 5px 10px; font-size: 12px; }
 }
+
+/* ══════════════════════════════════════════════
+   Card Swap — from Bencho (MIT licensed)
+   A stack of cards in depth. Front card goes to
+   back on click/drag. Tokens mapped to project.
+   ══════════════════════════════════════════════ */
+
+/* --fill-on   → project text: #1a1a2e (dark on light glass)
+   --fill-slab → project card surface: rgba(255,255,255,0.9)
+   --t         → inline per-card transform (set by JS) */
+.csw {
+  position: relative;
+  user-select: none;
+  -webkit-user-select: none;
+  margin: 0 auto;
+}
+
+.csw-stage {
+  position: absolute;
+  left: 30px;
+  bottom: 24px;
+  /* flat, so paint order is the z-index: a card sent back goes behind
+     at once. The origin is the block's middle, where it was on .csw */
+  perspective: 1000px;
+  perspective-origin: 150px 95px;
+}
+
+/* a card is a photo in a thin slab frame, its corner concentric
+   with the photo's, and a solid label pill in the corner */
+.csw-card {
+  position: absolute;
+  inset: 0;
+  padding: 3px;
+  border-radius: 20px;
+  /* --fill-slab mapped to project surface */
+  background: rgba(255,255,255,0.9);
+  /* --fill-on mapped to project text */
+  color: #1a1a2e;
+  /* hairline edge instead of shadow — depth is the stack */
+  box-shadow: 0 0 0 1px rgba(26,26,46,0.12);
+  /* --t is the slot transform, set inline per card */
+  transform: var(--t);
+  transition: transform 600ms cubic-bezier(0.22, 1, 0.36, 1);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.csw-card[data-front] { cursor: grab; touch-action: none; }
+.csw-card[data-front]:active { cursor: grabbing; }
+
+.csw-photo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 17px;
+  pointer-events: none;
+}
+
+.csw-tag {
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  /* --fill-slab mapped */
+  background: rgba(255,255,255,0.92);
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1a2e;
+  pointer-events: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  backdrop-filter: blur(8px);
+}
+
+/* CardSwap wrapper in panel */
+.cardswap-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px 0;
+}
+
