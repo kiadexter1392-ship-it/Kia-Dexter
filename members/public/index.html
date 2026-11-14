@@ -68,6 +68,59 @@
     <div class="feature"><div class="ic">🔔</div><h4>اعلان شخصی</h4><p>بازخورد مربی روی تمرین‌هایت را به شکل اعلان دریافت کن.</p></div>
   </section>
 
+  <!-- شهریه و شماره کارت -->
+  <section class="auth-wrap" id="pricing" style="padding-top:0">
+    <div class="auth-card wide pad-lg" style="text-align:center">
+      <h3 style="font-size:22px;margin-bottom:24px">شهریه و شماره کارت</h3>
+      <div id="pricingGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-bottom:28px"></div>
+
+      <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-bottom:16px">
+        <div class="flip-card" onclick="this.classList.toggle('flipped')" style="width:300px;height:190px">
+          <div class="flip-card-inner">
+            <div class="flip-card-front card-male" style="background:linear-gradient(135deg,#0c1929,#1a3a6a,#2563a8);border-radius:16px;padding:20px;display:flex;flex-direction:column;justify-content:space-between;position:relative;box-shadow:0 12px 40px rgba(0,0,0,0.5)">
+              <div style="width:36px;height:26px;background:linear-gradient(135deg,#d4a853,#f0d878);border-radius:5px"></div>
+              <div style="position:absolute;top:16px;left:16px;font-size:10px;font-weight:800;letter-spacing:2px;color:rgba(255,255,255,0.5)">ARSLAN DOJO</div>
+              <div style="font-size:18px;font-weight:700;color:#fff">نوید احمدی</div>
+              <div style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:rgba(255,255,255,0.9);background:rgba(255,255,255,0.12);padding:6px 12px;border-radius:20px;width:fit-content"><span>👔</span> شهریه آقایان</div>
+              <div style="font-size:11px;color:rgba(255,255,255,0.4);text-align:center">↻ ضربه بزنید</div>
+            </div>
+            <div class="flip-card-back card-male" style="background:linear-gradient(135deg,#0c1929,#1a3a6a,#2563a8);border-radius:16px;padding:20px;display:flex;flex-direction:column;justify-content:space-between;position:relative;transform:rotateY(180deg);backface-visibility:hidden;box-shadow:0 12px 40px rgba(0,0,0,0.5)">
+              <div style="position:absolute;top:0;left:0;right:0;height:36px;background:rgba(0,0,0,0.6);border-radius:16px 16px 0 0"></div>
+              <div style="font-size:10px;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:2px;margin-top:44px">شماره کارت</div>
+              <div style="font-size:18px;font-weight:700;letter-spacing:3px;font-family:monospace;color:#fff;text-align:center;padding:8px 0">6219 8619 3898 6279</div>
+              <button onclick="event.stopPropagation();copyCard(this,'6219861938986279')" style="display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:8px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);border-radius:8px;color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit"><span>📋</span> کپی</button>
+              <div style="font-size:10px;color:rgba(255,255,255,0.6);text-align:center">نوید احمدی — آقایان</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="flip-card" onclick="this.classList.toggle('flipped')" style="width:300px;height:190px">
+          <div class="flip-card-inner">
+            <div class="flip-card-front card-female" style="background:linear-gradient(135deg,#290c1e,#6a1a3a,#a82563);border-radius:16px;padding:20px;display:flex;flex-direction:column;justify-content:space-between;position:relative;box-shadow:0 12px 40px rgba(0,0,0,0.5)">
+              <div style="width:36px;height:26px;background:linear-gradient(135deg,#d4a853,#f0d878);border-radius:5px"></div>
+              <div style="position:absolute;top:16px;left:16px;font-size:10px;font-weight:800;letter-spacing:2px;color:rgba(255,255,255,0.5)">ARSLAN DOJO</div>
+              <div style="font-size:18px;font-weight:700;color:#fff">خانم توکلی شانجانی</div>
+              <div style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:rgba(255,255,255,0.9);background:rgba(255,255,255,0.12);padding:6px 12px;border-radius:20px;width:fit-content"><span>👗</span> شهریه بانوان</div>
+              <div style="font-size:11px;color:rgba(255,255,255,0.4);text-align:center">↻ ضربه بزنید</div>
+            </div>
+            <div class="flip-card-back card-female" style="background:linear-gradient(135deg,#290c1e,#6a1a3a,#a82563);border-radius:16px;padding:20px;display:flex;flex-direction:column;justify-content:space-between;position:relative;transform:rotateY(180deg);backface-visibility:hidden;box-shadow:0 12px 40px rgba(0,0,0,0.5)">
+              <div style="position:absolute;top:0;left:0;right:0;height:36px;background:rgba(0,0,0,0.6);border-radius:16px 16px 0 0"></div>
+              <div style="font-size:10px;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:2px;margin-top:44px">شماره کارت</div>
+              <div style="font-size:18px;font-weight:700;letter-spacing:3px;font-family:monospace;color:#fff;text-align:center;padding:8px 0">6219 8619 0341 7334</div>
+              <button onclick="event.stopPropagation();copyCard(this,'6219861903417334')" style="display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:8px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);border-radius:8px;color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit"><span>📋</span> کپی</button>
+              <div style="font-size:10px;color:rgba(255,255,255,0.6);text-align:center">خانم توکلی شانجانی — بانوان</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="font-size:13px;color:var(--text-muted);padding:14px;background:rgba(26,26,26,0.4);border-radius:12px;border:1px solid var(--border)">
+        مهلت پرداخت تا ۱۲ هر ماه — فیش واریزی را به
+        <a href="https://ble.ir/+989016399804" target="_blank" style="color:var(--gold);text-decoration:none;font-weight:600">+989016399804</a>
+        ارسال کنید.
+      </div>
+    </div>
+  </section>
+
   <main class="auth-wrap" id="join" style="min-height:auto;padding-bottom:60px">
     <section class="card auth-card wide pad-lg">
       <div class="tabs">
@@ -127,9 +180,26 @@
 
   <div class="toast-container" id="toastContainer"></div>
 
+  <style>
+    .flip-card { perspective: 1200px; cursor: pointer; }
+    .flip-card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.7s cubic-bezier(0.175,0.885,0.32,1.275); transform-style: preserve-3d; }
+    .flip-card.flipped .flip-card-inner { transform: rotateY(180deg); }
+    .flip-card-front, .flip-card-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+    .flip-card-back { transform: rotateY(180deg); }
+  </style>
+
   <script src="/ui/jalali.browser.js"></script>
   <script src="/ui/ui.js"></script>
   <script>
+    function copyCard(btn, number) {
+      navigator.clipboard.writeText(number).then(function() {
+        var orig = btn.innerHTML;
+        btn.innerHTML = '<span>✅</span> کپی شد!';
+        btn.style.background = 'rgba(74,222,128,0.2)';
+        setTimeout(function() { btn.innerHTML = orig; btn.style.background = ''; }, 2000);
+      });
+    }
+
     (function () {
       var loginForm = document.getElementById('loginForm');
       var registerForm = document.getElementById('registerForm');
@@ -162,6 +232,21 @@
           sel.appendChild(o);
         });
       }).catch(function () { });
+
+      // Load pricing
+      fetch('/api/payment').then(function(r) { return r.json(); }).then(function(data) {
+        if (!data.ok) return;
+        var grid = document.getElementById('pricingGrid');
+        if (!grid) return;
+        grid.innerHTML = data.pricing.map(function(p) {
+          return '<div style="background:rgba(26,26,26,0.5);backdrop-filter:blur(10px);border:1px solid var(--border);border-radius:14px;padding:18px;text-align:center">' +
+            '<div style="font-size:14px;font-weight:600;margin-bottom:8px">' + p.discipline + '</div>' +
+            '<div style="font-size:24px;font-weight:800;color:var(--gold);margin-bottom:4px">' + p.price + '</div>' +
+            '<div style="font-size:11px;color:var(--text-dim);margin-bottom:12px">هزار تومان / ماهانه</div>' +
+            '<a href="https://ble.ir/+989016399804" target="_blank" style="display:inline-block;padding:8px 16px;background:rgba(212,168,83,0.12);border:1px solid rgba(212,168,83,0.3);border-radius:8px;color:var(--gold);font-size:12px;font-weight:600;text-decoration:none">پرداخت</a>' +
+            '</div>';
+        }).join('');
+      }).catch(function() {});
 
       var params = new URLSearchParams(location.search);
       if (params.get('error') === 'bad-token' || params.get('error') === 'expired') {
