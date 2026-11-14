@@ -4,29 +4,31 @@
    ============================================================ */
 
 :root {
-  --bg: #0a0a0a;
-  --bg-2: #111111;
+  --bg: #0d0d0d;
+  --bg-2: #141414;
   --bg-3: #1a1a1a;
-  --surface: #141414;
-  --surface-2: #1e1e1e;
-  --border: #2a2a2a;
-  --border-light: #333333;
+  --surface: rgba(20, 20, 20, 0.6);
+  --surface-2: rgba(30, 30, 30, 0.5);
+  --border: rgba(212, 168, 83, 0.15);
+  --border-light: rgba(212, 168, 83, 0.25);
   --text: #ffffff;
-  --text-muted: #888888;
+  --text-muted: #999999;
   --text-dim: #666666;
-  --accent: #d4a853;
-  --accent-2: #e8c878;
-  --accent-soft: rgba(212, 168, 83, 0.1);
+  --gold: #d4a853;
+  --gold-light: #f0d878;
+  --gold-dark: #b8922e;
+  --gold-soft: rgba(212, 168, 83, 0.08);
   --red: #ff6b5e;
   --red-soft: rgba(255, 107, 94, 0.1);
   --green: #4ade80;
   --green-soft: rgba(74, 222, 128, 0.1);
-  --radius: 16px;
-  --radius-sm: 12px;
-  --radius-lg: 24px;
+  --radius: 20px;
+  --radius-sm: 14px;
+  --radius-lg: 28px;
   --font: 'Vazirmatn', -apple-system, BlinkMacSystemFont, sans-serif;
-  --shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-  --shadow-sm: 0 4px 20px rgba(0, 0, 0, 0.3);
+  --shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  --shadow-gold: 0 8px 32px rgba(212, 168, 83, 0.15);
+  --glass: blur(20px) saturate(180%);
 }
 
 * {
@@ -46,6 +48,24 @@ body {
   line-height: 1.6;
   direction: rtl;
   overflow-x: hidden;
+  min-height: 100vh;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: 
+    radial-gradient(ellipse 80% 60% at 10% 20%, rgba(212, 168, 83, 0.06) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 80% at 90% 80%, rgba(184, 146, 46, 0.04) 0%, transparent 50%),
+    radial-gradient(ellipse 100% 100% at 50% 50%, rgba(212, 168, 83, 0.02) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+body > * {
+  position: relative;
+  z-index: 1;
 }
 
 .hidden { display: none !important; }
@@ -60,8 +80,9 @@ body {
   left: 0;
   right: 0;
   z-index: 1000;
-  background: rgba(10, 10, 10, 0.8);
-  backdrop-filter: blur(20px);
+  background: rgba(13, 13, 13, 0.7);
+  backdrop-filter: var(--glass);
+  -webkit-backdrop-filter: var(--glass);
   border-bottom: 1px solid var(--border);
   padding: 16px 24px;
 }
@@ -133,8 +154,8 @@ body {
   position: absolute;
   inset: 0;
   background: 
-    radial-gradient(circle at 20% 50%, rgba(212, 168, 83, 0.08) 0%, transparent 50%),
-    radial-gradient(circle at 80% 20%, rgba(255, 107, 94, 0.06) 0%, transparent 50%);
+    radial-gradient(ellipse 70% 50% at 15% 40%, rgba(212, 168, 83, 0.1) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 70% at 85% 60%, rgba(240, 216, 120, 0.06) 0%, transparent 50%);
   z-index: 0;
   pointer-events: none;
 }
@@ -147,15 +168,17 @@ body {
 
 .hero .eyebrow {
   display: inline-block;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 700;
   letter-spacing: 3px;
-  color: var(--accent);
+  color: var(--gold);
   text-transform: uppercase;
   margin-bottom: 24px;
-  padding: 8px 16px;
-  background: var(--accent-soft);
+  padding: 10px 20px;
+  background: rgba(212, 168, 83, 0.08);
+  border: 1px solid rgba(212, 168, 83, 0.2);
   border-radius: 30px;
+  backdrop-filter: blur(10px);
 }
 
 .hero h1 {
@@ -167,7 +190,7 @@ body {
 }
 
 .hero h1 span {
-  background: linear-gradient(135deg, var(--red), var(--accent));
+  background: linear-gradient(135deg, var(--gold), var(--gold-light));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -212,23 +235,41 @@ body {
 }
 
 .btn.primary {
-  background: var(--text);
-  color: var(--bg);
+  background: linear-gradient(135deg, var(--gold), var(--gold-light));
+  color: #0a0a0a;
+  font-weight: 700;
 }
 
 .btn.primary:hover {
-  background: var(--accent);
   transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(212, 168, 83, 0.35);
 }
 
 .btn.gold {
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
-  color: var(--bg);
+  background: linear-gradient(135deg, var(--gold), var(--gold-light));
+  color: #0a0a0a;
+  font-weight: 700;
 }
 
 .btn.gold:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(212, 168, 83, 0.3);
+  box-shadow: 0 8px 30px rgba(212, 168, 83, 0.35);
+}
+
+.btn.lg {
+  padding: 16px 32px;
+  font-size: 16px;
+}
+
+.btn:not(.primary):not(.gold) {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.btn:not(.primary):not(.gold):hover {
+  border-color: var(--gold);
+  color: var(--gold);
 }
 
 .btn.full {
@@ -252,15 +293,17 @@ body {
 .hero-art .ring {
   width: 280px;
   height: 280px;
-  border: 2px solid var(--border);
+  border: 1px solid var(--border-light);
   border-radius: 50%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 12px;
-  background: var(--surface);
-  box-shadow: var(--shadow);
+  background: rgba(20, 20, 20, 0.5);
+  backdrop-filter: var(--glass);
+  -webkit-backdrop-filter: var(--glass);
+  box-shadow: var(--shadow-gold);
 }
 
 .hero-art .big-mark {
@@ -270,7 +313,7 @@ body {
 .hero-art .bold {
   font-size: 24px;
   font-weight: 800;
-  background: linear-gradient(135deg, var(--red), var(--accent));
+  background: linear-gradient(135deg, var(--gold), var(--gold-light));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -283,7 +326,9 @@ body {
 
 .hero-art .float {
   padding: 12px 20px;
-  background: var(--surface);
+  background: rgba(20, 20, 20, 0.5);
+  backdrop-filter: var(--glass);
+  -webkit-backdrop-filter: var(--glass);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   font-size: 14px;
@@ -332,6 +377,8 @@ body {
 
 .feature {
   background: var(--surface);
+  backdrop-filter: var(--glass);
+  -webkit-backdrop-filter: var(--glass);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 32px;
@@ -339,9 +386,9 @@ body {
 }
 
 .feature:hover {
-  border-color: var(--accent);
+  border-color: var(--gold);
   transform: translateY(-4px);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-gold);
 }
 
 .feature .ic {
@@ -373,9 +420,12 @@ body {
 
 .auth-card {
   background: var(--surface);
+  backdrop-filter: var(--glass);
+  -webkit-backdrop-filter: var(--glass);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 40px;
+  box-shadow: var(--shadow-gold);
 }
 
 .auth-card.wide {
@@ -411,8 +461,9 @@ body {
 }
 
 .tabs button.active {
-  background: var(--text);
-  color: var(--bg);
+  background: linear-gradient(135deg, var(--gold), var(--gold-light));
+  color: #0a0a0a;
+  font-weight: 700;
 }
 
 .col {
@@ -454,19 +505,21 @@ body {
 .field input,
 .field select {
   padding: 14px 16px;
-  background: var(--bg-3);
+  background: rgba(26, 26, 26, 0.6);
+  backdrop-filter: blur(10px);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   color: var(--text);
   font-size: 15px;
   font-family: inherit;
-  transition: border-color 0.2s;
+  transition: all 0.2s;
 }
 
 .field input:focus,
 .field select:focus {
   outline: none;
-  border-color: var(--accent);
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(212, 168, 83, 0.1);
 }
 
 .field input.en {
@@ -479,17 +532,19 @@ body {
   color: var(--text-muted);
   text-align: center;
   padding: 16px;
-  background: var(--bg-3);
+  background: rgba(26, 26, 26, 0.4);
+  backdrop-filter: blur(10px);
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
 }
 
 .hint code {
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: rgba(212, 168, 83, 0.12);
+  color: var(--gold);
   padding: 2px 8px;
   border-radius: 4px;
   font-family: monospace;
+  font-weight: 600;
 }
 
 .hint .tiny {
@@ -526,7 +581,9 @@ body {
    ============================================================ */
 
 .landing-footer {
-  background: var(--bg-2);
+  background: rgba(20, 20, 20, 0.5);
+  backdrop-filter: var(--glass);
+  -webkit-backdrop-filter: var(--glass);
   border-top: 1px solid var(--border);
   padding: 24px;
   display: flex;
