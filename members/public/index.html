@@ -3,415 +3,210 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#0a0a0a">
-  <title>ARSLAN DOJO — باشگاه رزمی</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <title>باشگاه آنلاین ارسلان دوجو — پنل شاگردان</title>
+  <meta name="description" content="پنل کاربری شاگردان باشگاه آنلاین ارسلان دوجو: دریافت تمرین، جدول پیشرفت ماهانه و اطلاعیه‌های باشگاه">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'><circle cx='24' cy='24' r='20' fill='%23d9a441'/></svg>">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css">
   <link rel="stylesheet" href="/ui/style.css">
 </head>
-<body>
+<body class="landing">
 
-  <!-- Navigation -->
-  <nav class="nav">
-    <div class="nav-container">
-      <div class="nav-brand">
-        <svg class="nav-logo" viewBox="0 0 48 48" width="40" height="40">
+  <header class="landing-nav">
+    <div class="brand">
+      <span class="mark">
+        <svg viewBox="0 0 48 48" aria-hidden="true">
           <defs>
-            <linearGradient id="logoGrad" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stop-color="#ff6b5e"/>
-              <stop offset="100%" stop-color="#d9a441"/>
+            <linearGradient id="ensoG" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#ff6b5e"></stop>
+              <stop offset="100%" stop-color="#d9a441"></stop>
             </linearGradient>
           </defs>
-          <circle cx="24" cy="24" r="22" fill="none" stroke="url(#logoGrad)" stroke-width="2"/>
-          <path d="M33.5 8.6A19 19 0 1 0 42.6 27.4" fill="none" stroke="url(#logoGrad)" stroke-width="3" stroke-linecap="round"/>
-          <circle cx="24" cy="24" r="4" fill="url(#logoGrad)"/>
+          <path d="M33.5 8.6A19 19 0 1 0 42.6 27.4" fill="none" stroke="url(#ensoG)" stroke-width="4.6" stroke-linecap="round"></path>
+          <circle cx="24" cy="24" r="4.2" fill="url(#ensoG)"></circle>
         </svg>
-        <span class="nav-brand-text">ARSLAN DOJO</span>
+      </span>
+      <div>
+        <div class="name">باشگاه آنلاین ارسلان دوجو</div>
+        <div class="sub">ARSLAN DOJO — MEMBERS</div>
       </div>
-      <div class="nav-links">
-        <a href="#about">درباره</a>
-        <a href="#disciplines">رشته‌ها</a>
-        <a href="#pricing">شهریه</a>
-        <a href="#contact">تماس</a>
-      </div>
-      <div class="nav-actions">
-        <a href="#auth" class="nav-btn">ورود</a>
-      </div>
-      <button class="nav-menu-btn" id="menuBtn">☰</button>
     </div>
-  </nav>
+    <nav class="links">
+      <a href="#features">امکانات</a>
+      <a href="#join">عضویت</a>
+      <a href="#" id="coachLink">پنل مربی</a>
+    </nav>
+  </header>
 
-  <!-- Hero Section -->
   <section class="hero">
-    <div class="hero-bg"></div>
-    <div class="hero-content">
-      <div class="hero-eyebrow">باشگاه رزمی ارسلان دوجو</div>
-      <h1 class="hero-title">
-        قدرت.<br>
-        <span class="hero-title-accent">انضباط.</span><br>
-        افتخار.
-      </h1>
-      <p class="hero-subtitle">کاراته، کراسفیت، بوکس، ژیمناستیک و موی‌تای — با مربیان حرفه‌ای</p>
-      <div class="hero-cta">
-        <a href="#auth" class="btn btn-primary">ثبت‌نام</a>
-        <a href="#disciplines" class="btn btn-outline">مشاهده رشته‌ها</a>
+    <div>
+      <span class="eyebrow">باشگاه رزمی آنلاین</span>
+      <h1>تمرینت را <span>هر روز</span> دنبال کن،<br>پیشرفتت را ببین.</h1>
+      <p class="lead">
+        برنامه تمرینی مستقیم از طرف مربی به پنل تو می‌رسد؛ جدول پیشرفت ماهانه‌ات را ببین،
+        تمرین‌ها را تیک بزن و از اطلاعیه‌های باشگاه باخبر بمان.
+      </p>
+      <div class="cta">
+        <a class="btn primary lg" href="#join">ساخت پنل کاربری</a>
+        <a class="btn lg" href="#" id="loginJump">ورود به پنل</a>
       </div>
     </div>
-    <div class="hero-stats">
-      <div class="stat">
-        <div class="stat-number">۵+</div>
-        <div class="stat-label">رشته ورزشی</div>
+    <div class="hero-art">
+      <div class="ring">
+        <div class="big-mark">🥋</div>
+        <div class="bold">ارسلان دوجو</div>
+        <div class="tiny">کیوکوشین · کاراته · کیک‌بوکسینگ</div>
       </div>
-      <div class="stat">
-        <div class="stat-number">۲۰+</div>
-        <div class="stat-label">سال تجربه</div>
-      </div>
-      <div class="stat">
-        <div class="stat-number">۱۰۰+</div>
-        <div class="stat-label">شاگرد فعال</div>
-      </div>
+      <div class="float a">📈 جدول پیشرفت ماهانه</div>
+      <div class="float b">📩 تمرین مستقیم از مربی</div>
     </div>
   </section>
 
-  <!-- About Bento Grid -->
-  <section class="section" id="about">
-    <div class="section-header">
-      <div class="section-eyebrow">درباره ما</div>
-      <h2 class="section-title">چرا ارسلان دوجو؟</h2>
-    </div>
-    <div class="bento-grid">
-      <div class="bento-card bento-large">
-        <div class="bento-icon">🥋</div>
-        <h3>مربیان حرفه‌ای</h3>
-        <p>با بیش از ۲۰ سال تجربه در آموزش رشته‌های رزمی</p>
-      </div>
-      <div class="bento-card">
-        <div class="bento-icon">📊</div>
-        <h3>پیگیری پیشرفت</h3>
-        <p>ثبت منظم پیشرفت ماهانه شاگردان</p>
-      </div>
-      <div class="bento-card">
-        <div class="bento-icon">🏆</div>
-        <h3>مسابقات</h3>
-        <p>آمادگی برای مسابقات استانی و کشوری</p>
-      </div>
-      <div class="bento-card">
-        <div class="bento-icon">👥</div>
-        <h3>همه سنین</h3>
-        <p>از ۴ سال تا بزرگسالان</p>
-      </div>
-      <div class="bento-card">
-        <div class="bento-icon">💪</div>
-        <h3>تجهیزات مدرن</h3>
-        <p>سالن مجهز با استانداردهای بین‌المللی</p>
-      </div>
-    </div>
+  <section class="features" id="features">
+    <div class="feature"><div class="ic">🥋</div><h4>تمرین اختصاصی</h4><p>برنامه تمرینی که مربی برایت می‌فرستد، با مهلت و جزئیات کامل.</p></div>
+    <div class="feature"><div class="ic">📊</div><h4>جدول پیشرفت</h4><p>نمره استقامت، قدرت، تکنیک، انعطاف و انضباط برای هر ماه سال.</p></div>
+    <div class="feature"><div class="ic">📢</div><h4>اطلاعیه باشگاه</h4><p>خبر کلاس‌ها، آزمون کمربند و رویدادها بلافاصله در پنل شما.</p></div>
+    <div class="feature"><div class="ic">🔔</div><h4>اعلان شخصی</h4><p>بازخورد مربی روی تمرین‌هایت را به شکل اعلان دریافت کن.</p></div>
   </section>
 
-  <!-- Disciplines -->
-  <section class="section section-dark" id="disciplines">
-    <div class="section-header">
-      <div class="section-eyebrow">رشته‌های ورزشی</div>
-      <h2 class="section-title">رشته خودت رو انتخاب کن</h2>
-    </div>
-    <div class="disciplines-grid">
-      <div class="discipline-card">
-        <div class="discipline-emoji">🥋</div>
-        <h3>کاراته</h3>
-        <p>سبک شوتوکان — از مبتدی تا دان بالا</p>
+  <main class="auth-wrap" id="join" style="min-height:auto;padding-bottom:60px">
+    <section class="card auth-card wide pad-lg">
+      <div class="tabs">
+        <button id="tabLogin" class="active" type="button">ورود به پنل</button>
+        <button id="tabRegister" type="button">ثبت‌نام و ساخت پنل</button>
       </div>
-      <div class="discipline-card">
-        <div class="discipline-emoji">🏋️</div>
-        <h3>کراسفیت</h3>
-        <p>تمرینات عملکردی برای همه سطوح</p>
-      </div>
-      <div class="discipline-card">
-        <div class="discipline-emoji">🥊</div>
-        <h3>بوکس</h3>
-        <p>تکنیک‌های حرفه‌ای مشت‌زنی</p>
-      </div>
-      <div class="discipline-card">
-        <div class="discipline-emoji">🤸</div>
-        <h3>ژیمناستیک</h3>
-        <p>انعطاف، تعادل و قدرت</p>
-      </div>
-      <div class="discipline-card">
-        <div class="discipline-emoji">👊</div>
-        <h3>موی‌تای</h3>
-        <p>هنر هشت اندام — بانوان</p>
-      </div>
-    </div>
-  </section>
 
-  <!-- Pricing -->
-  <section class="section" id="pricing">
-    <div class="section-header">
-      <div class="section-eyebrow">شهریه ماهانه</div>
-      <h2 class="section-title">سرمایه‌گذاری روی خودت</h2>
-    </div>
-    <div class="pricing-grid" id="pricingGrid"></div>
-
-    <!-- Bank Cards -->
-    <div class="cards-section">
-      <h3 class="cards-title">شماره کارت‌ها <span class="cards-hint">برای کپی، روی کارت بزنید</span></h3>
-      <div class="cards-grid">
-
-        <div class="flip-card" onclick="this.classList.toggle('flipped')">
-          <div class="flip-card-inner">
-            <div class="flip-card-front card-male">
-              <div class="card-chip"></div>
-              <div class="card-brand">ARSLAN DOJO</div>
-              <div class="card-name">نوید احمدی</div>
-              <div class="card-type"><span class="type-icon">👔</span> شهریه آقایان</div>
-              <div class="card-hint">↻ ضربه بزنید</div>
-            </div>
-            <div class="flip-card-back card-male">
-              <div class="card-stripe"></div>
-              <div class="card-label">شماره کارت</div>
-              <div class="card-number">6219 8619 3898 6279</div>
-              <button class="card-copy-btn" data-copy="6219861938986279" onclick="event.stopPropagation(); copyCard(this);">
-                <span>📋</span> کپی شماره کارت
-              </button>
-              <div class="card-name-small">نوید احمدی — آقایان</div>
-            </div>
-          </div>
+      <!-- ورود -->
+      <form id="loginForm" class="col" style="gap:13px">
+        <div class="grid-2">
+          <div class="field"><label for="lUser">نام کاربری</label>
+            <input id="lUser" type="text" class="en" autocomplete="username" placeholder="ali" required></div>
+          <div class="field"><label for="lPass">رمز عبور</label>
+            <input id="lPass" type="password" class="en" autocomplete="current-password" placeholder="••••••••" required></div>
         </div>
-
-        <div class="flip-card" onclick="this.classList.toggle('flipped')">
-          <div class="flip-card-inner">
-            <div class="flip-card-front card-female">
-              <div class="card-chip"></div>
-              <div class="card-brand">ARSLAN DOJO</div>
-              <div class="card-name">خانم توکلی شانجانی</div>
-              <div class="card-type"><span class="type-icon">👗</span> شهریه بانوان</div>
-              <div class="card-hint">↻ ضربه بزنید</div>
-            </div>
-            <div class="flip-card-back card-female">
-              <div class="card-stripe"></div>
-              <div class="card-label">شماره کارت</div>
-              <div class="card-number">6219 8619 0341 7334</div>
-              <button class="card-copy-btn" data-copy="6219861903417334" onclick="event.stopPropagation(); copyCard(this);">
-                <span>📋</span> کپی شماره کارت
-              </button>
-              <div class="card-name-small">خانم توکلی شانجانی — بانوان</div>
-            </div>
-          </div>
+        <button class="btn primary full lg" id="loginBtn" type="submit">ورود</button>
+        <div class="hint">
+          <div>حساب نمونه برای تست: <code>ali</code> / <code>123456</code></div>
+          <div class="tiny mt-s">اگر قبلاً ثبت‌نام کرده‌اید، اطلاعاتتان در دیتابیس باشگاه ذخیره شده است.</div>
         </div>
-
-      </div>
-      <div class="pricing-note">
-        مهلت پرداخت تا ۱۲ هر ماه — فیش واریزی را به 
-        <a href="https://ble.ir/+989016399804" target="_blank" class="en">+989016399804</a> 
-        ارسال کنید.
-      </div>
-    </div>
-  </section>
-
-  <!-- FAQ -->
-  <section class="section section-dark" id="faq">
-    <div class="section-header">
-      <div class="section-eyebrow">سوالات متداول</div>
-      <h2 class="section-title">پاسخ سوالات شما</h2>
-    </div>
-    <div class="faq-list" id="faqList"></div>
-  </section>
-
-  <!-- Contact -->
-  <section class="section" id="contact">
-    <div class="section-header">
-      <div class="section-eyebrow">تماس با ما</div>
-      <h2 class="section-title">در ارتباط باش</h2>
-    </div>
-    <div class="contact-grid">
-      <div class="contact-card">
-        <div class="contact-icon">💬</div>
-        <h3>پیام‌رسان بله</h3>
-        <p>ارسال فیش واریزی و ارتباط با باشگاه</p>
-        <a href="https://ble.ir/+989016399804" target="_blank" class="btn btn-primary">باز کردن بله</a>
-      </div>
-      <div class="contact-card">
-        <div class="contact-icon">📞</div>
-        <h3>تماس تلفنی</h3>
-        <p>ساعات اداری</p>
-        <a href="tel:+989016399804" class="btn btn-outline">تماس</a>
-      </div>
-    </div>
-  </section>
-
-  <!-- Auth Section -->
-  <section class="section auth-section" id="auth">
-    <div class="auth-container">
-      <div class="auth-tabs">
-        <button id="tabLogin" class="auth-tab active">ورود</button>
-        <button id="tabRegister" class="auth-tab">ثبت‌نام</button>
-      </div>
-
-      <div class="auth-error hidden" id="errorMsg"></div>
-
-      <form id="loginForm" class="auth-form" method="POST" action="/login">
-        <div class="form-group">
-          <label>نام کاربری</label>
-          <input name="username" type="text" class="en" autocomplete="username" required>
-        </div>
-        <div class="form-group">
-          <label>رمز عبور</label>
-          <input name="password" type="password" class="en" autocomplete="current-password" required>
-        </div>
-        <button type="submit" class="btn btn-primary btn-full">ورود به پنل</button>
       </form>
 
-      <form id="registerForm" class="auth-form hidden" method="POST" action="/register">
-        <div class="form-row">
-          <div class="form-group">
-            <label>نام و نام خانوادگی <span class="req">*</span></label>
-            <input name="full_name" required>
-          </div>
-          <div class="form-group">
-            <label>نام کاربری (انگلیسی) <span class="req">*</span></label>
-            <input name="username" class="en" required minlength="3">
-          </div>
+      <!-- ثبت‌نام -->
+      <form id="registerForm" class="col hidden" style="gap:13px">
+        <div class="grid-3">
+          <div class="field"><label>نام و نام خانوادگی *</label><input name="full_name" required placeholder="مثلاً علی رضایی"></div>
+          <div class="field"><label>نام کاربری (انگلیسی) *</label><input name="username" class="en" required minlength="3" placeholder="ali123"></div>
+          <div class="field"><label>شماره موبایل</label><input name="phone" class="en" placeholder="09xxxxxxxxx"></div>
         </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>رشته ورزشی <span class="req">*</span></label>
-            <select name="discipline" required>
-              <option value="">انتخاب رشته...</option>
-              <option value="کاراته">کاراته</option>
-              <option value="کراسفیت">کراسفیت</option>
-              <option value="بوکس">بوکس</option>
-              <option value="ژیمناستیک">ژیمناستیک</option>
-              <option value="موی تای">موی تای</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>جنسیت</label>
-            <select name="gender">
-              <option value="">—</option>
-              <option>مرد</option>
-              <option>زن</option>
-            </select>
-          </div>
+        <div class="grid-4">
+          <div class="field"><label>سن</label><input name="age" type="number" min="4" max="90"></div>
+          <div class="field"><label>قد (سانتی‌متر)</label><input name="height_cm" type="number" min="80" max="230"></div>
+          <div class="field"><label>وزن (کیلوگرم)</label><input name="weight_kg" type="number" step="0.1" min="15" max="250"></div>
+          <div class="field"><label>کمربند فعلی</label><select name="belt" id="beltSelect"></select></div>
         </div>
-        <div class="form-row-3">
-          <div class="form-group"><label>سن</label><input name="age" type="number" min="4" max="90"></div>
-          <div class="form-group"><label>قد (cm)</label><input name="height_cm" type="number" min="80" max="230"></div>
-          <div class="form-group"><label>وزن (kg)</label><input name="weight_kg" type="number" step="0.1" min="15" max="250"></div>
+        <div class="grid-3">
+          <div class="field"><label>جنسیت</label><select name="gender"><option value="">—</option><option>مرد</option><option>زن</option></select></div>
+          <div class="field"><label>سبک تمرینی</label><input name="style" placeholder="کیوکوشین"></div>
+          <div class="field"><label>سابقه تمرین</label><input name="experience" placeholder="مثلاً ۱ سال"></div>
         </div>
-        <div class="form-row">
-          <div class="form-group"><label>رمز عبور <span class="req">*</span></label><input name="password" type="password" class="en" minlength="6" required></div>
-          <div class="form-group"><label>تکرار رمز <span class="req">*</span></label><input name="password2" type="password" class="en" minlength="6" required></div>
+        <div class="grid-2">
+          <div class="field"><label>رمز عبور * (حداقل ۶ حرف)</label><input name="password" type="password" class="en" minlength="6" required></div>
+          <div class="field"><label>تکرار رمز عبور *</label><input name="password2" type="password" class="en" minlength="6" required></div>
         </div>
-        <button type="submit" class="btn btn-primary btn-full">ثبت‌نام</button>
+        <button class="btn gold full lg" id="registerBtn" type="submit">ثبت‌نام و ورود به پنل</button>
+        <div class="hint">
+          با ثبت‌نام، نام شما در فهرست شاگردان مربی ثبت می‌شود و می‌تواند برایتان تمرین بفرستد و جدول پیشرفت را پر کند.
+        </div>
       </form>
-    </div>
-  </section>
+    </section>
+  </main>
 
-  <!-- Footer -->
-  <footer class="footer">
-    <div class="footer-container">
-      <div class="footer-brand">
-        <svg class="footer-logo" viewBox="0 0 48 48" width="32" height="32">
-          <defs>
-            <linearGradient id="footerLogoGrad" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stop-color="#ff6b5e"/>
-              <stop offset="100%" stop-color="#d9a441"/>
-            </linearGradient>
-          </defs>
-          <circle cx="24" cy="24" r="22" fill="none" stroke="url(#footerLogoGrad)" stroke-width="2"/>
-          <path d="M33.5 8.6A19 19 0 1 0 42.6 27.4" fill="none" stroke="url(#footerLogoGrad)" stroke-width="3" stroke-linecap="round"/>
-          <circle cx="24" cy="24" r="4" fill="url(#footerLogoGrad)"/>
-        </svg>
-        <div>
-          <strong>ARSLAN DOJO</strong>
-          <span>باشگاه رزمی ارسلان دوجو</span>
-        </div>
-      </div>
-      <div class="footer-links">
-        <a href="#about">درباره</a>
-        <a href="#disciplines">رشته‌ها</a>
-        <a href="#pricing">شهریه</a>
-        <a href="#contact">تماس</a>
-      </div>
-      <div class="footer-copy">© 2026 Arslan Dojo. All rights reserved.</div>
-    </div>
+  <footer class="landing-footer">
+    <span>© باشگاه آنلاین ارسلان دوجو</span>
+    <span>سایت شماره ۲ — پنل شاگردان</span>
   </footer>
+
+  <div class="toast-container" id="toastContainer"></div>
 
   <script src="/ui/jalali.browser.js"></script>
   <script src="/ui/ui.js"></script>
   <script>
-    // Copy card number
-    function copyCard(btn) {
-      const number = btn.dataset.copy;
-      navigator.clipboard.writeText(number).then(() => {
-        const original = btn.innerHTML;
-        btn.innerHTML = '<span>✅</span> کپی شد!';
-        btn.style.background = 'rgba(74, 222, 128, 0.2)';
-        setTimeout(() => {
-          btn.innerHTML = original;
-          btn.style.background = '';
-        }, 2000);
-      }).catch(() => {
-        alert('کپی نشد. شماره کارت: ' + number);
-      });
-    }
+    (function () {
+      var loginForm = document.getElementById('loginForm');
+      var registerForm = document.getElementById('registerForm');
+      var tabLogin = document.getElementById('tabLogin');
+      var tabRegister = document.getElementById('tabRegister');
 
-    // Tab switching
-    document.getElementById('tabLogin').addEventListener('click', () => {
-      document.getElementById('loginForm').classList.remove('hidden');
-      document.getElementById('registerForm').classList.add('hidden');
-      document.getElementById('tabLogin').classList.add('active');
-      document.getElementById('tabRegister').classList.remove('active');
-    });
-    document.getElementById('tabRegister').addEventListener('click', () => {
-      document.getElementById('registerForm').classList.remove('hidden');
-      document.getElementById('loginForm').classList.add('hidden');
-      document.getElementById('tabRegister').classList.add('active');
-      document.getElementById('tabLogin').classList.remove('active');
-    });
-
-    // Menu toggle
-    document.getElementById('menuBtn').addEventListener('click', () => {
-      document.querySelector('.nav-links').classList.toggle('open');
-    });
-
-    // Load pricing
-    fetch('/api/payment').then(r => r.json()).then(data => {
-      if (!data.ok) return;
-      const grid = document.getElementById('pricingGrid');
-      grid.innerHTML = data.pricing.map(p => `
-        <div class="pricing-card">
-          <div class="pricing-name">${p.discipline}</div>
-          <div class="pricing-amount">${p.price}</div>
-          <div class="pricing-unit">هزار تومان / ماهانه</div>
-          <a href="https://ble.ir/+989016399804" target="_blank" class="btn btn-outline btn-sm">پرداخت و ارسال رسید</a>
-        </div>
-      `).join('');
-    }).catch(() => {});
-
-    // Load FAQ
-    fetch('/api/faq').then(r => r.json()).then(data => {
-      if (!data.ok) return;
-      const list = document.getElementById('faqList');
-      list.innerHTML = data.faqs.map((f, i) => `
-        <div class="faq-item">
-          <button class="faq-question" onclick="this.parentElement.classList.toggle('open')">
-            ${f.q}
-            <span class="faq-arrow">◂</span>
-          </button>
-          <div class="faq-answer"><p>${f.a}</p></div>
-        </div>
-      `).join('');
-    }).catch(() => {});
-
-    // Form validation
-    document.getElementById('registerForm').addEventListener('submit', function(e) {
-      const pw = this.querySelector('[name=password]').value;
-      const pw2 = this.querySelector('[name=password2]').value;
-      if (pw !== pw2) {
-        e.preventDefault();
-        alert('تکرار رمز مطابقت ندارد');
+      function show(which) {
+        var isLogin = which === 'login';
+        loginForm.classList.toggle('hidden', !isLogin);
+        registerForm.classList.toggle('hidden', isLogin);
+        tabLogin.classList.toggle('active', isLogin);
+        tabRegister.classList.toggle('active', !isLogin);
       }
-    });
+
+      tabLogin.addEventListener('click', function () { show('login'); });
+      tabRegister.addEventListener('click', function () { show('register'); });
+      document.getElementById('loginJump').addEventListener('click', function (e) {
+        e.preventDefault();
+        show('login');
+        document.getElementById('join').scrollIntoView({ behavior: 'smooth' });
+        setTimeout(function () { document.getElementById('lUser').focus(); }, 350);
+      });
+
+      UI.loadConfig().then(function (cfg) {
+        document.getElementById('coachLink').href = UI.peerUrl(cfg.coachPort);
+        var sel = document.getElementById('beltSelect');
+        (cfg.belts || ['سفید']).forEach(function (b) {
+          var o = document.createElement('option');
+          o.value = b; o.textContent = b;
+          sel.appendChild(o);
+        });
+      }).catch(function () { });
+
+      var params = new URLSearchParams(location.search);
+      if (params.get('error') === 'bad-token' || params.get('error') === 'expired') {
+        UI.toast('لینک ورود از پنل مربی معتبر نیست یا منقضی شده است', 'warn', 5000);
+      }
+
+      function busy(btn, on, label) {
+        btn.disabled = on;
+        btn.innerHTML = on ? '<span class="loader"></span> ' + label : btn.dataset.label;
+      }
+
+      var loginBtn = document.getElementById('loginBtn');
+      loginBtn.dataset.label = loginBtn.textContent;
+      loginForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        busy(loginBtn, true, 'در حال ورود...');
+        UI.api('/api/login', {
+          method: 'POST',
+          body: { username: document.getElementById('lUser').value, password: document.getElementById('lPass').value }
+        }).then(function () {
+          UI.toast('خوش آمدید!', 'ok');
+          setTimeout(function () { location.href = '/panel'; }, 400);
+        }).catch(function (err) {
+          UI.toast(err.message, 'warn', 5000);
+          busy(loginBtn, false);
+        });
+      });
+
+      var registerBtn = document.getElementById('registerBtn');
+      registerBtn.dataset.label = registerBtn.textContent;
+      registerForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var data = {};
+        new FormData(registerForm).forEach(function (v, k) { data[k] = v; });
+        if (data.password !== data.password2) { UI.toast('تکرار رمز عبور مطابقت ندارد', 'warn'); return; }
+        busy(registerBtn, true, 'در حال ثبت‌نام...');
+        UI.api('/api/register', { method: 'POST', body: data }).then(function () {
+          UI.toast('ثبت‌نام انجام شد — به پنل خوش آمدید', 'ok');
+          setTimeout(function () { location.href = '/panel'; }, 500);
+        }).catch(function (err) {
+          UI.toast(err.message, 'warn', 5500);
+          busy(registerBtn, false);
+        });
+      });
+    }());
   </script>
 </body>
 </html>
