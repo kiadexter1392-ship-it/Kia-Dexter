@@ -95,9 +95,9 @@
 .topbar h1 { font-size: 20px; font-weight: 800; margin: 0; }
 .topbar .sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
 
-/* ── Sections ── */
-.section { display: none; padding: 24px 28px 40px; }
-.section.active { display: block; }
+/* ── Sections (panel only — more specific to override style.css) ── */
+.main .section { display: none; padding: 24px 28px 40px; max-width: none; margin: 0; }
+.main .section.active { display: block; }
 
 /* ── Row / Col Utilities ── */
 .row { display: flex; align-items: center; gap: 10px; }
