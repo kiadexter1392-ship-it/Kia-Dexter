@@ -72,6 +72,9 @@
 
       <!-- CardSwap — decorative stack in home view -->
       <div id="cardSwapRoot" class="cardswap-wrap" style="display:none"></div>
+
+      <!-- StackedBars — progress chart -->
+      <div id="stackedBarsRoot" style="display:flex;justify-content:center;padding:20px 0"></div>
       <section class="section" id="view-plans"></section>
       <section class="section" id="view-progress"></section>
       <section class="section" id="view-news"></section>
@@ -85,6 +88,7 @@
   <script src="/ui/ui.js"></script>
   <script src="/panel.js"></script>
   <script src="/CardSwap.js"></script>
+  <script src="/StackedBars.js"></script>
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch(function(e) {});
@@ -98,11 +102,20 @@
           window.CardSwap.mount(root, { auto: true, every: 5 });
         }
       }
-      /* Wait for home view to render, then show */
+      function showStackedBars() {
+        var root = document.getElementById('stackedBarsRoot');
+        if (root && window.StackedBars && window.StackedBars.mount) {
+          window.StackedBars.mount(root, { bars: 14, colour: 'Colour' });
+        }
+      }
       if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', function() { setTimeout(showCardSwap, 800); });
+        document.addEventListener('DOMContentLoaded', function() {
+          setTimeout(showCardSwap, 800);
+          setTimeout(showStackedBars, 1000);
+        });
       } else {
         setTimeout(showCardSwap, 800);
+        setTimeout(showStackedBars, 1000);
       }
     })();
   </script>
