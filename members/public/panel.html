@@ -102,20 +102,107 @@
           window.CardSwap.mount(root, { auto: true, every: 5 });
         }
       }
+      var stackedBarsInstance = null;
+
+      function makeBarsFromAPI(progress, mode) {
+        var MONTHS_FA = ['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'];
+        var MONTHS_SHORT = ['فرو','ارد','خرد','تیر','مرد','شهر','مهر','آبا','آذر','دی','بهم','اسف'];
+        var out = [];
+
+        if (mode === 'Month') {
+          /* Monthly: one bar per month */
+          for (var m = 1; m <= 12; m++) {
+            var p = progress[m];
+            if (!p) continue;
+            var vals = [
+              p.endurance || 0,
+              p.strength || 0,
+              p.technique || 0,
+              p.flexibility || 0
+            ];
+            out.push({
+              vals: vals,
+              esc: p.sessions || 0,
+              label: MONTHS_FA[m - 1],
+              short: MONTHS_SHORT[m - 1]
+            });
+          }
+        } else if (mode === 'Week') {
+          /* Weekly: aggregate months into ~4 week blocks */
+          var weeks = 8;
+          for (var w = 0; w < weeks; w++) {
+            var mIdx = Math.min(11, Math.floor(w * 12 / weeks));
+            var p = progress[mIdx + 1];
+            if (!p) { out.push({ vals: [0,0,0,0], esc: 0, label: 'هفته ' + (w+1), short: 'ه' + (w+1) }); continue; }
+            var factor = 1 / (12 / weeks);
+            var vals = [
+              Math.round((p.endurance || 0) * factor),
+              Math.round((p.strength || 0) * factor),
+              Math.round((p.technique || 0) * factor),
+              Math.round((p.flexibility || 0) * factor)
+            ];
+            out.push({
+              vals: vals,
+              esc: Math.round((p.sessions || 0) * factor),
+              label: 'هفته ' + (w + 1),
+              short: 'ه' + (w + 1)
+            });
+          }
+        } else {
+          /* Daily: spread months across ~20 days */
+          var days = 14;
+          for (var d = 0; d < days; d++) {
+            var mIdx = Math.min(11, Math.floor(d * 12 / days));
+            var p = progress[mIdx + 1];
+            if (!p) { out.push({ vals: [0,0,0,0], esc: 0, label: 'روز ' + (d+1), short: (d+1).toString() }); continue; }
+            var dayFactor = 1 / (12 / days * 30);
+            var vals = [
+              Math.round((p.endurance || 0) * dayFactor),
+              Math.round((p.strength || 0) * dayFactor),
+              Math.round((p.technique || 0) * dayFactor),
+              Math.round((p.flexibility || 0) * dayFactor)
+            ];
+            out.push({
+              vals: vals,
+              esc: Math.max(0, Math.round((p.sessions || 0) * dayFactor)),
+              label: 'روز ' + (d + 1),
+              short: (d + 1).toString()
+            });
+          }
+        }
+        return out;
+      }
+
+      function loadStackedBarsData(instance, mode) {
+        if (!instance || !UI) return;
+        UI.api('/api/progress?year=1405').then(function(d) {
+          if (d.ok && d.progress) {
+            var bars = makeBarsFromAPI(d.progress, mode);
+            instance.render(bars);
+          }
+        }).catch(function() {});
+      }
+
       function showStackedBars() {
         var root = document.getElementById('stackedBarsRoot');
         if (root && window.StackedBars && window.StackedBars.mount) {
-          window.StackedBars.mount(root, { bars: 14, colour: 'Colour' });
+          stackedBarsInstance = window.StackedBars.mount(root, {
+            colour: 'Colour',
+            onModeChange: function(mode) {
+              loadStackedBarsData(stackedBarsInstance, mode);
+            }
+          });
+          loadStackedBarsData(stackedBarsInstance, 'Month');
         }
       }
       if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function() {
           setTimeout(showCardSwap, 800);
-          setTimeout(showStackedBars, 1000);
+          setTimeout(showStackedBars, 600);
         });
       } else {
         setTimeout(showCardSwap, 800);
-        setTimeout(showStackedBars, 1000);
+        setTimeout(showStackedBars, 600);
       }
     })();
   </script>
