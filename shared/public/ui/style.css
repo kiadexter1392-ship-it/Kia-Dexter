@@ -19,11 +19,11 @@
   --glass-strong: rgba(255,255,255,0.85);
   --glass-border: rgba(212,168,83,0.2);
   --glass-shadow: 0 8px 32px rgba(0,0,0,0.08);
-  /* ══ Amber Gold Glass — from css.glass ══ */
-  --amber-glass: rgba(255,186,0,0.25);
-  --amber-glass-border: rgba(255,186,0,0.39);
+  /* ══ Professional Gold Glass — from css.glass, gold-tuned ══ */
+  --amber-glass: rgba(212,168,83,0.18);
+  --amber-glass-border: rgba(212,168,83,0.30);
   --amber-blur: 11.2px;
-  --amber-shadow: 0 4px 30px rgba(0,0,0,0.1);
+  --amber-shadow: 0 4px 30px rgba(0,0,0,0.08);
   --bg-2: rgba(255,255,255,0.5);
   --bg-3: rgba(255,255,255,0.75);
   --line: rgba(212,168,83,0.15);
@@ -62,7 +62,7 @@ a { color: inherit; text-decoration: none; }
     box-shadow: var(--glass-shadow);
 */
 
-/* ══ Amber Gold Glass — css.glass recipe ══ */
+/* ══ Professional Gold Glass — css.glass recipe, gold-tuned ══ */
 .glass-amber {
   background: var(--amber-glass);
   border-radius: 16px;
@@ -150,10 +150,10 @@ a { color: inherit; text-decoration: none; }
   box-shadow: var(--amber-shadow);
 }
 .btn-ghost:hover {
-  background: rgba(255,186,0,0.35);
-  border-color: rgba(255,186,0,0.55);
+  background: rgba(212,168,83,0.28);
+  border-color: rgba(212,168,83,0.50);
   color: var(--gold);
-  box-shadow: 0 4px 20px rgba(255,186,0,0.25);
+  box-shadow: 0 4px 20px rgba(212,168,83,0.20);
 }
 .btn-full { width: 100%; }
 
@@ -179,10 +179,10 @@ a { color: inherit; text-decoration: none; }
   transition: all 0.3s;
 }
 .feature-card:hover {
-  background: rgba(255,186,0,0.32);
-  border-color: rgba(255,186,0,0.55);
+  background: rgba(212,168,83,0.28);
+  border-color: rgba(212,168,83,0.50);
   transform: translateY(-4px);
-  box-shadow: 0 8px 40px rgba(255,186,0,0.2);
+  box-shadow: 0 8px 40px rgba(212,168,83,0.18);
 }
 .feature-icon { font-size: 32px; margin-bottom: 14px; }
 .feature-card h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; color: var(--text); }
@@ -237,10 +237,10 @@ a { color: inherit; text-decoration: none; }
   box-shadow: var(--amber-shadow);
 }
 .bank-front-female {
-  background: rgba(255,200,50,0.22);
+  background: rgba(212,168,83,0.22);
   backdrop-filter: blur(var(--amber-blur));
   -webkit-backdrop-filter: blur(var(--amber-blur));
-  border: 1px solid rgba(255,186,0,0.42);
+  border: 1px solid rgba(212,168,83,0.38);
   box-shadow: var(--amber-shadow);
 }
 .bank-back-male {
@@ -251,10 +251,10 @@ a { color: inherit; text-decoration: none; }
   transform: rotateY(180deg);
 }
 .bank-back-female {
-  background: rgba(255,200,50,0.22);
+  background: rgba(212,168,83,0.22);
   backdrop-filter: blur(var(--amber-blur));
   -webkit-backdrop-filter: blur(var(--amber-blur));
-  border: 1px solid rgba(255,186,0,0.42);
+  border: 1px solid rgba(212,168,83,0.38);
   transform: rotateY(180deg);
 }
 .bank-chip { width: 38px; height: 28px; background: linear-gradient(135deg, var(--gold), var(--gold-light)); border-radius: 5px; box-shadow: 0 2px 8px rgba(212,168,83,0.3); }
@@ -358,10 +358,10 @@ a { color: inherit; text-decoration: none; }
   transition: all 0.3s;
 }
 .contact-card:hover {
-  background: rgba(255,186,0,0.32);
-  border-color: rgba(255,186,0,0.55);
+  background: rgba(212,168,83,0.28);
+  border-color: rgba(212,168,83,0.50);
   transform: translateY(-3px);
-  box-shadow: 0 8px 40px rgba(255,186,0,0.2);
+  box-shadow: 0 8px 40px rgba(212,168,83,0.18);
 }
 .contact-icon { font-size: 32px; margin-bottom: 12px; }
 .contact-card h3 { font-size: 16px; font-weight: 700; margin-bottom: 8px; color: var(--text); }
@@ -438,8 +438,8 @@ a { color: inherit; text-decoration: none; }
   transition: box-shadow 0.3s, background 0.3s;
 }
 .stk-cs-card:hover .stk-cs-face {
-  background: rgba(255,186,0,0.35);
-  box-shadow: 0 8px 40px rgba(255,186,0,0.25), inset 0 1px 0 rgba(255,255,255,0.6);
+  background: rgba(212,168,83,0.30);
+  box-shadow: 0 8px 40px rgba(212,168,83,0.22), inset 0 1px 0 rgba(255,255,255,0.6);
 }
 .stk-cs-num {
   position: absolute; top: 10px; right: 12px;
