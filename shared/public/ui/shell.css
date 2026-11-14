@@ -15,11 +15,11 @@
 .sidebar {
   width: var(--sidebar-w, 260px);
   flex-shrink: 0;
-  background: var(--glass-strong, rgba(255,255,255,0.85));
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border-left: 1px solid var(--glass-border, rgba(212,168,83,0.2));
-  box-shadow: 4px 0 30px rgba(0,0,0,0.04);
+  background: var(--amber-glass, rgba(255,186,0,0.25));
+  backdrop-filter: blur(var(--amber-blur, 11.2px));
+  -webkit-backdrop-filter: blur(var(--amber-blur, 11.2px));
+  border-left: 1px solid var(--amber-glass-border, rgba(255,186,0,0.39));
+  box-shadow: var(--amber-shadow, 0 4px 30px rgba(0,0,0,0.1));
   display: flex;
   flex-direction: column;
   overflow-y: auto;
@@ -94,10 +94,10 @@
   align-items: center;
   gap: 14px;
   padding: 20px 28px;
-  border-bottom: 1px solid var(--line, rgba(212,168,83,0.15));
-  background: var(--glass, rgba(255,255,255,0.65));
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid var(--amber-glass-border, rgba(255,186,0,0.39));
+  background: var(--amber-glass, rgba(255,186,0,0.25));
+  backdrop-filter: blur(var(--amber-blur, 11.2px));
+  -webkit-backdrop-filter: blur(var(--amber-blur, 11.2px));
   position: sticky;
   top: 0;
   z-index: 10;
@@ -125,13 +125,13 @@
 
 /* ── Card ── */
 .card {
-  background: var(--glass, rgba(255,255,255,0.65));
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid var(--glass-border, rgba(212,168,83,0.2));
+  background: var(--amber-glass, rgba(255,186,0,0.25));
+  backdrop-filter: blur(var(--amber-blur, 11.2px));
+  -webkit-backdrop-filter: blur(var(--amber-blur, 11.2px));
+  border: 1px solid var(--amber-glass-border, rgba(255,186,0,0.39));
   border-radius: var(--radius-lg, 20px);
   padding: 22px;
-  box-shadow: var(--glass-shadow, 0 8px 32px rgba(0,0,0,0.08));
+  box-shadow: var(--amber-shadow, 0 4px 30px rgba(0,0,0,0.1));
 }
 .card.pad-lg { padding: 28px; }
 .card-head {
@@ -150,14 +150,15 @@
 
 /* ── Stat Card ── */
 .stat {
-  background: var(--glass, rgba(255,255,255,0.65));
-  backdrop-filter: blur(16px);
-  border: 1px solid var(--glass-border, rgba(212,168,83,0.2));
+  background: var(--amber-glass, rgba(255,186,0,0.25));
+  backdrop-filter: blur(var(--amber-blur, 11.2px));
+  -webkit-backdrop-filter: blur(var(--amber-blur, 11.2px));
+  border: 1px solid var(--amber-glass-border, rgba(255,186,0,0.39));
   border-radius: var(--radius, 16px);
   padding: 18px;
   position: relative;
   overflow: hidden;
-  box-shadow: var(--glass-shadow, 0 8px 32px rgba(0,0,0,0.08));
+  box-shadow: var(--amber-shadow, 0 4px 30px rgba(0,0,0,0.1));
 }
 .stat::before {
   content: '';
@@ -353,9 +354,10 @@
   padding: 20px;
 }
 .modal {
-  background: var(--glass-strong);
-  backdrop-filter: blur(24px) saturate(180%);
-  border: 1px solid var(--glass-border);
+  background: var(--amber-glass);
+  backdrop-filter: blur(var(--amber-blur));
+  -webkit-backdrop-filter: blur(var(--amber-blur));
+  border: 1px solid var(--amber-glass-border);
   border-radius: var(--radius-lg);
   max-width: 520px; width: 100%;
   max-height: 85vh; overflow-y: auto;
