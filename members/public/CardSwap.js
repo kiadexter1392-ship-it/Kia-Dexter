@@ -20,12 +20,12 @@
   const STEP_Y = 26;
   const STEP_Z = 70;
 
-  /* Martial arts themed cards — self-contained with emoji art */
+  /* Martial arts themed cards — 3D rendered images */
   const CARDS = [
-    { id: 'karate',  title: 'کاراته',   emoji: '🥋', bg: 'linear-gradient(135deg, #d4a853, #e8c878)' },
-    { id: 'crossfit',title: 'کراسفیت',  emoji: '🏋️', bg: 'linear-gradient(135deg, #e07050, #f09070)' },
-    { id: 'boxing',  title: 'بوکس',     emoji: '🥊', bg: 'linear-gradient(135deg, #5080c0, #70a0e0)' },
-    { id: 'gym',     title: 'ژیمناستیک',emoji: '🤸', bg: 'linear-gradient(135deg, #50b080, #70d0a0)' },
+    { id: 'karate',  title: 'کاراته',    src: '/images/card-karate.jpg' },
+    { id: 'crossfit',title: 'کراسفیت',   src: '/images/card-crossfit.jpg' },
+    { id: 'boxing',  title: 'بوکس',      src: '/images/card-boxing.jpg' },
+    { id: 'gym',     title: 'ژیمناستیک', src: '/images/card-gym.jpg' },
   ];
 
   function slot(k) {
@@ -122,15 +122,12 @@
         el.style.zIndex = CARDS.length - k;
         el.style.setProperty('--t', slot(k));
 
-        /* Photo area — colored gradient with emoji */
-        var photo = document.createElement('div');
+        /* Photo area — 3D rendered image */
+        var photo = document.createElement('img');
         photo.className = 'csw-photo';
-        photo.style.background = c.bg;
-        photo.style.display = 'flex';
-        photo.style.alignItems = 'center';
-        photo.style.justifyContent = 'center';
-        photo.style.fontSize = '64px';
-        photo.textContent = c.emoji;
+        photo.src = c.src;
+        photo.alt = c.title;
+        photo.draggable = false;
 
         /* Title tag */
         var tag = document.createElement('div');
