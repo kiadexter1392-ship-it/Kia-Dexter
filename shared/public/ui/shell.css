@@ -573,15 +573,19 @@
   border-radius: 10px;
   background: var(--stb-w6);
 }
+.stb-seg-ctl.stb-seg-3 {
+  grid-template-columns: 1fr 1fr 1fr;
+}
 .stb-thumb {
   position: absolute;
   top: 2px; bottom: 2px; left: 2px;
   width: calc(50% - 2px);
   border-radius: 8px;
   background: rgba(255,255,255,0.9);
-  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1), width 220ms ease;
 }
 .stb-seg-ctl[data-mode="Week"] .stb-thumb { transform: translateX(100%); }
+.stb-seg-ctl[data-mode="Month"] .stb-thumb { transform: translateX(200%); }
 
 .stb-tab {
   position: relative;
@@ -712,6 +716,30 @@
 @keyframes stb-pop {
   from { transform: translateY(0.18em); opacity: 0; filter: blur(2px); }
   to { transform: none; opacity: 1; filter: blur(0); }
+}
+
+/* Full-width variant */
+.stb.stb-wide {
+  width: 100%;
+  max-width: var(--max-w, 900px);
+  margin: 0 auto;
+}
+
+.stb.stb-wide .stb-plot {
+  overflow-x: auto;
+}
+
+@media (max-width: 768px) {
+  .stb.stb-wide {
+    padding: 12px;
+  }
+  .stb.stb-wide .stb-num {
+    font-size: 24px;
+  }
+  .stb-tab {
+    padding: 0 6px;
+    font-size: 11px;
+  }
 }
 
 
