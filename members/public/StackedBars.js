@@ -1,96 +1,46 @@
 /* ══ Stacked Bars — Vanilla JS ═══════════════════════════
    Adapted from Bencho's React StackedBars.
-   An alert-volume card: stacked bars per day/week with
-   tooltip, ring highlight, and spring animations.
+   Real data from API, Day/Week/Month modes, full width.
 
    Token mapping (Bencho → project):
      --fill-on    → #1a1a2e (project text)
      --fill-slab  → rgba(255,255,255,0.9) (card surface)
      --font-ui    → 'Vazirmatn', Tahoma, sans-serif
      --pane-edge  → rgba(212,168,83,0.2) (gold border)
-     --c          → inline per-bar color
-     --i          → inline column index (stagger)
-     --stb-r      → border-radius (set by JS)
-     --stb-rr     → ring radius (set by JS)
-
-   framer-motion replaced with CSS transitions + JS springs.
 */
 
 (function() {
   'use strict';
 
-  const W = 300;
-  const PAD = 16;
-  const CW = W - PAD * 2;
-  const CH = 104;
-  const BH = 22;
-  const SEG_GAP = 2;
+  /* Responsive: full width with max */
+  const MAX_W = 900;
+  const PAD = 20;
+  const CH = 140;
+  const BH = 28;
+  const SEG_GAP = 3;
   const LIFT = 2;
-  const TIP_W = 140;
+  const TIP_W = 160;
 
-  /* Jalali months */
-  const MONTHS = ['فرو','ارد','خرد','تیر','مرد','شهر','مهر','آبا','آذر','دی','بهم','اسف'];
+  const JALALI_MONTHS = ['فرووردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'];
+  const JALALI_MONTHS_SHORT = ['فرو','ارد','خرد','تیر','مرد','شهر','مهر','آبا','آذر','دی','بهم','اسف'];
 
   /* Categories — martial arts metrics */
   const CATS = ['استقامت', 'قدرت', 'تکنیک', 'انعطاف'];
 
-  /* Seeded random for consistent data */
-  function mulberry(seed) {
-    var a = seed >>> 0;
-    return function() {
-      a = (a + 0x6d2b79f5) >>> 0;
-      var t = a;
-      t = Math.imul(t ^ (t >>> 15), t | 1);
-      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-    };
-  }
+  function fmt(v) { return Math.round(v).toLocaleString('fa-IR'); }
+  function sum(a) { return a.reduce(function(s, v) { return s + v; }, 0); }
 
-  const fmt = function(v) { return Math.round(v).toLocaleString('fa-IR'); };
-  const sum = function(a) { return a.reduce(function(s, v) { return s + v; }, 0); };
-
-  function makeBars(mode, n) {
-    var rnd = mulberry(mode === 'Day' ? 4396 : 9117);
-    var base = [40, 30, 25, 20]; /* scores out of 100 */
-    var out = [];
-    var totalDays = 30;
-    for (var i = 0; i < totalDays; i++) {
-      var back = totalDays - 1 - i;
-      if (mode === 'Day') {
-        /* Use a fixed date range in Jalali */
-        var dayNum = 1 + back;
-        var monthIdx = 7; /* Aban */
-        var wd = (dayNum + 2) % 7; /* rough weekday */
-        var quiet = (wd === 5 || wd === 6) ? 0.6 : 1;
-        var surge = rnd() < 0.12 ? 1.4 : 1;
-        var vals = base.map(function(b, k) {
-          return Math.round(b * quiet * (0.5 + rnd() * 0.9) * (k === 0 ? surge : 1));
-        });
-        var esc = Math.round(2 + rnd() * 8 * quiet * surge);
-        var label = dayNum + ' ' + MONTHS[monthIdx];
-        out.push({ vals: vals, esc: esc, label: label, short: label });
-      } else {
-        var weekNum = totalDays - back;
-        var vals = base.map(function(b) { return Math.round(b * 4.5 * (0.7 + rnd() * 0.6)); });
-        var esc = Math.round(20 + rnd() * 35);
-        out.push({ vals: vals, esc: esc, label: 'هفته ' + weekNum, short: 'ه' + weekNum });
-      }
-    }
-    return out.slice(totalDays - n);
-  }
-
-  /* Spring animation helper — replaces framer-motion animate() */
+  /* Spring animation */
   function springTo(el, prop, target, duration) {
-    duration = duration || 500;
-    var start = parseFloat(el.style[prop] || 0);
-    var diff = target - start;
+    duration = duration || 400;
+    var current = parseFloat(el.style[prop] || 0);
+    var diff = target - current;
     if (Math.abs(diff) < 0.5) { el.style[prop] = target + 'px'; return; }
     var startTime = performance.now();
     function tick(now) {
       var t = Math.min(1, (now - startTime) / duration);
-      /* cubic-bezier(0.22, 1, 0.36, 1) approximation */
       var ease = 1 - Math.pow(1 - t, 3);
-      el.style[prop] = (start + diff * ease) + 'px';
+      el.style[prop] = (current + diff * ease) + 'px';
       if (t < 1) requestAnimationFrame(tick);
     }
     requestAnimationFrame(tick);
@@ -99,18 +49,21 @@
   function StackedBars(container, options) {
     if (!container) return;
     options = options || {};
-    var barCount = Math.max(2, Math.round(options.bars || 20));
-    var colourMode = options.colour || 'Colour';
 
-    var mode = 'Day';
+    var mode = 'Day'; /* Day | Week | Month */
     var at = null;
-    var seen = false;
+    var data = [];
+    var layout = [];
+    var cols = [];
+    var barCount = 0;
+    var g = 0;
+    var bw = 0;
+    var plotW = 0;
 
     /* Build DOM */
     var root = document.createElement('div');
-    root.className = 'stb';
-    root.setAttribute('data-colour', colourMode === 'Colour' ? 'on' : 'off');
-    root.style.width = W + 'px';
+    root.className = 'stb stb-wide';
+    root.setAttribute('data-colour', 'on');
 
     /* Header */
     var head = document.createElement('div');
@@ -127,45 +80,47 @@
     titles.appendChild(subEl);
 
     var segCtl = document.createElement('div');
-    segCtl.className = 'stb-seg-ctl';
+    segCtl.className = 'stb-seg-ctl stb-seg-3';
     segCtl.setAttribute('data-mode', mode);
-    segCtl.setAttribute('role', 'tablist');
 
     var thumb = document.createElement('span');
     thumb.className = 'stb-thumb';
-    thumb.setAttribute('aria-hidden', 'true');
 
     var tabDay = document.createElement('button');
     tabDay.className = 'stb-tab';
     tabDay.setAttribute('data-on', '');
-    tabDay.setAttribute('role', 'tab');
-    tabDay.textContent = 'روز';
+    tabDay.textContent = 'روزانه';
+
     var tabWeek = document.createElement('button');
     tabWeek.className = 'stb-tab';
-    tabWeek.setAttribute('role', 'tab');
-    tabWeek.textContent = 'هفته';
+    tabWeek.textContent = 'هفتگی';
+
+    var tabMonth = document.createElement('button');
+    tabMonth.className = 'stb-tab';
+    tabMonth.textContent = 'ماهانه';
 
     segCtl.appendChild(thumb);
     segCtl.appendChild(tabDay);
     segCtl.appendChild(tabWeek);
+    segCtl.appendChild(tabMonth);
 
     head.appendChild(titles);
     head.appendChild(segCtl);
     root.appendChild(head);
 
-    /* Figure (total number) */
+    /* Figure */
     var figure = document.createElement('div');
     figure.className = 'stb-figure';
     var numEl = document.createElement('span');
     numEl.className = 'stb-num';
     var unitEl = document.createElement('span');
     unitEl.className = 'stb-unit';
-    unitEl.textContent = 'مجموع';
+    unitEl.textContent = 'مجموع نمره';
     figure.appendChild(numEl);
     figure.appendChild(unitEl);
     root.appendChild(figure);
 
-    /* Plot area */
+    /* Plot */
     var plot = document.createElement('div');
     plot.className = 'stb-plot';
     plot.style.height = (CH + 1 + BH) + 'px';
@@ -175,16 +130,12 @@
     baseLine.style.top = CH + 'px';
     plot.appendChild(baseLine);
 
-    /* Ring (highlight) */
     var ring = document.createElement('span');
     ring.className = 'stb-ring';
-    ring.setAttribute('aria-hidden', 'true');
     plot.appendChild(ring);
 
-    /* Tooltip */
     var tip = document.createElement('div');
     tip.className = 'stb-tip';
-    tip.setAttribute('aria-hidden', 'true');
     plot.appendChild(tip);
 
     root.appendChild(plot);
@@ -200,35 +151,50 @@
 
     container.appendChild(root);
 
-    /* Data & render */
-    var data = [];
-    var layout = [];
-    var cols = [];
+    /* Tab widths for 3-mode thumb */
+    function updateThumb() {
+      var third = 100 / 3;
+      thumb.style.width = 'calc(' + third + '% - 2px)';
+      if (mode === 'Day') thumb.style.transform = 'translateX(0)';
+      else if (mode === 'Week') thumb.style.transform = 'translateX(' + third + '%)';
+      else thumb.style.transform = 'translateX(' + (third * 2) + '%)';
+    }
 
-    function render() {
-      data = makeBars(mode, barCount);
+    /* Compute geometry */
+    function computeGeometry() {
+      plotW = root.offsetWidth - PAD * 2;
+      if (plotW < 100) plotW = 400;
+      barCount = data.length;
+      if (barCount < 1) return;
+      g = Math.max(2, Math.min(8, (plotW - 4 * barCount) / (barCount - 1 || 1)));
+      bw = (plotW - g * (barCount - 1)) / barCount;
+    }
 
-      /* Geometry */
-      var g = Math.max(1, Math.min(6, (CW - 3 * barCount) / (barCount - 1)));
-      var bw = (CW - g * (barCount - 1)) / barCount;
-      var r = Math.min(2.5, bw / 2);
+    /* Render with data */
+    function render(newData) {
+      if (newData) data = newData;
+      if (data.length < 1) return;
 
-      root.style.setProperty('--stb-r', r + 'px');
-      root.style.setProperty('--stb-rr', (r + 3) + 'px');
+      computeGeometry();
 
       /* Update header */
-      subEl.textContent = barCount + ' ' + (mode === 'Day' ? 'روز اخیر' : 'هفته اخیر');
+      subEl.textContent = barCount + ' ' +
+        (mode === 'Day' ? 'روز اخیر' : mode === 'Week' ? 'هفته اخیر' : 'ماه اخیر');
       segCtl.setAttribute('data-mode', mode);
       tabDay.setAttribute('data-on', mode === 'Day' ? '' : null);
       tabWeek.setAttribute('data-on', mode === 'Week' ? '' : null);
+      tabMonth.setAttribute('data-on', mode === 'Month' ? '' : null);
+      updateThumb();
 
-      /* Compute totals & scale */
+      /* Totals & scale */
       var totals = data.map(function(b) { return sum(b.vals); });
       var maxT = Math.max.apply(null, totals);
-      var maxE = Math.max.apply(null, data.map(function(b) { return b.esc; }));
+      var maxE = Math.max.apply(null, data.map(function(b) { return b.esc || 0; }));
+      if (maxT < 1) maxT = 100;
+      if (maxE < 1) maxE = 10;
       var scale = (CH - LIFT - 2 - SEG_GAP * 3) / maxT;
 
-      /* Update total number with pop animation */
+      /* Total number with pop */
       var total = sum(totals);
       numEl.innerHTML = '';
       var totalStr = fmt(total);
@@ -241,7 +207,7 @@
         numEl.appendChild(d);
       }
 
-      /* Clear existing columns */
+      /* Clear columns */
       cols.forEach(function(c) { if (c.parentNode) c.parentNode.removeChild(c); });
       cols = [];
       layout = [];
@@ -273,6 +239,7 @@
           y += h + SEG_GAP;
         }
 
+        var escVal = b.esc || 0;
         var esc = document.createElement('span');
         esc.className = 'stb-esc';
         esc.style.top = (CH + 1 + LIFT) + 'px';
@@ -282,18 +249,18 @@
         layout.push({
           segs: segs,
           top: y - SEG_GAP,
-          esc: Math.max(3, (b.esc / maxE) * (BH - LIFT - 2))
+          esc: Math.max(3, (escVal / maxE) * (BH - LIFT - 2))
         });
 
         plot.appendChild(col);
         cols.push(col);
       }
 
-      /* Axis labels */
+      /* Axis */
       axisFirst.textContent = data[0].short;
       axisLast.textContent = data[data.length - 1].short;
 
-      /* Animate bars in */
+      /* Animate in */
       requestAnimationFrame(function() {
         requestAnimationFrame(function() {
           for (var i = 0; i < data.length; i++) {
@@ -322,19 +289,14 @@
       if (at === idx) return;
       at = idx;
 
-      /* Update scrub state */
-      if (idx !== null) {
+      if (idx !== null && idx < barCount) {
         root.setAttribute('data-scrub', '');
         cols.forEach(function(c, i) {
           c.setAttribute('data-on', i === idx ? '' : null);
         });
 
-        /* Position ring */
         var L = layout[idx];
-        var left = idx * ((CW - Math.max(1, Math.min(6, (CW - 3 * barCount) / (barCount - 1))) * (barCount - 1)) / barCount + Math.max(1, Math.min(6, (CW - 3 * barCount) / (barCount - 1))));
-        var g = Math.max(1, Math.min(6, (CW - 3 * barCount) / (barCount - 1)));
-        var bw = (CW - g * (barCount - 1)) / barCount;
-        left = idx * (bw + g);
+        var left = idx * (bw + g);
         var x = left - 3;
         var up = L.top;
         var down = L.esc;
@@ -346,11 +308,11 @@
         springTo(ring, 'top', y, 400);
         ring.style.height = h + 'px';
 
-        /* Position tooltip */
+        /* Tooltip position */
         var right = left + bw + 8;
         var tx;
-        if (right + TIP_W <= CW || left - 8 - TIP_W < 0) {
-          tx = Math.min(CW - TIP_W, right);
+        if (right + TIP_W <= plotW || left - 8 - TIP_W < 0) {
+          tx = Math.min(plotW - TIP_W, right);
         } else {
           tx = left - 8 - TIP_W;
         }
@@ -366,7 +328,7 @@
           top2.map(function(item) {
             return '<div class="stb-tip-row"><i style="--c:var(--stb-c' + (item.k + 1) + ')"></i><span>' + CATS[item.k] + '</span><b>' + fmt(item.v) + '</b></div>';
           }).join('') +
-          '<div class="stb-tip-row" data-esc=""><i></i><span>اسکالیت</span><b>' + cur.esc + '</b></div>';
+          '<div class="stb-tip-row" data-esc=""><i></i><span>جلسات</span><b>' + (cur.esc || 0) + '</b></div>';
         tip.style.opacity = '1';
 
       } else {
@@ -389,21 +351,39 @@
     });
     plot.addEventListener('pointerleave', function() { setAt(null); });
 
-    /* Tab switching */
-    tabDay.addEventListener('click', function() {
-      if (mode !== 'Day') { mode = 'Day'; setAt(null); render(); }
-    });
-    tabWeek.addEventListener('click', function() {
-      if (mode !== 'Week') { mode = 'Week'; setAt(null); render(); }
+    /* Tabs */
+    function setMode(m) {
+      if (mode !== m) {
+        mode = m;
+        setAt(null);
+        /* Request new data for this mode */
+        if (options.onModeChange) options.onModeChange(m);
+      }
+    }
+    tabDay.addEventListener('click', function() { setMode('Day'); });
+    tabWeek.addEventListener('click', function() { setMode('Week'); });
+    tabMonth.addEventListener('click', function() { setMode('Month'); });
+
+    /* Resize handler */
+    var resizeTimer;
+    window.addEventListener('resize', function() {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(function() { render(); }, 200);
     });
 
-    /* Initial render */
-    render();
+    /* Public API */
+    var api = {
+      render: render,
+      setMode: setMode,
+      root: root
+    };
+
+    return api;
   }
 
   window.StackedBars = {
     mount: function(container, options) {
-      StackedBars(container, options);
+      return StackedBars(container, options);
     }
   };
 })();
