@@ -107,6 +107,7 @@ a { color: inherit; text-decoration: none; }
 .cards-row { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; margin-bottom: 20px; }
 .bank-card-wrap {
   width: 310px; height: 190px; perspective: 1000px; cursor: pointer;
+  display: inline-block; vertical-align: top;
 }
 .bank-card-inner {
   position: relative; width: 100%; height: 100%;
@@ -115,8 +116,9 @@ a { color: inherit; text-decoration: none; }
 .bank-card-wrap.flipped .bank-card-inner { transform: rotateY(180deg); }
 .bank-face {
   position: absolute; inset: 0; border-radius: 16px; padding: 22px;
-  backface-visibility: hidden; display: flex; flex-direction: column;
-  justify-content: space-between; overflow: hidden;
+  backface-visibility: hidden; -webkit-backface-visibility: hidden;
+  display: flex; flex-direction: column; justify-content: space-between;
+  overflow: hidden;
 }
 .bank-front-male { background: linear-gradient(135deg, #0f1f3d, #1a3a6a); }
 .bank-front-female { background: linear-gradient(135deg, #2d0f1e, #6a1a3a); }
