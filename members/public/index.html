@@ -2,26 +2,38 @@
 <html lang="fa" dir="rtl">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>باشگاه ارسلان دوجو</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'><circle cx='24' cy='24' r='20' fill='%23d4a853'/></svg>">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
+  <meta name="theme-color" content="#0a0a0f">
+  <meta name="description" content="باشگاه رزمی ارسلان دوجو — کاراته، کراسفیت، بوکس، ژیمناستیک و موی‌تای. ثبت‌نام آنلاین، پیگیری پیشرفت و برنامه تمرینی اختصاصی.">
+  <meta name="keywords" content="باشگاه رزمی, کاراته, کراسفیت, بوکس, ژیمناستیک, موی تای, ارسلان دوجو, تمرین, ورزش">
+  <meta name="author" content="Arslan Dojo">
+  <meta property="og:title" content="باشگاه رزمی ارسلان دوجو">
+  <meta property="og:description" content="کاراته، کراسفیت، بوکس، ژیمناستیک و موی‌تای — با مربیان حرفه‌ای">
+  <meta property="og:type" content="website">
+  <title>باشگاه رزمی ارسلان دوجو — کاراته، کراسفیت، بوکس</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Ccircle cx='24' cy='24' r='20' fill='%23d4a853'/%3E%3Cpath d='M33.5 8.6A19 19 0 1 0 42.6 27.4' fill='none' stroke='%23ff6b5e' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="apple-touch-icon" href="/ui/icons/icon-192.png">
+  <link rel="manifest" href="/manifest.json">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css">
   <link rel="stylesheet" href="/ui/style.css">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 </head>
 <body>
 
 <!-- NAV -->
 <nav class="nav">
   <div class="nav-brand">
-    <svg viewBox="0 0 48 48"><defs><linearGradient id="g1" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#ff6b5e"/><stop offset="100%" stop-color="#d4a853"/></linearGradient></defs><path d="M33.5 8.6A19 19 0 1 0 42.6 27.4" fill="none" stroke="url(#g1)" stroke-width="4.6" stroke-linecap="round"/><circle cx="24" cy="24" r="4.2" fill="url(#g1)"/></svg>
+    <svg viewBox="0 0 48 48" width="36" height="36"><defs><linearGradient id="g1" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#ff6b5e"/><stop offset="100%" stop-color="#d4a853"/></linearGradient></defs><path d="M33.5 8.6A19 19 0 1 0 42.6 27.4" fill="none" stroke="url(#g1)" stroke-width="4.6" stroke-linecap="round"/><circle cx="24" cy="24" r="4.2" fill="url(#g1)"/></svg>
     <span class="nav-brand-name">ARSLAN DOJO</span>
   </div>
-  <div class="nav-links">
+  <div class="nav-links" id="navLinks">
     <a href="#features">امکانات</a>
     <a href="#pricing">شهریه</a>
-    <a href="#auth">ورود</a>
+    <a href="#contact">تماس</a>
+    <a href="#auth">ورود / ثبت‌نام</a>
     <a href="#" id="coachLink" class="nav-btn">پنل مربی</a>
   </div>
+  <button class="nav-menu-btn" id="menuBtn" aria-label="منو">☰</button>
 </nav>
 
 <!-- HERO -->
@@ -50,54 +62,75 @@
 </section>
 
 <!-- PRICING -->
-<section class="section" id="pricing" style="background:rgba(255,255,255,0.02);max-width:100%;padding:80px 24px">
-  <div style="max-width:1100px;margin:0 auto">
-    <div class="section-label">شهریه ماهانه</div>
-    <div class="section-title">شماره کارت‌ها</div>
+<section class="section" id="pricing">
+  <div class="section-label">شهریه ماهانه</div>
+  <div class="section-title">شماره کارت‌ها</div>
 
-      <div id="cardStackRoot"></div>
+  <div id="cardStackRoot"></div>
 
-      <div class="cards-row">
-      <div class="bank-card-wrap" onclick="this.classList.toggle('flipped')">
-        <div class="bank-card-inner">
-          <div class="bank-face bank-front-male">
-            <div class="bank-chip"></div>
-            <div class="bank-brand">ARSLAN DOJO</div>
-            <div class="bank-holder">نوید احمدی</div>
-            <div class="bank-type"><span>👔</span> شهریه آقایان</div>
-            <div class="bank-hint">↻ ضربه بزنید</div>
-          </div>
-          <div class="bank-face bank-back-male bank-back">
-            <div class="stripe"></div>
-            <div class="label">شماره کارت</div>
-            <div class="number">6219 8619 3898 6279</div>
-            <button class="bank-copy" onclick="event.stopPropagation();doCopy(this,'6219861938986279')"><span>📋</span> کپی</button>
-            <div class="small-name">نوید احمدی — آقایان</div>
-          </div>
+  <div class="cards-row">
+    <div class="bank-card-wrap" onclick="this.classList.toggle('flipped')" role="button" tabindex="0" aria-label="کارت شهریه آقایان — ضربه بزنید">
+      <div class="bank-card-inner">
+        <div class="bank-face bank-front-male">
+          <div class="bank-chip"></div>
+          <div class="bank-brand">ARSLAN DOJO</div>
+          <div class="bank-holder">نوید احمدی</div>
+          <div class="bank-type"><span>👔</span> شهریه آقایان</div>
+          <div class="bank-hint">↻ ضربه بزنید</div>
         </div>
-      </div>
-
-      <div class="bank-card-wrap" onclick="this.classList.toggle('flipped')">
-        <div class="bank-card-inner">
-          <div class="bank-face bank-front-female">
-            <div class="bank-chip"></div>
-            <div class="bank-brand">ARSLAN DOJO</div>
-            <div class="bank-holder">خانم توکلی شانجانی</div>
-            <div class="bank-type"><span>👗</span> شهریه بانوان</div>
-            <div class="bank-hint">↻ ضربه بزنید</div>
-          </div>
-          <div class="bank-face bank-back-female bank-back">
-            <div class="stripe"></div>
-            <div class="label">شماره کارت</div>
-            <div class="number">6219 8619 0341 7334</div>
-            <button class="bank-copy" onclick="event.stopPropagation();doCopy(this,'6219861903417334')"><span>📋</span> کپی</button>
-            <div class="small-name">خانم توکلی شانجانی — بانوان</div>
-          </div>
+        <div class="bank-face bank-back-male bank-back">
+          <div class="stripe"></div>
+          <div class="label">شماره کارت</div>
+          <div class="number">6219 8619 3898 6279</div>
+          <button class="bank-copy" onclick="event.stopPropagation();doCopy(this,'6219861938986279')" aria-label="کپی شماره کارت"><span>📋</span> کپی</button>
+          <div class="small-name">نوید احمدی — آقایان</div>
         </div>
       </div>
     </div>
 
-    <div class="pricing-note">مهلت پرداخت تا ۱۲ هر ماه — فیش به <a href="https://ble.ir/+989016399804" target="_blank">+989016399804</a> ارسال شود.</div>
+    <div class="bank-card-wrap" onclick="this.classList.toggle('flipped')" role="button" tabindex="0" aria-label="کارت شهریه بانوان — ضربه بزنید">
+      <div class="bank-card-inner">
+        <div class="bank-face bank-front-female">
+          <div class="bank-chip"></div>
+          <div class="bank-brand">ARSLAN DOJO</div>
+          <div class="bank-holder">خانم توکلی شانجانی</div>
+          <div class="bank-type"><span>👗</span> شهریه بانوان</div>
+          <div class="bank-hint">↻ ضربه بزنید</div>
+        </div>
+        <div class="bank-face bank-back-female bank-back">
+          <div class="stripe"></div>
+          <div class="label">شماره کارت</div>
+          <div class="number">6219 8619 0341 7334</div>
+          <button class="bank-copy" onclick="event.stopPropagation();doCopy(this,'6219861903417334')" aria-label="کپی شماره کارت"><span>📋</span> کپی</button>
+          <div class="small-name">خانم توکلی شانجانی — بانوان</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pricing-note">مهلت پرداخت تا ۱۲ هر ماه — فیش به <a href="https://ble.ir/+989016399804" target="_blank" rel="noopener">+989016399804</a> ارسال شود.</div>
+</section>
+
+<!-- CONTACT -->
+<section class="section" id="contact">
+  <div class="section-label">تماس با ما</div>
+  <div class="section-title">اطلاعات تماس</div>
+  <div class="contact-grid">
+    <div class="contact-card">
+      <div class="contact-icon">📍</div>
+      <h3>آدرس</h3>
+      <p>نیشابور، خراسان رضوی<br>باشگاه رزمی ارسلان دوجو</p>
+    </div>
+    <div class="contact-card">
+      <div class="contact-icon">📞</div>
+      <h3>تلفن تماس</h3>
+      <p><a href="tel:+989016399804" class="en" style="color:#d4a853;text-decoration:none;font-weight:600">+98 901 639 9804</a></p>
+    </div>
+    <div class="contact-card">
+      <div class="contact-icon">🕐</div>
+      <h3>ساعت کاری</h3>
+      <p>شنبه تا چهارشنبه: ۱۶–۲۱<br>پنجشنبه: ۹–۱۳</p>
+    </div>
   </div>
 </section>
 
@@ -105,28 +138,28 @@
 <section class="auth-section" id="auth">
   <div class="auth-box">
     <div class="auth-tabs">
-      <button class="auth-tab active" id="tabLogin">ورود</button>
-      <button class="auth-tab" id="tabRegister">ثبت‌نام</button>
+      <button class="auth-tab active" id="tabLogin" type="button">ورود</button>
+      <button class="auth-tab" id="tabRegister" type="button">ثبت‌نام</button>
     </div>
 
     <div id="errorMsg" class="hidden" style="background:rgba(255,107,94,0.1);border:1px solid rgba(255,107,94,0.3);color:#ff6b5e;padding:12px;border-radius:10px;font-size:14px;margin-bottom:16px"></div>
 
-    <form id="loginForm">
+    <form id="loginForm" autocomplete="on">
       <div class="form-row">
-        <div class="form-group"><label>نام کاربری</label><input id="lUser" class="en" placeholder="ali" required></div>
-        <div class="form-group"><label>رمز عبور</label><input id="lPass" type="password" class="en" placeholder="••••••••" required></div>
+        <div class="form-group"><label for="lUser">نام کاربری</label><input id="lUser" class="en" placeholder="ali" autocomplete="username" required></div>
+        <div class="form-group"><label for="lPass">رمز عبور</label><input id="lPass" type="password" class="en" placeholder="••••••••" autocomplete="current-password" required></div>
       </div>
       <button type="submit" class="btn btn-gold btn-full" id="loginBtn">ورود</button>
       <div class="form-hint">حساب تست: <code>ali</code> / <code>123456</code></div>
     </form>
 
-    <form id="registerForm" class="hidden">
+    <form id="registerForm" class="hidden" autocomplete="on">
       <div class="form-row">
         <div class="form-group"><label>نام و نام خانوادگی *</label><input name="full_name" required></div>
-        <div class="form-group"><label>نام کاربری (انگلیسی) *</label><input name="username" class="en" required minlength="3"></div>
+        <div class="form-group"><label>نام کاربری (انگلیسی) *</label><input name="username" class="en" required minlength="3" autocomplete="username"></div>
       </div>
       <div class="form-row">
-        <div class="form-group"><label>رشته *</label><select name="discipline" id="beltSelect" required><option value="">انتخاب...</option><option>کاراته</option><option>کراسفیت</option><option>بوکس</option><option>ژیمناستیک</option><option>موی تای</option></select></div>
+        <div class="form-group"><label>رشته *</label><select name="discipline" required><option value="">انتخاب...</option><option>کاراته</option><option>کراسفیت</option><option>بوکس</option><option>ژیمناستیک</option><option>موی تای</option></select></div>
         <div class="form-group"><label>جنسیت</label><select name="gender"><option value="">—</option><option>مرد</option><option>زن</option></select></div>
       </div>
       <div class="form-row-3">
@@ -135,8 +168,8 @@
         <div class="form-group"><label>وزن kg</label><input name="weight_kg" type="number" step="0.1" min="15" max="250"></div>
       </div>
       <div class="form-row">
-        <div class="form-group"><label>رمز عبور * <span class="req">(۶+ حرف)</span></label><input name="password" type="password" class="en" minlength="6" required></div>
-        <div class="form-group"><label>تکرار رمز *</label><input name="password2" type="password" class="en" minlength="6" required></div>
+        <div class="form-group"><label>رمز عبور * <span class="req">(۶+ حرف)</span></label><input name="password" type="password" class="en" minlength="6" required autocomplete="new-password"></div>
+        <div class="form-group"><label>تکرار رمز *</label><input name="password2" type="password" class="en" minlength="6" required autocomplete="new-password"></div>
       </div>
       <button type="submit" class="btn btn-gold btn-full" id="registerBtn">ثبت‌نام</button>
     </form>
@@ -145,89 +178,152 @@
 
 <!-- FOOTER -->
 <footer class="footer">
-  <span>© 2026 Arslan Dojo</span>
-  <span>پنل شاگردان</span>
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <svg viewBox="0 0 48 48" width="28" height="28"><defs><linearGradient id="fg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#ff6b5e"/><stop offset="100%" stop-color="#d4a853"/></linearGradient></defs><path d="M33.5 8.6A19 19 0 1 0 42.6 27.4" fill="none" stroke="url(#fg1)" stroke-width="4.6" stroke-linecap="round"/><circle cx="24" cy="24" r="4.2" fill="url(#fg1)"/></svg>
+      <div>
+        <strong>ARSLAN DOJO</strong>
+        <span>باشگاه رزمی ارسلان دوجو — نیشابور</span>
+      </div>
+    </div>
+    <div class="footer-info">
+      <div><span class="footer-label">تلفن:</span> <a href="tel:+989016399804" class="en">+98 901 639 9804</a></div>
+      <div><span class="footer-label">ساعت کاری:</span> شنبه–چهارشنبه ۱۶–۲۱</div>
+    </div>
+    <div class="footer-copy">© 2026 Arslan Dojo. All rights reserved.</div>
+  </div>
 </footer>
 
-<div id="toastBox"></div>
+<!-- TOAST -->
+<div id="toastBox" aria-live="polite"></div>
 
+<!-- SCRIPTS -->
 <script src="/ui/jalali.browser.js"></script>
 <script src="/ui/ui.js"></script>
 <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/htm@3.1.1/dist/htm.umd.js"></script>
 <script>
-  const html = htm.bind(React.createElement);
+  var html = htm.bind(React.createElement);
 </script>
 <script src="/CardStack.js"></script>
-function doCopy(btn, num) {
-  navigator.clipboard.writeText(num).then(function() {
-    btn.innerHTML = '<span>✅</span> کپی شد';
-    setTimeout(function() { btn.innerHTML = '<span>📋</span> کپی'; }, 2000);
+<script>
+(function() {
+  'use strict';
+
+  /* ── Copy to Clipboard + Toast ── */
+  window.doCopy = function(btn, num) {
+    navigator.clipboard.writeText(num).then(function() {
+      btn.innerHTML = '<span>✅</span> کپی شد';
+      btn.style.background = 'rgba(74,222,128,0.2)';
+      showToast('شماره کارت با موفقیت کپی شد', 'ok');
+      setTimeout(function() { btn.innerHTML = '<span>📋</span> کپی'; btn.style.background = ''; }, 2500);
+    }).catch(function() {
+      showToast('کپی ناموفق بود', 'warn');
+    });
+  };
+
+  function showToast(msg, type) {
+    var box = document.getElementById('toastBox');
+    var el = document.createElement('div');
+    el.className = 'toast ' + (type || '');
+    el.textContent = msg;
+    box.appendChild(el);
+    setTimeout(function() { if (el.parentNode) el.remove(); }, 3500);
+  }
+
+  /* ── Mobile Menu ── */
+  var menuBtn = document.getElementById('menuBtn');
+  var navLinks = document.getElementById('navLinks');
+  if (menuBtn && navLinks) {
+    menuBtn.addEventListener('click', function() {
+      navLinks.classList.toggle('open');
+      menuBtn.textContent = navLinks.classList.contains('open') ? '✕' : '☰';
+    });
+    /* Close menu on link click (mobile) */
+    navLinks.querySelectorAll('a').forEach(function(a) {
+      a.addEventListener('click', function() { navLinks.classList.remove('open'); menuBtn.textContent = '☰'; });
+    });
+  }
+
+  /* ── Auth Tabs ── */
+  var loginForm = document.getElementById('loginForm');
+  var registerForm = document.getElementById('registerForm');
+  var tabLogin = document.getElementById('tabLogin');
+  var tabRegister = document.getElementById('tabRegister');
+
+  function showAuth(which) {
+    var isLogin = which === 'login';
+    loginForm.classList.toggle('hidden', !isLogin);
+    registerForm.classList.toggle('hidden', isLogin);
+    tabLogin.classList.toggle('active', isLogin);
+    tabRegister.classList.toggle('active', !isLogin);
+  }
+  tabLogin.addEventListener('click', function() { showAuth('login'); });
+  tabRegister.addEventListener('click', function() { showAuth('register'); });
+
+  /* ── Coach Link ── */
+  UI.loadConfig().then(function(cfg) {
+    document.getElementById('coachLink').href = UI.peerUrl(cfg.coachPort);
+  }).catch(function() {});
+
+  /* ── Pricing CardStack ── */
+  fetch('/api/payment').then(function(r) { return r.json(); }).then(function(d) {
+    if (!d.ok) return;
+    var cards = d.pricing.slice(0, 6).map(function(p) {
+      return { discipline: p.discipline, price: p.price };
+    });
+    var root = document.getElementById('cardStackRoot');
+    if (root && window.CardStack) {
+      var domRoot = ReactDOM.createRoot(root);
+      domRoot.render(React.createElement(window.CardStack, {
+        spread: 85, bounce: 50, scatter: 30, count: cards.length, cards: cards
+      }));
+    }
+  }).catch(function() {});
+
+  /* ── Login ── */
+  loginForm.addEventListener('submit', function(e) {
+    e.preventDefault();
+    var btn = document.getElementById('loginBtn');
+    btn.disabled = true; btn.textContent = '...';
+    UI.api('/api/login', { method: 'POST', body: {
+      username: document.getElementById('lUser').value,
+      password: document.getElementById('lPass').value
+    }}).then(function() {
+      showToast('خوش آمدید!', 'ok');
+      setTimeout(function() { location.href = '/panel'; }, 400);
+    }).catch(function(err) {
+      showToast(err.message, 'warn');
+      btn.disabled = false; btn.textContent = 'ورود';
+    });
   });
-}
 
-function toast(msg, type) {
-  var box = document.getElementById('toastBox');
-  var el = document.createElement('div');
-  el.className = 'toast ' + (type || '');
-  el.textContent = msg;
-  box.appendChild(el);
-  setTimeout(function() { el.remove(); }, 4000);
-}
+  /* ── Register ── */
+  registerForm.addEventListener('submit', function(e) {
+    e.preventDefault();
+    var data = {};
+    new FormData(this).forEach(function(v, k) { data[k] = v; });
+    if (data.password !== data.password2) { showToast('تکرار رمز مطابقت ندارد', 'warn'); return; }
+    var btn = document.getElementById('registerBtn');
+    btn.disabled = true; btn.textContent = '...';
+    UI.api('/api/register', { method: 'POST', body: data })
+    .then(function() {
+      showToast('ثبت‌نام شد! خوش آمدید', 'ok');
+      setTimeout(function() { location.href = '/panel'; }, 500);
+    }).catch(function(err) {
+      showToast(err.message, 'warn');
+      btn.disabled = false; btn.textContent = 'ثبت‌نام';
+    });
+  });
 
-// Tabs
-document.getElementById('tabLogin').onclick = function() {
-  document.getElementById('loginForm').classList.remove('hidden');
-  document.getElementById('registerForm').classList.add('hidden');
-  this.classList.add('active'); document.getElementById('tabRegister').classList.remove('active');
-};
-document.getElementById('tabRegister').onclick = function() {
-  document.getElementById('registerForm').classList.remove('hidden');
-  document.getElementById('loginForm').classList.add('hidden');
-  this.classList.add('active'); document.getElementById('tabLogin').classList.remove('active');
-};
-
-// Load config
-UI.loadConfig().then(function(cfg) {
-  document.getElementById('coachLink').href = UI.peerUrl(cfg.coachPort);
-}).catch(function(){});
-
-      // Pricing — CardStack
-      fetch('/api/payment').then(function(r){return r.json()}).then(function(d){
-        if(!d.ok) return;
-        var cards = d.pricing.slice(0, 6).map(function(p) {
-          return { discipline: p.discipline, price: p.price };
-        });
-        var root = document.getElementById('cardStackRoot');
-        if (root && window.CardStack) {
-          var domRoot = ReactDOM.createRoot(root);
-          domRoot.render(React.createElement(window.CardStack, { spread: 85, bounce: 50, scatter: 30, count: cards.length, cards: cards }));
-        }
-      }).catch(function(){});
-
-// Login
-document.getElementById('loginForm').onsubmit = function(e) {
-  e.preventDefault();
-  var btn = document.getElementById('loginBtn');
-  btn.disabled = true; btn.textContent = '...';
-  UI.api('/api/login', { method:'POST', body:{ username: document.getElementById('lUser').value, password: document.getElementById('lPass').value }})
-  .then(function(){ toast('خوش آمدید!','ok'); setTimeout(function(){ location.href='/panel'; }, 400); })
-  .catch(function(err){ toast(err.message,'warn'); btn.disabled=false; btn.textContent='ورود'; });
-};
-
-// Register
-document.getElementById('registerForm').onsubmit = function(e) {
-  e.preventDefault();
-  var data = {};
-  new FormData(this).forEach(function(v,k){ data[k]=v; });
-  if(data.password !== data.password2){ toast('تکرار رمز مطابقت ندارد','warn'); return; }
-  var btn = document.getElementById('registerBtn');
-  btn.disabled = true; btn.textContent = '...';
-  UI.api('/api/register', { method:'POST', body: data })
-  .then(function(){ toast('ثبت‌نام شد!','ok'); setTimeout(function(){ location.href='/panel'; }, 500); })
-  .catch(function(err){ toast(err.message,'warn'); btn.disabled=false; btn.textContent='ثبت‌نام'; });
-};
+  /* ── Bank card keyboard accessibility ── */
+  document.querySelectorAll('.bank-card-wrap').forEach(function(card) {
+    card.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.classList.toggle('flipped'); }
+    });
+  });
+})();
 </script>
 </body>
 </html>
