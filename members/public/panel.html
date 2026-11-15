@@ -75,6 +75,9 @@
 
       <!-- StackedBars — progress chart -->
       <div id="stackedBarsRoot" style="display:flex;justify-content:center;padding:20px 0"></div>
+
+      <!-- ToastStack — notification stack -->
+      <div id="toastStackRoot" style="display:flex;justify-content:center;padding:20px 0"></div>
       <section class="section" id="view-plans"></section>
       <section class="section" id="view-progress"></section>
       <section class="section" id="view-news"></section>
@@ -89,6 +92,7 @@
   <script src="/panel.js"></script>
   <script src="/CardSwap.js"></script>
   <script src="/StackedBars.js"></script>
+  <script src="/ToastStack.js"></script>
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch(function(e) {});
@@ -183,6 +187,8 @@
         }).catch(function() {});
       }
 
+      var toastStackInstance = null;
+
       function showStackedBars() {
         var root = document.getElementById('stackedBarsRoot');
         if (root && window.StackedBars && window.StackedBars.mount) {
@@ -195,14 +201,23 @@
           loadStackedBarsData(stackedBarsInstance, 'Month');
         }
       }
+
+      function showToastStack() {
+        var root = document.getElementById('toastStackRoot');
+        if (root && window.ToastStack && window.ToastStack.mount && !toastStackInstance) {
+          toastStackInstance = window.ToastStack.mount(root, { peek: 14, gap: 10, corner: 16 });
+        }
+      }
       if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function() {
           setTimeout(showCardSwap, 800);
           setTimeout(showStackedBars, 600);
+          setTimeout(showToastStack, 1200);
         });
       } else {
         setTimeout(showCardSwap, 800);
         setTimeout(showStackedBars, 600);
+        setTimeout(showToastStack, 1200);
       }
     })();
   </script>
