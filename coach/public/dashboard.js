@@ -4,13 +4,14 @@
 (function () {
   'use strict';
 
-  const { api, toast, modal, closeModal, confirmBox, esc, fa, STATUS, METRICS, heatClass, avatar, nl2br, peerUrl } = UI;
+  const { api, toast, modal, closeModal, confirmBox, esc, fa, STATUS, METRICS, heatClass, avatar, nl2br, peerUrl, PATH_PREFIX } = UI;
   const J = window.Jalali;
 
   let CFG = null;
   let ME = null;
   let MEMBERS = [];
   let YEARS = [];
+  let membersUrl = null;
 
   const state = {
     view: 'overview',
@@ -41,12 +42,13 @@
       const me = await api('/api/me');
       if (!me.user) throw Object.assign(new Error('not logged in'), { status: 401 });
       ME = me.user;
+      document.getElementById('meAvatar').innerHTML = avatar(ME);
     } catch (err) {
-      location.href = '/';
+      location.href = PATH_PREFIX + '/';
       return;
     }
 
-    const membersUrl = CFG.membersSiteUrl || peerUrl(CFG.memberPort);
+    membersUrl = CFG.membersSiteUrl || peerUrl(CFG.memberPort);
     const links = [document.getElementById('membersSiteLink'), document.getElementById('topMembersLink')];
     links.forEach((a) => { a.href = membersUrl; });
 
@@ -74,7 +76,7 @@
     });
     document.getElementById('logoutBtn').addEventListener('click', async () => {
       await api('/api/logout', { method: 'POST' });
-      location.href = '/';
+      location.href = PATH_PREFIX + '/';
     });
     document.getElementById('quickAction').addEventListener('click', () => planForm());
     document.getElementById('bellBtn').addEventListener('click', bellBox);
@@ -462,7 +464,7 @@
   async function impersonate(m) {
     try {
       const r = await api(`/api/members/${m.id}/impersonate`, { method: 'POST' });
-      const url = `${membersUrl}/impersonate?token=${r.token}`;
+      const url = `${membersUrl.replace(/\/$/, '')}/impersonate?token=${encodeURIComponent(r.token)}`;
       window.open(url, '_blank', 'noopener');
       toast('پنل شاگرد در تب جدید باز شد', 'ok');
     } catch (err) { toast(err.message, 'warn'); }
@@ -771,7 +773,7 @@
       renderProgress(box);
     });
     document.getElementById('exportCsv').addEventListener('click', () => {
-      window.open('/api/export/progress?year=' + state.progressYear, '_blank');
+      window.open(PATH_PREFIX + '/api/export/progress?year=' + state.progressYear, '_blank');
     });
 
     if (state.progressMode === 'club') await renderClubMatrix(document.getElementById('progressBody'));
@@ -1190,6 +1192,7 @@
         const r = await api('/api/me', { method: 'PUT', body: data });
         const me = { user: r.user };
         ME = me.user;
+        document.getElementById('meAvatar').innerHTML = avatar(ME);
         toast('اطلاعات مربی ذخیره شد', 'ok');
       } catch (err) { toast(err.message, 'warn'); }
     });

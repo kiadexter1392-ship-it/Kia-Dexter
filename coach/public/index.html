@@ -2,150 +2,79 @@
 <html lang="fa" dir="rtl">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="color-scheme" content="light">
   <title>ارسلان دوجو — پنل مربی</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'><circle cx='24' cy='24' r='20' fill='%23e2483d'/></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'><circle cx='24' cy='24' r='20' fill='%23d4a853'/></svg>">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css">
-  <link rel="stylesheet" href="/ui/style.css">
-  <link rel="stylesheet" href="/ui/shell.css">
-  <link rel="stylesheet" href="/ui/dojo-3d.css">
+  <link rel="stylesheet" href="ui/style.css">
+  <link rel="stylesheet" href="ui/shell.css">
+  <link rel="stylesheet" href="login.css">
 </head>
-<body class="dojo-landing">
-
-  <div class="scroll-progress" id="scrollProgress"></div>
-
-  <header class="dojo-nav" id="dojoNav">
-    <div class="dojo-brand">
-      <span class="dojo-logo">
-        <svg viewBox="0 0 48 48"><defs><linearGradient id="gL" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#ff6b5e"/><stop offset="100%" stop-color="#d9a441"/></linearGradient></defs><path d="M33.5 8.6A19 19 0 1 0 42.6 27.4" fill="none" stroke="url(#gL)" stroke-width="4.6" stroke-linecap="round"/><circle cx="24" cy="24" r="4.2" fill="url(#gL)"/></svg>
-      </span>
-      <div><div class="dojo-brand-name">ارسلان دوجو</div><div class="dojo-brand-sub">COACH PANEL</div></div>
-    </div>
-    <nav class="dojo-links" id="dojoLinks">
-      <a href="#" id="membersLinkNav">سایت شاگردان</a>
-    </nav>
-    <div class="dojo-nav-actions">
-      <button class="dojo-menu-btn" id="menuBtn">☰</button>
-    </div>
+<body class="coach-login">
+  <header class="coach-login-nav">
+    <a class="nav-brand" href="./" aria-label="ارسلان دوجو، پنل مربی">
+      <svg viewBox="0 0 48 48" aria-hidden="true"><defs><linearGradient id="logoGold" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#d4a853"/><stop offset="100%" stop-color="#e8c878"/></linearGradient></defs><path d="M33.5 8.6A19 19 0 1 0 42.6 27.4" fill="none" stroke="url(#logoGold)" stroke-width="4.6" stroke-linecap="round"/><circle cx="24" cy="24" r="4.2" fill="url(#logoGold)"/></svg>
+      <span><strong>ارسلان دوجو</strong><small>پنل مربی</small></span>
+    </a>
+    <a class="btn ghost" id="membersLinkNav" href="/">سایت شاگردان ←</a>
   </header>
 
-  <section class="dojo-hero" id="hero">
-    <div class="dojo-hero-bg">
-      <div class="dojo-scene">
-        <div class="dojo-cube" id="heroCube">
-          <div class="dojo-cube-face dojo-cube-front">👨‍🏫</div>
-          <div class="dojo-cube-face dojo-cube-back">📊</div>
-          <div class="dojo-cube-face dojo-cube-right">⚑</div>
-          <div class="dojo-cube-face dojo-cube-left">📢</div>
-          <div class="dojo-cube-face dojo-cube-top"></div>
-          <div class="dojo-cube-face dojo-cube-bottom"></div>
+  <main class="coach-login-main">
+    <section class="coach-intro" aria-labelledby="introTitle">
+      <span class="hero-badge">مدیریت باشگاه</span>
+      <h1 id="introTitle">پنل <em>مربی</em></h1>
+      <p>ارسال تمرین، ثبت پیشرفت ماهانه شاگردان، اطلاع‌رسانی و دسترسی مستقیم به پنل هر شاگرد.</p>
+      <div class="coach-features">
+        <div class="card">
+          <h2>امکانات</h2>
+          <ul><li>ارسال تمرین</li><li>جدول پیشرفت</li><li>اطلاعیه</li><li>بازخورد</li></ul>
+        </div>
+        <div class="card">
+          <h2>دسترسی</h2>
+          <ul><li>ورود به پنل شاگرد</li><li>خروجی اکسل</li></ul>
         </div>
       </div>
-      <div class="dojo-depth-layer dojo-depth-1"></div>
-      <div class="dojo-depth-layer dojo-depth-2"></div>
-    </div>
-    <div class="dojo-hero-content">
-      <h1 class="dojo-title">پنل مربی</h1>
-      <p class="dojo-subtitle">
-        ارسال تمرین، ثبت پیشرفت ماهانه شاگردان، اطلاع‌رسانی و دسترسی مستقیم به پنل هر شاگرد.
-      </p>
-      <div class="dojo-cta">
-        <a href="#auth" class="dojo-btn dojo-btn-primary">ورود</a>
-        <a href="#" id="goMembersBtn" class="dojo-btn dojo-btn-outline">سایت شاگردان ←</a>
-      </div>
-    </div>
-    <div class="dojo-hero-visual">
-      <div class="dojo-3d-scene">
-        <div class="dojo-3d-panel dojo-3d-p1">
-          <div class="dojo-3d-panel-inner">
-            <div class="dojo-3d-panel-label">امکانات</div>
-            <div class="dojo-3d-panel-list">
-              <span>ارسال تمرین</span><span>جدول پیشرفت</span><span>اطلاعیه</span><span>بازخورد</span>
-            </div>
-          </div>
-        </div>
-        <div class="dojo-3d-panel dojo-3d-p2">
-          <div class="dojo-3d-panel-inner">
-            <div class="dojo-3d-panel-label">دسترسی</div>
-            <div class="dojo-3d-panel-list">
-              <span>ورود به پنل شاگرد</span><span>خروجی اکسل</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
+      <a id="goMembersBtn" href="/" class="coach-members-link">سایت شاگردان ←</a>
+    </section>
 
-  <section class="dojo-auth-section" id="auth">
-    <div class="dojo-auth-card">
-      <div style="text-align:center;margin-bottom:18px">
-        <h3 style="margin:0;font-size:17px">ورود مربی</h3>
-      </div>
-      <div class="dojo-error hidden" id="errorMsg"></div>
-      <form id="loginForm" class="dojo-form" method="POST" action="/login">
-        <div class="dojo-field">
-          <label>نام کاربری</label>
-          <input name="username" type="text" class="en" autocomplete="username" required>
+    <section class="auth-box coach-login-card" id="auth" aria-labelledby="loginTitle">
+      <span class="coach-login-mark" aria-hidden="true">◈</span>
+      <h2 id="loginTitle">ورود مربی</h2>
+      <div class="coach-login-error hidden" id="errorMsg" role="alert" aria-live="polite"></div>
+      <form id="loginForm" method="POST" action="login">
+        <div class="form-group">
+          <label for="coachUsername">نام کاربری</label>
+          <input id="coachUsername" name="username" type="text" class="en" dir="ltr" autocomplete="username" autocapitalize="none" spellcheck="false" required>
         </div>
-        <div class="dojo-field">
-          <label>رمز عبور</label>
-          <input name="password" type="password" class="en" autocomplete="current-password" required>
+        <div class="form-group">
+          <label for="coachPassword">رمز عبور</label>
+          <input id="coachPassword" name="password" type="password" class="en" dir="ltr" autocomplete="current-password" required>
         </div>
-        <button class="dojo-btn dojo-btn-primary dojo-btn-full" type="submit">ورود</button>
-        <a href="#" id="goMembers" class="dojo-btn dojo-btn-outline dojo-btn-full" style="margin-top:6px">سایت شاگردان ←</a>
+        <button class="btn primary btn-full" type="submit">ورود</button>
+        <a href="/" id="goMembers" class="btn ghost btn-full">سایت شاگردان ←</a>
       </form>
-    </div>
-  </section>
+    </section>
+  </main>
 
-  <footer class="dojo-footer">
-    <div class="dojo-footer-inner">
-      <div class="dojo-footer-brand"><strong>ارسلان دوجو — پنل مربی</strong></div>
-    </div>
-  </footer>
-
-  <script src="/ui/jalali.browser.js"></script>
-  <script src="/ui/ui.js"></script>
-  <script src="/ui/dojo-3d.js"></script>
-  <!-- 4 Creative JS Libraries (CDN) -->
-  <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.18/dist/lenis.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@barba/core@2.10.3/dist/barba.umd.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/muuri@0.9.5/dist/muuri.min.js"></script>
-  <script src="/ui/animations.js"></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      if (typeof initLenis === 'function') initLenis();
-      if (typeof initGSAP === 'function') initGSAP();
-      if (typeof initMuuri === 'function') initMuuri();
-      if (typeof initBarba === 'function') initBarba();
-      if (typeof initScrollProgress === 'function') initScrollProgress();
-    });
-  </script>
+  <footer class="coach-login-footer">ارسلان دوجو — پنل مربی</footer>
+  <script src="ui/jalali.browser.js"></script>
+  <script src="ui/ui.js"></script>
   <script>
     (function () {
       var errorMsg = document.getElementById('errorMsg');
-
-      document.getElementById('menuBtn').addEventListener('click', function () {
-        document.getElementById('dojoLinks').classList.toggle('open');
-      });
-
-      // نمایش خطا از URL
-      var params = new URLSearchParams(location.search);
-      var err = params.get('error');
+      var err = new URLSearchParams(location.search).get('error');
       if (err) {
         errorMsg.textContent = err;
         errorMsg.classList.remove('hidden');
       }
-
       UI.loadConfig().then(function (cfg) {
-        var members = UI.peerUrl(cfg.memberPort);
-        document.getElementById('membersLinkNav').href = members;
-        document.getElementById('goMembers').href = members;
-        document.getElementById('goMembersBtn').href = members;
-      }).catch(function () { });
-
-      Dojo3D.init();
+        var members = cfg.membersSiteUrl || UI.peerUrl(cfg.memberPort);
+        ['membersLinkNav', 'goMembers', 'goMembersBtn'].forEach(function (id) {
+          document.getElementById(id).href = members;
+        });
+      }).catch(function () {});
     }());
   </script>
 </body>

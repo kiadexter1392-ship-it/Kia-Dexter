@@ -81,6 +81,7 @@ app.get('/api/config', (ctx) => {
     jalaliYear: j.jy,
     jalaliMonth: j.jm,
     coachPort: COACH_PORT,
+    peerSiteUrl: ctx.req.headers['x-dojo-proxy'] === '1' ? '/coach/' : null,
     months: JALALI_MONTHS,
     belts: ['سفید', 'زرد', 'نارنجی', 'سبز', 'آبی', 'قهوه‌ای', 'مشکی دان ۱', 'مشکی دان ۲'],
     disciplines: ['کاراته', 'کراسفیت', 'بوکس', 'ژیمناستیک', 'موی تای'],

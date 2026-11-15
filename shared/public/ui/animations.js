@@ -225,6 +225,8 @@
   function animateButtons() {
     const buttons = document.querySelectorAll('.dojo-btn');
     buttons.forEach(btn => {
+      // Don't add GSAP hover to form submit buttons (causes click issues)
+      if (btn.type === 'submit' || btn.closest('form')) return;
       btn.addEventListener('mouseenter', function () {
         gsap.to(this, { scale: 1.05, duration: 0.3, ease: 'power2.out' });
       });
@@ -246,22 +248,7 @@
       setupDraggablePanels(panelsContainer);
     }
 
-    // Observe pricing grid for dynamic content
-    const pricingGrid = document.getElementById('pricingGrid');
-    if (pricingGrid) {
-      const observer = new MutationObserver(function () {
-        if (pricingGrid.children.length > 0 && !pricingGrid._muuri) {
-          // Add Muuri-compatible class
-          pricingGrid.classList.add('muuri-grid');
-          Array.from(pricingGrid.children).forEach(function (child) {
-            child.style.position = 'relative';
-          });
-          setupDraggableGrid(pricingGrid);
-          observer.disconnect();
-        }
-      });
-      observer.observe(pricingGrid, { childList: true });
-    }
+    // Note: Pricing grid uses CSS grid (Muuri disabled to avoid click interference)
 
     console.log('[Dojo] Muuri drag initialized ✓');
   }
@@ -408,6 +395,8 @@
   function initMagneticCursor() {
     const magneticElements = document.querySelectorAll('.dojo-btn-primary, .dojo-btn-gold');
     magneticElements.forEach(el => {
+      // Skip form submit buttons
+      if (el.type === 'submit' || el.closest('form')) return;
       el.addEventListener('mousemove', function (e) {
         const rect = this.getBoundingClientRect();
         const x = e.clientX - rect.left - rect.width / 2;
