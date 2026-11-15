@@ -34,7 +34,7 @@ async function waitFor(fn) {
   const child = spawn(process.execPath, ['start.js'], {
     cwd: path.join(__dirname, '..'),
     env: { ...process.env, PORT: String(port), COACH_PORT: String(coachPort), MEMBER_PORT: String(memberPort),
-      RESET_DB: '0', ARSLAN_DATA_DIR: dir, ARSLAN_DB: path.join(dir, 'test.db') },
+      MEMBERS_SITE_URL: 'null', RESET_DB: '0', ARSLAN_DATA_DIR: dir, ARSLAN_DB: path.join(dir, 'test.db') },
     stdio: ['ignore', 'pipe', 'pipe']
   });
   let logs = '';
@@ -118,6 +118,7 @@ async function waitFor(fn) {
       assert.ok(apiCalls.every(url => new URL(url).pathname.startsWith(prefix)));
       assert.deepEqual(pageErrors, []);
       const cfg = await (await fetch(origin + '/api/config')).json();
+      assert.equal(cfg.membersSiteUrl, null);
       if (origin !== direct) assert.equal(cfg.peerSiteUrl, '/');
       // Every local script and stylesheet resolves with and without the proxy prefix.
       for (const el of doc.querySelectorAll('script[src], link[rel="stylesheet"]')) {

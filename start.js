@@ -18,7 +18,7 @@ const children = [];
 
 function start(label, script, color) {
   const child = spawn(process.execPath, [path.join(__dirname, script)], {
-    env: { ...process.env, COACH_PORT, MEMBER_PORT, MEMBERS_SITE_URL },
+    env: { ...process.env, COACH_PORT, MEMBER_PORT, MEMBERS_SITE_URL: MEMBERS_SITE_URL || '' },
     stdio: ['ignore', 'pipe', 'pipe']
   });
   const prefix = `\x1b[${color}m[${label}]\x1b[0m `;
