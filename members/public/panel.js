@@ -537,13 +537,13 @@
           </div>
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px">
             ${paymentData.cards.map(function (c) {
-              return '<div style="background:linear-gradient(135deg,#1a1a2e,#16213e);border:1px solid rgba(77,159,216,0.2);border-radius:16px;padding:22px">' +
-                '<div style="font-size:11px;color:var(--muted-2);margin-bottom:8px">' + esc(c.label) + '</div>' +
-                '<div class="en" style="font-size:18px;font-weight:700;letter-spacing:2px;font-family:monospace;margin-bottom:10px">' +
-                  c.number.replace(/(.{4})/g, '$1 ').trim() +
+              return '<div class="tuition-bank-card">' +
+                '<div class="tuition-bank-label">' + esc(c.label) + '</div>' +
+                '<div class="tuition-bank-number" dir="ltr">' +
+                  esc(c.number.replace(/(.{4})/g, '$1 ').trim()) +
                 '</div>' +
-                '<div style="font-weight:600">' + esc(c.holder) + '</div>' +
-                '<button class="btn sm ghost" style="margin-top:10px" data-copy="' + c.number + '">📋 کپی شماره کارت</button>' +
+                '<div class="tuition-bank-holder">' + esc(c.holder) + '</div>' +
+                '<button class="btn sm ghost" data-copy="' + esc(c.number) + '">📋 کپی شماره کارت</button>' +
               '</div>';
             }).join('')}
           </div>
@@ -693,6 +693,10 @@
               </div>
             </div>
             <div class="grid-2">
+              <div class="field"><label for="pBirthDate">تاریخ دقیق تولد (شمسی)</label><input id="pBirthDate" name="birth_date" class="en" dir="ltr" placeholder="۱۳۹۰/۰۵/۲۱" maxlength="10" value="${esc(UI.birthDateValue(ME.birth_date))}"></div>
+              <div class="field"><label for="pBloodGroup">گروه خونی</label><select id="pBloodGroup" name="blood_group" dir="ltr"><option value="">نامشخص</option>${UI.BLOOD_GROUPS.map(group => `<option ${ME.blood_group === group ? 'selected' : ''}>${group}</option>`).join('')}</select></div>
+            </div>
+            <div class="grid-2">
               <div class="field"><label>سابقه تمرین</label><input name="experience" value="${esc(ME.experience || '')}"></div>
             </div>
             <div><button class="btn primary" type="submit">ذخیره تغییرات</button></div>
@@ -714,8 +718,6 @@
             <ul class="small muted" style="margin:0;padding-inline-start:18px">
               <li>عضو از: ${J.formatJalali(ME.created_at)}</li>
               <li>کمربند ثبت‌شده: ${esc(ME.belt || 'سفید')}</li>
-              <li>اطلاعات تو در دیتابیس باشگاه ذخیره شده و پاک نمی‌شود.</li>
-              <li>مربی می‌تواند جدول پیشرفت تو را ماه‌به‌ماه ببیند و پر کند.</li>
             </ul>
           </div>
         </div>

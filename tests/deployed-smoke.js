@@ -19,9 +19,13 @@ async function main() {
       const chart = await (await request('/StackedBars.js?live-check=' + Date.now())).text();
       const chartCss = await (await request('/ui/shell.css?live-check=' + Date.now())).text();
       const worker = await (await request('/sw.js?live-check=' + Date.now())).text();
+      const home = await (await request('/?live-check=' + Date.now())).text();
+      const panelCode = await (await request('/panel.js?live-check=' + Date.now())).text();
       if (css.ok && (await css.text()).includes('body.coach-login') && cfg.peerSiteUrl === '/' && cfg.membersSiteUrl !== 'null'
           && chart.includes('function updateTabs()') && chartCss.includes('inset-inline-start: calc(')
-          && worker.includes('arslan-dojo-static-v2-')) {
+          && worker.includes('arslan-dojo-static-v2-') && home.includes('name="blood_group"')
+          && home.includes('name="birth_date"') && panelCode.includes('tuition-bank-card')
+          && chartCss.includes('.tuition-bank-card') && !panelCode.includes('اطلاعات تو در دیتابیس باشگاه ذخیره شده')) {
         ready = true; break;
       }
     } catch { /* the service may restart during rollout */ }
