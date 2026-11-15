@@ -78,6 +78,15 @@ async function freePort() {
       await page.locator('#loginForm [type="submit"]').click();
       await page.waitForURL(coach + '/dashboard');
       await page.locator('#view-overview .stat').first().waitFor();
+      for (const key of ['members', 'plans', 'progress', 'settings', 'overview']) {
+        await page.locator('.gdock-item[data-key="' + key + '"]').click();
+        await page.waitForFunction(key => document.querySelector('#view-' + key)?.classList.contains('active')
+          && document.querySelector('.gdock-item[aria-current="page"]')?.dataset.key === key, key);
+      }
+      await page.locator('.sidebar [data-view="news"]').click();
+      assert.equal(await page.locator('.gdock-item[aria-current]').count(), 0);
+      await page.locator('.sidebar [data-view="overview"]').click();
+      assert.equal(await page.locator('.gdock-item[aria-current]').getAttribute('data-key'), 'overview');
       const memberUrl = await page.locator('#membersSiteLink').getAttribute('href');
       assert.equal(memberUrl, coach + '/member/');
       const member = await context.newPage(); member.on('pageerror', error => errors.push(error.message));
@@ -91,8 +100,19 @@ async function freePort() {
       await member.waitForURL(coach + '/member/panel');
       await member.locator('#meAvatar .avatar').waitFor();
       assert.equal(await member.locator('#coachLink').getAttribute('href'), coach + '/');
+      for (const key of ['plans', 'progress', 'news', 'profile', 'home']) {
+        await member.locator('.gdock-item[data-key="' + key + '"]').click();
+        await member.waitForFunction(key => document.querySelector('#view-' + key)?.classList.contains('active')
+          && document.querySelector('.gdock-item[aria-current="page"]')?.dataset.key === key, key);
+      }
       await member.locator('[data-view="profile"]').click(); await member.locator('#pBloodGroup').waitFor();
       await member.locator('[data-view="payment"]').click(); await member.locator('.tuition-bank-card').first().waitFor();
+      assert.equal(await member.locator('.gdock-item[aria-current]').count(), 0);
+      for (const width of [320, 390, 768, 1024, 1568]) {
+        await member.setViewportSize({ width, height: 980 });
+        const rect = await member.locator('.gdock').boundingBox();
+        assert.ok(rect.x >= 0 && rect.x + rect.width <= width && rect.y + rect.height <= 980);
+      }
       await member.waitForSelector('.csw-card img');
       assert.ok((await member.locator('.csw-card img').first().getAttribute('src')).startsWith('/member/images/'));
       assert.ok(memberApis.length > 5 && memberApis.every(url => url.startsWith('/member/api/')), memberApis.join(','));

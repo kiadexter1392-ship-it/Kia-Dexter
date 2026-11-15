@@ -9,6 +9,7 @@
 
   let CFG = null;
   let ME = null;
+  let magnifyingDock = null;
   const state = { view: 'home', year: null, newsTab: 'news' };
 
   const TITLES = {
@@ -47,6 +48,21 @@
     document.getElementById('bellBtn').addEventListener('click', bellBox);
     document.getElementById('quickProgress').addEventListener('click', selfReportForm);
 
+    if (window.MagnifyingDock) {
+      magnifyingDock = MagnifyingDock.mount(document.getElementById('magnifyingDock'), {
+        active: 'home',
+        label: 'ناوبری سریع پنل',
+        items: [
+          { key: 'home', label: 'خانه', icon: 'home' },
+          { key: 'plans', label: 'تمرینات من', icon: 'files' },
+          { key: 'progress', label: 'پیشرفت', icon: 'progress' },
+          { key: 'news', label: 'اطلاعیه‌ها', icon: 'news' },
+          { key: 'profile', label: 'پروفایل من', icon: 'you' }
+        ],
+        onSelect: view => switchView(view)
+      });
+    }
+
     await switchView('home');
     pollBell();
     setInterval(pollBell, 45000);
@@ -57,6 +73,7 @@
 
   async function switchView(view) {
     state.view = view;
+    if (magnifyingDock) magnifyingDock.setActive(view);
     document.querySelectorAll('.nav-item[data-view]').forEach((b) => b.classList.toggle('active', b.dataset.view === view));
     document.querySelectorAll('.section').forEach((s) => s.classList.toggle('active', s.id === 'view-' + view));
     document.getElementById('viewTitle').textContent = TITLES[view];
