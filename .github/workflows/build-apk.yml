@@ -5,12 +5,13 @@ on:
     branches: [main]
     paths:
       - 'mobile/**'
+      - '.github/**'
   workflow_dispatch:
 
 jobs:
   build-apk:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -19,31 +20,27 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: mobile/package-lock.json
-
-      - name: Setup Java 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
 
       - name: Install dependencies
         working-directory: mobile
-        run: npm ci
+        run: npm install
 
-      - name: Generate native Android project
+      - name: Install EAS CLI
+        run: npm install -g eas-cli
+
+      - name: Init EAS Project
         working-directory: mobile
-        run: npx expo prebuild --platform android --no-install
+        run: eas init --account kia.dexter --non-interactive
+        env:
+          EXPO_TOKEN: 63-IGN-9xHj_SAivS21BueK3EWONXi6rOuuEJSD-
 
-      - name: Build APK
-        working-directory: mobile/android
+      - name: Build with EAS
+        working-directory: mobile
+        run: eas build --platform android --profile preview --non-interactive --no-wait
+        env:
+          EXPO_TOKEN: 63-IGN-9xHj_SAivS21BueK3EWONXi6rOuuEJSD-
+
+      - name: Build Info
         run: |
-          chmod +x ./gradlew
-          ./gradlew assembleRelease --no-daemon
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: ArslanDojo.apk
-          path: mobile/android/app/build/outputs/apk/release/*.apk
+          echo "Build submitted!"
+          echo "Check status: https://expo.dev/accounts/kia.dexter/projects/arslan-dojo/builds"
