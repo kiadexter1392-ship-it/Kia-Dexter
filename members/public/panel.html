@@ -13,7 +13,7 @@
   <link rel="manifest" href="/manifest.json">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css">
   <link rel="stylesheet" href="/ui/style.css">
-  <link rel="stylesheet" href="/ui/shell.css">
+  <link rel="stylesheet" href="/ui/shell.css?v=chart-tabs-2">
 </head>
 <body>
   <div class="shell">
@@ -91,7 +91,7 @@
   <script src="/ui/ui.js"></script>
   <script src="/panel.js"></script>
   <script src="/CardSwap.js"></script>
-  <script src="/StackedBars.js"></script>
+  <script src="/StackedBars.js?v=chart-tabs-2"></script>
   <script src="/ToastStack.js"></script>
   <script>
     if ('serviceWorker' in navigator) {
@@ -177,9 +177,13 @@
         return out;
       }
 
+      var stackedBarsRequest = 0;
       function loadStackedBarsData(instance, mode) {
         if (!instance || !UI) return;
+        var request = ++stackedBarsRequest;
         UI.api('/api/progress?year=1405').then(function(d) {
+          // A slower response from a previous tab must not replace the latest view.
+          if (request !== stackedBarsRequest) return;
           if (d.ok && d.progress) {
             var bars = makeBarsFromAPI(d.progress, mode);
             instance.render(bars);
@@ -194,6 +198,7 @@
         if (root && window.StackedBars && window.StackedBars.mount) {
           stackedBarsInstance = window.StackedBars.mount(root, {
             colour: 'Colour',
+            initialMode: 'Month',
             onModeChange: function(mode) {
               loadStackedBarsData(stackedBarsInstance, mode);
             }
