@@ -146,21 +146,18 @@
 
     <form id="loginForm" autocomplete="on">
       <div class="form-row">
-        <div class="form-group"><label for="lUser">نام کاربری</label><input id="lUser" class="en" placeholder="ali" autocomplete="username" required></div>
-        <div class="form-group"><label for="lPass">رمز عبور</label><input id="lPass" type="password" class="en" placeholder="••••••••" autocomplete="current-password" required></div>
+        <div class="form-group" style="grid-column:1/-1"><label for="lUser">نام کاربری</label><input id="lUser" class="en" placeholder="ali" autocomplete="username" required></div>
       </div>
-      <button type="submit" class="btn btn-gold btn-full" id="loginBtn">ورود</button>
+
+      <!-- One-Time Code as password -->
+      <div style="margin:16px 0 8px">
+        <label style="font-size:13px;color:var(--text-light);display:block;margin-bottom:8px">رمز عبور (کد ۶ رقمی)</label>
+        <div id="otpMount"></div>
+      </div>
+
+      <button type="submit" class="btn btn-gold btn-full" id="loginBtn" style="margin-top:12px">ورود</button>
       <div class="form-hint">حساب تست: <code>ali</code> / <code>123456</code></div>
     </form>
-
-    <!-- One-Time Code verification (shown after login) -->
-    <div id="otpRoot" class="hidden" style="margin-top:20px">
-      <div style="text-align:center;margin-bottom:12px">
-        <div style="font-size:14px;font-weight:600;color:var(--text)">کد تأیید را وارد کنید</div>
-        <div style="font-size:12px;color:var(--muted);margin-top:4px">کد ۶ رقمی ارسال شده را وارد نمایید</div>
-      </div>
-      <div id="otpMount"></div>
-    </div>
 
     <form id="registerForm" class="hidden" autocomplete="on">
       <div class="form-row">
@@ -283,8 +280,9 @@
     }
   }).catch(function() {});
 
-  /* ── One-Time Code ── */
+  /* ── One-Time Code (as password field) ── */
   var otpInstance = null;
+  var otpCode = '';
   function initOTP() {
     var mount = document.getElementById('otpMount');
     if (mount && window.OneTimeCode && window.OneTimeCode.mount && !otpInstance) {
@@ -292,29 +290,32 @@
         length: 6,
         answer: 'Accept',
         onVerify: function(code) {
-          showToast('کد تأیید شد: ' + code, 'ok');
-          setTimeout(function() { location.href = '/panel'; }, 600);
+          otpCode = code;
+          showToast('کد وارد شد', 'ok');
         }
       });
     }
   }
+  /* Init OTP on load */
+  setTimeout(initOTP, 300);
 
   /* ── Login ── */
   loginForm.addEventListener('submit', function(e) {
     e.preventDefault();
     var btn = document.getElementById('loginBtn');
     btn.disabled = true; btn.textContent = '...';
+    var password = otpCode || document.getElementById('lPass')?.value || '';
     UI.api('/api/login', { method: 'POST', body: {
       username: document.getElementById('lUser').value,
-      password: document.getElementById('lPass').value
+      password: password
     }}).then(function() {
-      /* Show OTP verification step */
-      document.getElementById('loginForm').classList.add('hidden');
-      document.getElementById('otpRoot').classList.remove('hidden');
-      setTimeout(initOTP, 100);
+      showToast('خوش آمدید!', 'ok');
+      setTimeout(function() { location.href = '/panel'; }, 400);
     }).catch(function(err) {
       showToast(err.message, 'warn');
       btn.disabled = false; btn.textContent = 'ورود';
+      /* Shake OTP on wrong password */
+      if (otpInstance) { otpInstance.reset(); }
     });
   });
 
