@@ -572,26 +572,38 @@
 .stb-sub { font-size: 12px; color: var(--stb-mute); line-height: 16px; font-variant-numeric: tabular-nums; }
 
 .stb-seg-ctl {
+  --stb-tab-count: 2;
+  --stb-tab-index: 0;
   position: relative;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  flex-shrink: 0;
   padding: 2px;
   border-radius: 10px;
   background: var(--stb-w6);
 }
 .stb-seg-ctl.stb-seg-3 {
-  grid-template-columns: 1fr 1fr 1fr;
+  --stb-tab-count: 3;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 .stb-thumb {
   position: absolute;
-  top: 2px; bottom: 2px; left: 2px;
-  width: calc(50% - 2px);
+  top: 2px; bottom: 2px;
+  /* Subtract both 2px padding edges before dividing into equal tab tracks.
+     Logical positioning follows Persian RTL; translateX percentages would be
+     relative to the thumb itself, not the full control width. */
+  width: calc((100% - 4px) / var(--stb-tab-count));
+  inset-inline-start: calc(2px + (100% - 4px) / var(--stb-tab-count) * var(--stb-tab-index));
   border-radius: 8px;
   background: rgba(255,255,255,0.9);
-  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1), width 220ms ease;
+  pointer-events: none;
+  transition: inset-inline-start 220ms cubic-bezier(0.22, 1, 0.36, 1);
 }
-.stb-seg-ctl[data-mode="Week"] .stb-thumb { transform: translateX(100%); }
-.stb-seg-ctl[data-mode="Month"] .stb-thumb { transform: translateX(200%); }
+.stb-seg-ctl[data-mode="Week"] { --stb-tab-index: 1; }
+.stb-seg-ctl[data-mode="Month"] { --stb-tab-index: 2; }
+@media (prefers-reduced-motion: reduce) {
+  .stb-thumb { transition: none; }
+}
 
 .stb-tab {
   position: relative;

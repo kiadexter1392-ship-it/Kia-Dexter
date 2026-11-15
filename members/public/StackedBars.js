@@ -50,7 +50,8 @@
     if (!container) return;
     options = options || {};
 
-    var mode = 'Day'; /* Day | Week | Month */
+    var mode = ['Day', 'Week', 'Month'].indexOf(options.initialMode) !== -1
+      ? options.initialMode : 'Day'; /* Day | Week | Month */
     var at = null;
     var data = [];
     var layout = [];
@@ -151,14 +152,23 @@
 
     container.appendChild(root);
 
-    /* Tab widths for 3-mode thumb */
-    function updateThumb() {
-      var third = 100 / 3;
-      thumb.style.width = 'calc(' + third + '% - 2px)';
-      if (mode === 'Day') thumb.style.transform = 'translateX(0)';
-      else if (mode === 'Week') thumb.style.transform = 'translateX(' + third + '%)';
-      else thumb.style.transform = 'translateX(' + (third * 2) + '%)';
+    /* CSS uses logical insets so the thumb follows RTL/LTR grid order.
+       Update selection immediately, even while new chart data is still loading. */
+    var tabs = [tabDay, tabWeek, tabMonth];
+    var modes = ['Day', 'Week', 'Month'];
+    segCtl.setAttribute('role', 'group');
+    segCtl.setAttribute('aria-label', 'بازه زمانی نمودار');
+    tabs.forEach(function(tab) { tab.type = 'button'; });
+
+    function updateTabs() {
+      segCtl.setAttribute('data-mode', mode);
+      tabs.forEach(function(tab, index) {
+        var selected = modes[index] === mode;
+        tab.toggleAttribute('data-on', selected);
+        tab.setAttribute('aria-pressed', String(selected));
+      });
     }
+    updateTabs();
 
     /* Compute geometry */
     function computeGeometry() {
@@ -180,11 +190,7 @@
       /* Update header */
       subEl.textContent = barCount + ' ' +
         (mode === 'Day' ? 'روز اخیر' : mode === 'Week' ? 'هفته اخیر' : 'ماه اخیر');
-      segCtl.setAttribute('data-mode', mode);
-      tabDay.setAttribute('data-on', mode === 'Day' ? '' : null);
-      tabWeek.setAttribute('data-on', mode === 'Week' ? '' : null);
-      tabMonth.setAttribute('data-on', mode === 'Month' ? '' : null);
-      updateThumb();
+      updateTabs();
 
       /* Totals & scale */
       var totals = data.map(function(b) { return sum(b.vals); });
@@ -353,8 +359,9 @@
 
     /* Tabs */
     function setMode(m) {
-      if (mode !== m) {
+      if (modes.indexOf(m) !== -1 && mode !== m) {
         mode = m;
+        updateTabs();
         setAt(null);
         /* Request new data for this mode */
         if (options.onModeChange) options.onModeChange(m);

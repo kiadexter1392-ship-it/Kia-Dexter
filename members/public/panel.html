@@ -177,9 +177,13 @@
         return out;
       }
 
+      var stackedBarsRequest = 0;
       function loadStackedBarsData(instance, mode) {
         if (!instance || !UI) return;
+        var request = ++stackedBarsRequest;
         UI.api('/api/progress?year=1405').then(function(d) {
+          // A slower response from a previous tab must not replace the latest view.
+          if (request !== stackedBarsRequest) return;
           if (d.ok && d.progress) {
             var bars = makeBarsFromAPI(d.progress, mode);
             instance.render(bars);
@@ -194,6 +198,7 @@
         if (root && window.StackedBars && window.StackedBars.mount) {
           stackedBarsInstance = window.StackedBars.mount(root, {
             colour: 'Colour',
+            initialMode: 'Month',
             onModeChange: function(mode) {
               loadStackedBarsData(stackedBarsInstance, mode);
             }
