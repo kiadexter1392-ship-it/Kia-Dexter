@@ -15,23 +15,30 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Check deployed pages, coach login and member login
+      - name: Check dedicated coach and student routes
         env:
-          LIVE_URL: https://kia-dexter-production.up.railway.app
+          LIVE_URL: https://kia-dexter-production-cd4745b0.up.railway.app/member
           COACH_USERNAME: ${{ secrets.SMOKE_COACH_USERNAME }}
           COACH_PASSWORD: ${{ secrets.SMOKE_COACH_PASSWORD }}
           MEMBER_USERNAME: ${{ secrets.SMOKE_MEMBER_USERNAME }}
           MEMBER_PASSWORD: ${{ secrets.SMOKE_MEMBER_PASSWORD }}
-        run: node tests/deployed-smoke.js
+          COACH_URL: https://kia-dexter-production-cd4745b0.up.railway.app
+          MEMBER_URL: https://kia-dexter-production-cd4745b0.up.railway.app/member
+        run: node tests/railway-roles.js
       - name: Install browser test tools (not production dependencies)
         run: npm install --no-save --package-lock=false playwright-core@1.65.1 @sparticuz/chromium@153.0.0
+      - name: Verify default ports and both browser login flows on an isolated database
+        env:
+          BROWSER: '1'
+          TEST_DEFAULT_PORTS: '1'
+        run: node tests/port-routing.js
       - name: Verify registration and member details on an isolated database
         env:
           BROWSER: '1'
         run: node tests/member-details.js
       - name: Check actual Railway member panel in Chromium
         env:
-          LIVE_URL: https://kia-dexter-production.up.railway.app
+          LIVE_URL: https://kia-dexter-production-cd4745b0.up.railway.app/member
           MEMBER_USERNAME: ${{ secrets.SMOKE_MEMBER_USERNAME }}
           MEMBER_PASSWORD: ${{ secrets.SMOKE_MEMBER_PASSWORD }}
         run: node tests/stacked-bars.browser.js

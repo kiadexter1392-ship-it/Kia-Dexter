@@ -95,7 +95,7 @@
   <script src="/ToastStack.js"></script>
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(function(e) {});
+      navigator.serviceWorker.register(UI.PATH_PREFIX + '/sw.js').catch(function(e) {});
     }
     /* CardSwap — show in home view after panel loads */
     (function() {

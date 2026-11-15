@@ -22,10 +22,10 @@
 
   /* Martial arts themed cards — 3D rendered images */
   const CARDS = [
-    { id: 'karate',  title: 'کاراته',    src: '/images/card-karate.jpg' },
-    { id: 'crossfit',title: 'کراسفیت',   src: '/images/card-crossfit.jpg' },
-    { id: 'boxing',  title: 'بوکس',      src: '/images/card-boxing.jpg' },
-    { id: 'gym',     title: 'ژیمناستیک', src: '/images/card-gym.jpg' },
+    { id: 'karate',  title: 'کاراته',    src: (window.UI ? UI.PATH_PREFIX : '') + '/images/card-karate.jpg' },
+    { id: 'crossfit',title: 'کراسفیت',   src: (window.UI ? UI.PATH_PREFIX : '') + '/images/card-crossfit.jpg' },
+    { id: 'boxing',  title: 'بوکس',      src: (window.UI ? UI.PATH_PREFIX : '') + '/images/card-boxing.jpg' },
+    { id: 'gym',     title: 'ژیمناستیک', src: (window.UI ? UI.PATH_PREFIX : '') + '/images/card-gym.jpg' },
   ];
 
   function slot(k) {

@@ -174,6 +174,8 @@ function createServer(options = {}) {
   const middlewares = [];
 
   async function handle(req, res) {
+    // Mount proxies must receive the untouched request stream, before parsing POST bodies.
+    if (options.onRequest && options.onRequest(req, res)) return;
     const url = new URL(req.url, 'http://' + (req.headers.host || 'localhost'));
     const pathname = decodeURIComponent(url.pathname).replace(/\/{2,}/g, '/') || '/';
     const method = req.method.toUpperCase();
@@ -211,7 +213,7 @@ function createServer(options = {}) {
       json(data, status = 200) { return json(res, data, status, setCookies); },
       text(data, status = 200, type = 'text/plain; charset=utf-8') {
         for (const c of setCookies) res.setHeader('Set-Cookie', c);
-        res.writeHead(status, { 'Content-Type': type, 'Cache-Control': 'no-store' });
+        res.writeHead(status, { 'Content-Type': type, 'Cache-Control': 'no-store', ...SECURITY_HEADERS });
         res.end(data);
       },
       redirect(to, status = 302) {
