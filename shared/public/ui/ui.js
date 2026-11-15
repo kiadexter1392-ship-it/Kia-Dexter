@@ -159,8 +159,17 @@
     return esc(text).replace(/\n/g, '<br>');
   }
 
+  const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+  function birthDateValue(value) {
+    if (!value) return '';
+    const date = new Date(value + 'T12:00:00');
+    if (Number.isNaN(date.getTime())) return '';
+    const j = root.Jalali.toJalali(date);
+    return j.jy + '/' + String(j.jm).padStart(2, '0') + '/' + String(j.jd).padStart(2, '0');
+  }
+
   root.UI = {
-    fa, esc, api, toast, modal, closeModal, confirmBox,
+    fa, esc, api, toast, modal, closeModal, confirmBox, BLOOD_GROUPS, birthDateValue,
     heatClass, initials, avatar, STATUS, METRICS, peerUrl, loadConfig, nl2br, PATH_PREFIX
   };
 }(window));

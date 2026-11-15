@@ -327,6 +327,10 @@
             </div>
             <div class="field"><label>سابقه</label><input name="experience" value="${esc(existing ? existing.experience || '' : '')}"></div>
           </div>
+          <div class="grid-2">
+            <div class="field"><label for="mBirthDate">تاریخ دقیق تولد (شمسی)</label><input id="mBirthDate" name="birth_date" class="en" dir="ltr" placeholder="۱۳۹۰/۰۵/۲۱" maxlength="10" value="${esc(UI.birthDateValue(existing && existing.birth_date))}"></div>
+            <div class="field"><label for="mBloodGroup">گروه خونی</label><select id="mBloodGroup" name="blood_group" dir="ltr"><option value="">نامشخص</option>${UI.BLOOD_GROUPS.map(group => `<option ${existing && existing.blood_group === group ? 'selected' : ''}>${group}</option>`).join('')}</select></div>
+          </div>
           ${isEdit ? '' : `<div class="field"><label>رمز عبور اولیه</label><input name="password" class="en" value="123456"><div class="tiny">شاگرد می‌تواند بعداً از پنل خودش رمز را عوض کند.</div></div>`}
           <div class="field"><label>یادداشت مربی</label><textarea name="notes" placeholder="مثلاً: روی انعطاف بیشتر کار کند">${esc(existing ? existing.notes || '' : '')}</textarea></div>
           ${isEdit ? `<label class="check"><input type="checkbox" name="active" ${existing.active ? 'checked' : ''}> حساب کاربری فعال باشد</label>` : ''}
@@ -383,6 +387,10 @@
           </div>
         </div>
 
+        <div class="row wrap" style="margin-bottom:16px">
+          <span>تاریخ تولد: <b dir="ltr">${esc(m.birth_date ? fa(UI.birthDateValue(m.birth_date)) : '—')}</b></span>
+          <span>گروه خونی: <b dir="ltr">${esc(m.blood_group || '—')}</b></span>
+        </div>
         <div class="grid-4" style="margin-bottom:16px">
           ${statTile('میانگین سال', d.progress && Object.keys(d.progress).length ? fa(avgOf(d.progress)) : '—', `سال ${fa(d.year)}`, 'var(--gold)')}
           ${statTile('تمرین باز', fa(d.plans.filter((p) => p.status !== 'done').length), 'در انتظار انجام', 'var(--red)')}

@@ -759,3 +759,28 @@
     font-size: 11px;
   }
 }
+
+/* Tuition cards use the same gold glass as the rest of the member panel.
+   Dark brown text keeps all 16 digits readable on the light gold surface. */
+.tuition-bank-card {
+  background: var(--amber-glass);
+  border: 1px solid var(--amber-glass-border);
+  border-radius: var(--radius);
+  padding: 22px;
+  color: #35260f;
+  box-shadow: var(--amber-shadow);
+  backdrop-filter: blur(var(--amber-blur));
+  -webkit-backdrop-filter: blur(var(--amber-blur));
+  min-width: 0;
+}
+.tuition-bank-label { font-size: 12px; color: #614c28; margin-bottom: 12px; }
+.tuition-bank-number {
+  direction: ltr;
+  unicode-bidi: isolate;
+  font: 700 clamp(16px, 2vw, 21px) monospace;
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+  white-space: nowrap;
+}
+.tuition-bank-holder { font-weight: 600; }
+.tuition-bank-card .btn { margin-top: 14px; color: #35260f; border-color: rgba(122,91,37,0.35); }

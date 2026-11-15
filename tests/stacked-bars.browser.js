@@ -139,6 +139,28 @@ const root = path.join(__dirname, '..');
           }
           console.log(`PASS LIVE: actual Railway member panel, all tabs aligned at ${width}px`);
         }
+        await live.locator('[data-view="profile"]').click();
+        await live.locator('#pBloodGroup').waitFor();
+        assert.equal(await live.locator('#pBloodGroup option').count(), 9);
+        assert.equal(await live.locator('#pBirthDate').count(), 1);
+        const profile = await live.locator('#view-profile').textContent();
+        assert.ok(!profile.includes('پاک نمی‌شود') && !profile.includes('ماه‌به‌ماه'));
+        await live.locator('[data-view="payment"]').click();
+        await live.locator('.tuition-bank-card').first().waitFor();
+        const cards = await live.locator('.tuition-bank-card').evaluateAll(cards => cards.map(card => ({
+          bg: getComputedStyle(card).backgroundColor, color: getComputedStyle(card).color,
+          direction: getComputedStyle(card.querySelector('.tuition-bank-number')).direction,
+          number: card.querySelector('.tuition-bank-number').textContent.replace(/\s/g, ''),
+          copy: card.querySelector('[data-copy]').dataset.copy
+        })));
+        assert.equal(cards.length, 2);
+        for (const card of cards) {
+          assert.equal(card.bg, 'rgba(212, 168, 83, 0.18)');
+          assert.equal(card.color, 'rgb(53, 38, 15)');
+          assert.equal(card.direction, 'ltr');
+          assert.equal(card.number, card.copy);
+        }
+        console.log('PASS LIVE: profile blood group/date fields, removed explanations, readable gold cards and intact copy numbers');
         assert.deepEqual(liveErrors, []);
       } finally {
         await context.close();

@@ -25,7 +25,11 @@ jobs:
         run: node tests/deployed-smoke.js
       - name: Install browser test tools (not production dependencies)
         run: npm install --no-save --package-lock=false playwright-core@1.65.1 @sparticuz/chromium@153.0.0
-      - name: Check actual Railway chart tab layout in Chromium
+      - name: Verify registration and member details on an isolated database
+        env:
+          BROWSER: '1'
+        run: node tests/member-details.js
+      - name: Check actual Railway member panel in Chromium
         env:
           LIVE_URL: https://kia-dexter-production.up.railway.app
           MEMBER_USERNAME: ${{ secrets.SMOKE_MEMBER_USERNAME }}

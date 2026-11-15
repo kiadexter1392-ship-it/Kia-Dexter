@@ -7,6 +7,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
+const { normalizeMemberDetails } = require('./member-details');
 const { DatabaseSync } = require('node:sqlite');
 
 const DATA_DIR = process.env.ARSLAN_DATA_DIR || path.join(__dirname, '..', 'data');
@@ -249,6 +250,18 @@ try {
   }
 } catch { /* نادیده */ }
 
+/* Adding a nullable field preserves all existing members; both servers may start together. */
+execWithRetry('BEGIN IMMEDIATE');
+try {
+  if (!all("PRAGMA table_info('users')").some(c => c.name === 'blood_group')) {
+    db.exec('ALTER TABLE users ADD COLUMN blood_group TEXT DEFAULT NULL');
+  }
+  db.exec('COMMIT');
+} catch (err) {
+  db.exec('ROLLBACK');
+  throw err;
+}
+
 /* -------------------------------- رمز عبور -------------------------------- */
 
 function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) {
@@ -288,6 +301,7 @@ function publicUser(u) {
     phone: u.phone,
     gender: u.gender,
     birth_date: u.birth_date,
+    blood_group: u.blood_group || null,
     age: u.age,
     weight_kg: u.weight_kg,
     height_cm: u.height_cm,
@@ -304,14 +318,15 @@ function publicUser(u) {
 }
 
 function createUser(data, role = 'member') {
+  data = { ...data, ...normalizeMemberDetails(data) };
   const { hash, salt } = hashPassword(data.password);
   const ts = now();
   const colors = ['#e2483d', '#d9a441', '#3fa7d6', '#5cb85c', '#a06cd5', '#ef7f57', '#2fa8a0'];
   const color = data.avatar_color || colors[(data.full_name || 'a').length % colors.length];
   const info = run(
     `INSERT INTO users (role, full_name, username, phone, password_hash, password_salt, gender, birth_date, age,
-      weight_kg, height_cm, belt, style, experience, join_date, notes, avatar_color, active, created_at, updated_at, discipline)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      weight_kg, height_cm, belt, style, experience, join_date, notes, avatar_color, active, created_at, updated_at, discipline, blood_group)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     role,
     String(data.full_name || '').trim(),
     String(data.username || '').trim().toLowerCase(),
@@ -332,15 +347,17 @@ function createUser(data, role = 'member') {
     data.active === undefined ? 1 : (data.active ? 1 : 0),
     ts,
     ts,
-    data.discipline || data.style || null
+    data.discipline || data.style || null,
+    data.blood_group || null
   );
   return findById(info.lastInsertRowid);
 }
 
 function updateUser(id, data) {
+  data = { ...data, ...normalizeMemberDetails(data) };
   const fields = [];
   const values = [];
-  const allowed = ['full_name', 'phone', 'gender', 'birth_date', 'age', 'weight_kg', 'height_cm',
+  const allowed = ['full_name', 'phone', 'gender', 'birth_date', 'blood_group', 'age', 'weight_kg', 'height_cm',
     'belt', 'style', 'experience', 'notes', 'active', 'avatar_color', 'join_date', 'discipline'];
   for (const key of allowed) {
     if (data[key] !== undefined) {
