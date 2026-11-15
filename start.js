@@ -1,17 +1,17 @@
 'use strict';
 /*
  * اجرای هر دو سایت با reverse proxy:
- *   پورت اصلی (Railway) → /coach/* و /member/*
- *   لوکال → :4173 (مربی) و :4174 (شاگردان)
+ *   پورت 8080 → شاگردان (و /coach برای دسترسی سازگار به مربی)
+ *   پورت 4174 → مربی؛ پورت 4173 → سرور داخلی شاگردان
  */
 
 const http = require('node:http');
 const { spawn } = require('node:child_process');
 const path = require('node:path');
 
-const PORT = Number(process.env.PORT || 0);
-const COACH_PORT = process.env.COACH_PORT || 4173;
-const MEMBER_PORT = process.env.MEMBER_PORT || 4174;
+const { readPorts } = require('./shared/ports');
+const { proxy } = require('./shared/proxy');
+const { gateway: PORT, coach: COACH_PORT, member: MEMBER_PORT } = readPorts();
 const MEMBERS_SITE_URL = process.env.MEMBERS_SITE_URL || null;
 
 const children = [];
@@ -43,34 +43,6 @@ function shutdown(code = 0) {
 process.on('SIGINT', () => shutdown(0));
 process.on('SIGTERM', () => shutdown(0));
 
-/* --- Reverse Proxy --- */
-function proxy(targetPort, prefix = '') {
-  return function proxyHandler(req, res) {
-    const opts = {
-      hostname: '127.0.0.1',
-      port: targetPort,
-      path: req.url,
-      method: req.method,
-      headers: { ...req.headers, host: `localhost:${targetPort}`, 'x-dojo-proxy': '1' }
-    };
-    const proxyReq = http.request(opts, (proxyRes) => {
-      // Backend redirects are root-relative; keep coach navigation inside its mount.
-      const headers = { ...proxyRes.headers };
-      if (prefix && headers.location && headers.location.startsWith('/') &&
-          !headers.location.startsWith('//') && !/^\/coach(?:[/?]|$)/.test(headers.location)) {
-        headers.location = prefix + headers.location;
-      }
-      res.writeHead(proxyRes.statusCode, headers);
-      proxyRes.pipe(res, { end: true });
-    });
-    proxyReq.on('error', () => {
-      res.writeHead(502);
-      res.end('Bad Gateway');
-    });
-    req.pipe(proxyReq, { end: true });
-  };
-}
-
 console.log('باشگاه آنلاین ارسلان دوجو');
 console.log('─────────────────────────────────────────────');
 
@@ -88,7 +60,7 @@ if (PORT) {
     /* مسیرهای پنل مربی (با پیشوند /coach) */
     if (parsed.pathname.startsWith('/coach/') || parsed.pathname.startsWith('/v1/')) {
       req.url = url.replace(/^\/coach/, '') || '/';
-      return proxy(COACH_PORT, '/coach')(req, res);
+      return proxy(COACH_PORT, { prefix: '/coach' })(req, res);
     }
 
     /* بقیه مسیرها → شاگردان (پیش‌فرض) */

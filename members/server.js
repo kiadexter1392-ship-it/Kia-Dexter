@@ -1,18 +1,18 @@
 'use strict';
 /*
  * سایت شماره ۲ — پنل شاگردان «باشگاه آنلاین ارسلان دوجو»
- * پورت پیش‌فرض: ۴۱۷۴
+ * پورت داخلی پیش‌فرض: ۴۱۷۳؛ ورودی عمومی شاگردان: ۸۰۸۰
  */
 
 const path = require('node:path');
+const fs = require('node:fs');
+const { readPorts } = require('../shared/ports');
 const { createServer, rateLimit, sanitize } = require('../shared/server');
 const db = require('../shared/db');
 const { seedIfEmpty, DEMO } = require('../shared/seed');
 const { JALALI_MONTHS, todayJalali, formatJalali, faNum } = require('../shared/jalali');
 
-const PORT = Number(process.env.MEMBER_PORT || 4174);
-const USE_PROXY = !!process.env.PORT;
-const COACH_PORT = Number(process.env.COACH_PORT || 4173);
+const { member: PORT, coach: COACH_PORT } = readPorts();
 const SITE = 'member';
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const SHARED_PUBLIC = path.join(__dirname, '..', 'shared', 'public');
@@ -48,14 +48,31 @@ function bad(ctx, msg, status = 400) {
 
 /* ------------------------------ صفحه‌های HTML ----------------------------- */
 
+function serveMemberHtml(ctx, filename) {
+  const file = path.join(PUBLIC_DIR, filename);
+  if (ctx.req.headers['x-dojo-mount'] !== '/member') return ctx.file(file);
+  // Root-absolute asset URLs need the mount too; API calls use UI.PATH_PREFIX.
+  const html = fs.readFileSync(file, 'utf8').replace(/\b(src|href|action)="\/(?!\/)/g, '$1="/member/');
+  ctx.text(html, 200, 'text/html; charset=utf-8');
+}
+
+app.get('/manifest.json', (ctx) => {
+  const manifest = JSON.parse(fs.readFileSync(path.join(PUBLIC_DIR, 'manifest.json'), 'utf8'));
+  if (ctx.req.headers['x-dojo-mount'] === '/member') {
+    manifest.start_url = manifest.scope = '/member/';
+    manifest.icons.forEach(icon => { icon.src = '/member' + icon.src; });
+  }
+  ctx.json(manifest);
+});
+
 app.get('/', (ctx) => {
   if (member(ctx)) return ctx.redirect('/panel');
-  ctx.file(path.join(PUBLIC_DIR, 'index.html'));
+  serveMemberHtml(ctx, 'index.html');
 });
 
 app.get('/panel', (ctx) => {
   if (!member(ctx)) return ctx.redirect('/');
-  ctx.file(path.join(PUBLIC_DIR, 'panel.html'));
+  serveMemberHtml(ctx, 'panel.html');
 });
 
 /* ورود مربی به پنل یک شاگرد (از سایت اول) */
@@ -81,7 +98,8 @@ app.get('/api/config', (ctx) => {
     jalaliYear: j.jy,
     jalaliMonth: j.jm,
     coachPort: COACH_PORT,
-    peerSiteUrl: ctx.req.headers['x-dojo-proxy'] === '1' ? '/coach/' : null,
+    peerSiteUrl: ctx.req.headers['x-dojo-proxy'] === '1'
+      ? (ctx.req.headers['x-dojo-mount'] === '/member' ? '/' : '/coach/') : null,
     months: JALALI_MONTHS,
     belts: ['سفید', 'زرد', 'نارنجی', 'سبز', 'آبی', 'قهوه‌ای', 'مشکی دان ۱', 'مشکی دان ۲'],
     disciplines: ['کاراته', 'کراسفیت', 'بوکس', 'ژیمناستیک', 'موی تای'],

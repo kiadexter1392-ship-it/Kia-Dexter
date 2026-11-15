@@ -272,7 +272,7 @@
   }).catch(function() {});
 
   /* ── Pricing CardStack (vanilla JS) ── */
-  fetch('/api/payment').then(function(r) { return r.json(); }).then(function(d) {
+  fetch(UI.PATH_PREFIX + '/api/payment').then(function(r) { return r.json(); }).then(function(d) {
     if (!d.ok) return;
     var cards = d.pricing.slice(0, 6).map(function(p) {
       return { discipline: p.discipline, price: p.price };
@@ -313,7 +313,7 @@
       password: password
     }}).then(function() {
       showToast('خوش آمدید!', 'ok');
-      setTimeout(function() { location.href = '/panel'; }, 400);
+      setTimeout(function() { location.href = UI.PATH_PREFIX + '/panel'; }, 400);
     }).catch(function(err) {
       showToast(err.message, 'warn');
       btn.disabled = false; btn.textContent = 'ورود';
@@ -333,7 +333,7 @@
     UI.api('/api/register', { method: 'POST', body: data })
     .then(function() {
       showToast('ثبت‌نام شد! خوش آمدید', 'ok');
-      setTimeout(function() { location.href = '/panel'; }, 500);
+      setTimeout(function() { location.href = UI.PATH_PREFIX + '/panel'; }, 500);
     }).catch(function(err) {
       showToast(err.message, 'warn');
       btn.disabled = false; btn.textContent = 'ثبت‌نام';

@@ -31,7 +31,7 @@
       ME = me.user;
       state.year = me.jalali.year;
     } catch (err) {
-      location.href = '/';
+      location.href = UI.PATH_PREFIX + '/';
       return;
     }
 
@@ -42,7 +42,7 @@
     document.querySelectorAll('.nav-item[data-view]').forEach((b) => b.addEventListener('click', () => switchView(b.dataset.view)));
     document.getElementById('logoutBtn').addEventListener('click', async () => {
       await api('/api/logout', { method: 'POST' });
-      location.href = '/';
+      location.href = UI.PATH_PREFIX + '/';
     });
     document.getElementById('bellBtn').addEventListener('click', bellBox);
     document.getElementById('quickProgress').addEventListener('click', selfReportForm);

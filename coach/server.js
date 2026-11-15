@@ -1,17 +1,18 @@
 'use strict';
 /*
  * سایت شماره ۱ — پنل مربی «باشگاه آنلاین ارسلان دوجو»
- * پورت پیش‌فرض: ۴۱۷۳
+ * پورت پیش‌فرض: ۴۱۷۴
  */
 
 const path = require('node:path');
+const { readPorts } = require('../shared/ports');
+const { proxy } = require('../shared/proxy');
 const { createServer, rateLimit, sanitize } = require('../shared/server');
 const db = require('../shared/db');
 const { seedIfEmpty, DEMO } = require('../shared/seed');
 const { JALALI_MONTHS, todayJalali, formatJalali, faNum } = require('../shared/jalali');
 
-const PORT = Number(process.env.COACH_PORT || 4173);
-const MEMBER_PORT = Number(process.env.MEMBER_PORT || 4174);
+const { coach: PORT, member: MEMBER_PORT } = readPorts();
 const SITE = 'coach';
 const memberUrl = (process.env.MEMBERS_SITE_URL || '').trim();
 const MEMBERS_SITE_URL = ['', 'null', 'undefined'].includes(memberUrl) ? null : memberUrl;
@@ -23,7 +24,27 @@ seedIfEmpty();
 const app = createServer({
   name: 'coach-site',
   cookieName: 'arslan_coach_session',
-  publicDirs: [PUBLIC_DIR, SHARED_PUBLIC]
+  publicDirs: [PUBLIC_DIR, SHARED_PUBLIC],
+  onRequest(req, res) {
+    const url = new URL(req.url, 'http://localhost');
+    if (url.pathname === '/member') {
+      res.writeHead(302, { Location: '/member/' + url.search });
+      res.end();
+      return true;
+    }
+    if (url.pathname.startsWith('/member/')) {
+      req.url = req.url.slice('/member'.length);
+      proxy(MEMBER_PORT, { prefix: '/member' })(req, res);
+      return true;
+    }
+    // Keep previously saved /coach links working on the dedicated coach domain.
+    if (url.pathname === '/coach' || url.pathname.startsWith('/coach/')) {
+      res.writeHead(307, { Location: (url.pathname.slice('/coach'.length) || '/') + url.search });
+      res.end();
+      return true;
+    }
+    return false;
+  }
 });
 
 /* -------------------------------- ابزارها -------------------------------- */
@@ -65,6 +86,9 @@ app.get('/', (ctx) => {
   ctx.file(path.join(PUBLIC_DIR, 'index.html'));
 });
 
+// Old bookmarks from the former student site must not strand users after the port swap.
+app.get('/panel', (ctx) => ctx.redirect('/dashboard'));
+
 app.get('/dashboard', (ctx) => {
   if (!coach(ctx)) return ctx.redirect('/');
   ctx.file(path.join(PUBLIC_DIR, 'dashboard.html'));
@@ -81,7 +105,7 @@ app.get('/api/config', (ctx) => {
     jalaliYear: j.jy,
     jalaliMonth: j.jm,
     memberPort: MEMBER_PORT,
-    peerSiteUrl: ctx.req.headers['x-dojo-proxy'] === '1' ? '/' : null,
+    peerSiteUrl: ctx.req.headers['x-dojo-proxy'] === '1' ? '/' : '/member/',
     membersSiteUrl: MEMBERS_SITE_URL,
     months: JALALI_MONTHS,
     belts: ['سفید', 'زرد', 'نارنجی', 'سبز', 'آبی', 'قهوه‌ای', 'مشکی دان ۱', 'مشکی دان ۲', 'مشکی دان ۳', 'مشکی دان ۴'],

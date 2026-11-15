@@ -10,7 +10,8 @@
   /* ----------------------------- درخواست HTTP ---------------------------- */
 
   /* تشخیص پیشوند مسیر (برای Railway: پنل مربی زیر /coach) */
-  const PATH_PREFIX = /^\/coach(?:\/|$)/.test(location.pathname) ? '/coach' : '';
+  const mount = location.pathname.match(/^\/(coach|member)(?:\/|$)/);
+  const PATH_PREFIX = mount ? '/' + mount[1] : '';
 
   async function api(path, options = {}) {
     const opts = { method: options.method || 'GET', headers: {}, credentials: 'include' };
