@@ -153,6 +153,15 @@
       <div class="form-hint">حساب تست: <code>ali</code> / <code>123456</code></div>
     </form>
 
+    <!-- One-Time Code verification (shown after login) -->
+    <div id="otpRoot" class="hidden" style="margin-top:20px">
+      <div style="text-align:center;margin-bottom:12px">
+        <div style="font-size:14px;font-weight:600;color:var(--text)">کد تأیید را وارد کنید</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px">کد ۶ رقمی ارسال شده را وارد نمایید</div>
+      </div>
+      <div id="otpMount"></div>
+    </div>
+
     <form id="registerForm" class="hidden" autocomplete="on">
       <div class="form-row">
         <div class="form-group"><label>نام و نام خانوادگی *</label><input name="full_name" required></div>
@@ -201,6 +210,7 @@
 <script src="/ui/jalali.browser.js"></script>
 <script src="/ui/ui.js"></script>
 <script src="/CardStack.js"></script>
+<script src="/OneTimeCode.js"></script>
 <script>
 (function() {
   'use strict';
@@ -273,6 +283,22 @@
     }
   }).catch(function() {});
 
+  /* ── One-Time Code ── */
+  var otpInstance = null;
+  function initOTP() {
+    var mount = document.getElementById('otpMount');
+    if (mount && window.OneTimeCode && window.OneTimeCode.mount && !otpInstance) {
+      otpInstance = window.OneTimeCode.mount(mount, {
+        length: 6,
+        answer: 'Accept',
+        onVerify: function(code) {
+          showToast('کد تأیید شد: ' + code, 'ok');
+          setTimeout(function() { location.href = '/panel'; }, 600);
+        }
+      });
+    }
+  }
+
   /* ── Login ── */
   loginForm.addEventListener('submit', function(e) {
     e.preventDefault();
@@ -282,8 +308,10 @@
       username: document.getElementById('lUser').value,
       password: document.getElementById('lPass').value
     }}).then(function() {
-      showToast('خوش آمدید!', 'ok');
-      setTimeout(function() { location.href = '/panel'; }, 400);
+      /* Show OTP verification step */
+      document.getElementById('loginForm').classList.add('hidden');
+      document.getElementById('otpRoot').classList.remove('hidden');
+      setTimeout(initOTP, 100);
     }).catch(function(err) {
       showToast(err.message, 'warn');
       btn.disabled = false; btn.textContent = 'ورود';
