@@ -18,7 +18,7 @@ const children = [];
 
 function start(label, script, color) {
   const child = spawn(process.execPath, [path.join(__dirname, script)], {
-    env: { ...process.env, COACH_PORT, MEMBER_PORT, MEMBERS_SITE_URL },
+    env: { ...process.env, COACH_PORT, MEMBER_PORT, MEMBERS_SITE_URL: MEMBERS_SITE_URL || '' },
     stdio: ['ignore', 'pipe', 'pipe']
   });
   const prefix = `\x1b[${color}m[${label}]\x1b[0m `;
@@ -44,17 +44,23 @@ process.on('SIGINT', () => shutdown(0));
 process.on('SIGTERM', () => shutdown(0));
 
 /* --- Reverse Proxy --- */
-function proxy(targetPort) {
+function proxy(targetPort, prefix = '') {
   return function proxyHandler(req, res) {
     const opts = {
       hostname: '127.0.0.1',
       port: targetPort,
       path: req.url,
       method: req.method,
-      headers: { ...req.headers, host: `localhost:${targetPort}` }
+      headers: { ...req.headers, host: `localhost:${targetPort}`, 'x-dojo-proxy': '1' }
     };
     const proxyReq = http.request(opts, (proxyRes) => {
-      res.writeHead(proxyRes.statusCode, proxyRes.headers);
+      // Backend redirects are root-relative; keep coach navigation inside its mount.
+      const headers = { ...proxyRes.headers };
+      if (prefix && headers.location && headers.location.startsWith('/') &&
+          !headers.location.startsWith('//') && !/^\/coach(?:[/?]|$)/.test(headers.location)) {
+        headers.location = prefix + headers.location;
+      }
+      res.writeHead(proxyRes.statusCode, headers);
       proxyRes.pipe(res, { end: true });
     });
     proxyReq.on('error', () => {
@@ -72,11 +78,17 @@ if (PORT) {
   /* Railway: یک پورت، دو سرویس با reverse proxy */
   const proxyServer = http.createServer((req, res) => {
     const url = req.url;
+    const parsed = new URL(url, 'http://localhost');
+    // Canonical trailing slash makes relative form and asset URLs work correctly.
+    if (parsed.pathname === '/coach' || parsed.pathname === '/dashboard') {
+      res.writeHead(302, { Location: (parsed.pathname === '/coach' ? '/coach/' : '/coach/dashboard') + parsed.search });
+      return res.end();
+    }
 
     /* مسیرهای پنل مربی (با پیشوند /coach) */
-    if (url.startsWith('/coach') || url.startsWith('/v1/')) {
+    if (parsed.pathname.startsWith('/coach/') || parsed.pathname.startsWith('/v1/')) {
       req.url = url.replace(/^\/coach/, '') || '/';
-      return proxy(COACH_PORT)(req, res);
+      return proxy(COACH_PORT, '/coach')(req, res);
     }
 
     /* بقیه مسیرها → شاگردان (پیش‌فرض) */

@@ -13,6 +13,8 @@ const { JALALI_MONTHS, todayJalali, formatJalali, faNum } = require('../shared/j
 const PORT = Number(process.env.COACH_PORT || 4173);
 const MEMBER_PORT = Number(process.env.MEMBER_PORT || 4174);
 const SITE = 'coach';
+const memberUrl = (process.env.MEMBERS_SITE_URL || '').trim();
+const MEMBERS_SITE_URL = ['', 'null', 'undefined'].includes(memberUrl) ? null : memberUrl;
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const SHARED_PUBLIC = path.join(__dirname, '..', 'shared', 'public');
 
@@ -79,7 +81,8 @@ app.get('/api/config', (ctx) => {
     jalaliYear: j.jy,
     jalaliMonth: j.jm,
     memberPort: MEMBER_PORT,
-    membersSiteUrl: process.env.MEMBERS_SITE_URL || null,
+    peerSiteUrl: ctx.req.headers['x-dojo-proxy'] === '1' ? '/' : null,
+    membersSiteUrl: MEMBERS_SITE_URL,
     months: JALALI_MONTHS,
     belts: ['سفید', 'زرد', 'نارنجی', 'سبز', 'آبی', 'قهوه‌ای', 'مشکی دان ۱', 'مشکی دان ۲', 'مشکی دان ۳', 'مشکی دان ۴'],
     disciplines: ['کاراته', 'کراسفیت', 'بوکس', 'ژیمناستیک', 'موی تای'],

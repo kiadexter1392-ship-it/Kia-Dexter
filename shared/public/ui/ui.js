@@ -10,7 +10,7 @@
   /* ----------------------------- درخواست HTTP ---------------------------- */
 
   /* تشخیص پیشوند مسیر (برای Railway: پنل مربی زیر /coach) */
-  const PATH_PREFIX = location.pathname.startsWith('/coach') ? '/coach' : '';
+  const PATH_PREFIX = /^\/coach(?:\/|$)/.test(location.pathname) ? '/coach' : '';
 
   async function api(path, options = {}) {
     const opts = { method: options.method || 'GET', headers: {}, credentials: 'include' };
@@ -142,6 +142,7 @@
   /* --------------------------- آدرس سایت دیگر ---------------------------- */
   /* در محیط پیش‌نمایش، نام میزبان با شماره پورت شروع می‌شود: 4174-xxxx.e2b.app */
   function peerUrl(port) {
+    if (root.CLUB && root.CLUB.peerSiteUrl) return new URL(root.CLUB.peerSiteUrl, root.location.origin).href;
     const host = root.location.hostname;
     const match = host.match(/^(\d+)-(.+)$/);
     if (match) return `${root.location.protocol}//${port}-${match[2]}`;

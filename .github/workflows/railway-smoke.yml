@@ -1,0 +1,25 @@
+name: Verify live Railway deployment
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-production:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check deployed pages, coach login and member login
+        env:
+          LIVE_URL: https://kia-dexter-production.up.railway.app
+          COACH_USERNAME: ${{ secrets.SMOKE_COACH_USERNAME }}
+          COACH_PASSWORD: ${{ secrets.SMOKE_COACH_PASSWORD }}
+          MEMBER_USERNAME: ${{ secrets.SMOKE_MEMBER_USERNAME }}
+          MEMBER_PASSWORD: ${{ secrets.SMOKE_MEMBER_PASSWORD }}
+        run: node tests/deployed-smoke.js
