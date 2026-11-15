@@ -16,7 +16,12 @@ async function main() {
     try {
       const css = await request('/coach/login.css?live-check=' + Date.now());
       const cfg = await (await request('/coach/api/config')).json();
-      if (css.ok && (await css.text()).includes('body.coach-login') && cfg.peerSiteUrl === '/' && cfg.membersSiteUrl !== 'null') {
+      const chart = await (await request('/StackedBars.js?live-check=' + Date.now())).text();
+      const chartCss = await (await request('/ui/shell.css?live-check=' + Date.now())).text();
+      const worker = await (await request('/sw.js?live-check=' + Date.now())).text();
+      if (css.ok && (await css.text()).includes('body.coach-login') && cfg.peerSiteUrl === '/' && cfg.membersSiteUrl !== 'null'
+          && chart.includes('function updateTabs()') && chartCss.includes('inset-inline-start: calc(')
+          && worker.includes('arslan-dojo-static-v2-')) {
         ready = true; break;
       }
     } catch { /* the service may restart during rollout */ }

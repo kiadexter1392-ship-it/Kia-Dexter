@@ -104,6 +104,47 @@ const root = path.join(__dirname, '..');
     assert.match(await page.locator('.stb-sub').textContent(), /هفته/);
     assert.deepEqual(errors, []);
     console.log('PASS: real panel ignores stale API responses; no browser JavaScript errors');
+
+    if (process.env.LIVE_URL) {
+      const base = process.env.LIVE_URL.replace(/\/$/, '');
+      const login = await fetch(base + '/api/login', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: process.env.MEMBER_USERNAME || 'kia', password: process.env.MEMBER_PASSWORD || '123456' })
+      });
+      assert.equal(login.status, 200);
+      const cookie = login.headers.getSetCookie()[0].split(';')[0];
+      const separator = cookie.indexOf('=');
+      const context = await browser.newContext();
+      try {
+        await context.addCookies([{ name: cookie.slice(0, separator), value: cookie.slice(separator + 1), url: base }]);
+        const live = await context.newPage();
+        const liveErrors = [];
+        live.on('pageerror', error => liveErrors.push(error.message));
+        // The test must not depend on third-party animation/font CDNs being available.
+        await live.route('**/*', route => new URL(route.request().url()).origin === new URL(base).origin
+          ? route.continue() : route.abort());
+        await live.goto(base + '/panel', { waitUntil: 'domcontentloaded' });
+        await live.waitForSelector('.stb-tab');
+        for (const width of [1568, 1024, 390, 320]) {
+          await live.setViewportSize({ width, height: 980 });
+          for (const index of [0, 1, 2, 0, 2, 1]) {
+            await live.locator('.stb-tab').nth(index).click();
+            await live.waitForFunction(index => {
+              const tabs = document.querySelectorAll('.stb-tab');
+              const button = tabs[index].getBoundingClientRect();
+              const thumb = document.querySelector('.stb-thumb').getBoundingClientRect();
+              return Math.abs(button.x - thumb.x) < 1 && Math.abs(button.width - thumb.width) < 1
+                && document.querySelectorAll('.stb-tab[data-on]').length === 1 && tabs[index].hasAttribute('data-on');
+            }, index, { timeout: 3000 });
+          }
+          console.log(`PASS LIVE: actual Railway member panel, all tabs aligned at ${width}px`);
+        }
+        assert.deepEqual(liveErrors, []);
+      } finally {
+        await context.close();
+        await fetch(base + '/api/logout', { method: 'POST', headers: { cookie } });
+      }
+    }
   } finally {
     await browser.close();
   }
