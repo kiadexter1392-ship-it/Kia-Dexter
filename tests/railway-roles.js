@@ -14,7 +14,8 @@ const request = (base, route, options = {}) => fetch(base + route, { redirect: '
     try {
       const coach = await (await request(COACH, '/api/config?verify=' + Date.now())).json();
       const member = await (await request(MEMBER, '/api/config?verify=' + Date.now())).json();
-      if (coach.site === 'coach' && member.site === 'member' && coach.peerSiteUrl === '/member/' && member.peerSiteUrl === '/') {
+      const dock = await (await request(COACH, '/ui/MagnifyingDock.js?verify=' + Date.now())).text();
+      if (dock.includes('root.MagnifyingDock = { mount }') && coach.site === 'coach' && member.site === 'member' && coach.peerSiteUrl === '/member/' && member.peerSiteUrl === '/') {
         ready = true; break;
       }
     } catch { /* container may be restarting */ }
@@ -49,14 +50,18 @@ const request = (base, route, options = {}) => fetch(base + route, { redirect: '
       const page = await request(base, expectedRole === 'coach' ? '/dashboard' : '/panel', { headers: { cookie } });
       assert.equal(page.status, 200);
       const html = await page.text();
-      if (expectedRole === 'coach') assert.match(html, /id="view-overview"/);
+      if (expectedRole === 'coach') {
+        assert.match(html, /id="view-overview"/);
+        assert.match(html, /src="ui\/MagnifyingDock.js"/);
+      }
       else {
         assert.match(html, /src="\/member\/panel.js"/);
+        assert.match(html, /src="\/member\/ui\/MagnifyingDock.js"/);
         assert.match(html, /id="view-profile"/);
         assert.equal(page.headers.get('x-content-type-options'), 'nosniff');
       }
-      const assets = expectedRole === 'coach' ? ['/ui/style.css', '/ui/ui.js', '/dashboard.js']
-        : ['/ui/style.css', '/ui/ui.js', '/panel.js', '/CardSwap.js', '/images/card-karate.jpg'];
+      const assets = expectedRole === 'coach' ? ['/ui/style.css', '/ui/ui.js', '/ui/MagnifyingDock.js', '/dashboard.js']
+        : ['/ui/style.css', '/ui/ui.js', '/ui/MagnifyingDock.js', '/panel.js', '/CardSwap.js', '/images/card-karate.jpg'];
       for (const asset of assets) assert.equal((await request(base, asset)).status, 200, expectedRole + asset);
       console.log('PASS: live', expectedRole, 'form login, role-specific session/dashboard and all assets');
     }

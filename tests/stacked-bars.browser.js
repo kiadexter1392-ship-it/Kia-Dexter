@@ -10,6 +10,22 @@ const chromiumModule = require('@sparticuz/chromium');
 const binary = chromiumModule.default || chromiumModule;
 const root = path.join(__dirname, '..');
 
+async function verifyDock(page, keys) {
+  await page.waitForSelector('.gdock-item');
+  assert.equal(await page.locator('.gdock-item').count(), keys.length);
+  for (const key of keys) {
+    await page.locator(`.gdock-item[data-key="${key}"]`).click();
+    await page.waitForFunction(key => document.querySelector('#view-' + key)?.classList.contains('active')
+      && document.querySelector('.gdock-item[aria-current="page"]')?.dataset.key === key, key);
+  }
+  for (const width of [1568, 1024, 768, 390, 320]) {
+    await page.setViewportSize({ width, height: 980 });
+    const rect = await page.locator('.gdock').boundingBox();
+    assert.ok(rect.x >= 0 && rect.x + rect.width <= width && rect.y + rect.height <= 980);
+  }
+  console.log('PASS LIVE: dock navigation, active markers and viewport bounds:', keys.join(', '));
+}
+
 (async () => {
   const browser = await chromium.launch({ executablePath: await binary.executablePath(), args: ['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu'], headless: true });
   try {
@@ -125,6 +141,7 @@ const root = path.join(__dirname, '..');
           ? route.continue() : route.abort());
         await live.goto(base + '/panel', { waitUntil: 'domcontentloaded' });
         await live.waitForSelector('.stb-tab');
+        await verifyDock(live, ['plans', 'progress', 'news', 'profile', 'home']);
         for (const width of [1568, 1024, 390, 320]) {
           await live.setViewportSize({ width, height: 980 });
           for (const index of [0, 1, 2, 0, 2, 1]) {
@@ -161,6 +178,34 @@ const root = path.join(__dirname, '..');
           assert.equal(card.number, card.copy);
         }
         console.log('PASS LIVE: profile blood group/date fields, removed explanations, readable gold cards and intact copy numbers');
+        assert.deepEqual(liveErrors, []);
+      } finally {
+        await context.close();
+        await fetch(base + '/api/logout', { method: 'POST', headers: { cookie } });
+      }
+    }
+    if (process.env.COACH_URL) {
+      const base = process.env.COACH_URL.replace(/\/$/, '');
+      const login = await fetch(base + '/api/login', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: process.env.COACH_USERNAME || 'arsalan', password: process.env.COACH_PASSWORD || 'arsalan123' })
+      });
+      assert.equal(login.status, 200);
+      const cookie = login.headers.getSetCookie()[0].split(';')[0];
+      const separator = cookie.indexOf('=');
+      const context = await browser.newContext();
+      try {
+        await context.addCookies([{ name: cookie.slice(0, separator), value: cookie.slice(separator + 1), url: base }]);
+        const live = await context.newPage();
+        const liveErrors = [];
+        live.on('pageerror', error => liveErrors.push(error.message));
+        await live.route('**/*', route => new URL(route.request().url()).origin === new URL(base).origin
+          ? route.continue() : route.abort());
+        await live.goto(base + '/dashboard', { waitUntil: 'domcontentloaded' });
+        await verifyDock(live, ['members', 'plans', 'progress', 'settings', 'overview']);
+        await live.locator('[data-view="news"]').click();
+        await live.waitForFunction(() => document.querySelector('#view-news.active'));
+        assert.equal(await live.locator('.gdock-item[aria-current]').count(), 0);
         assert.deepEqual(liveErrors, []);
       } finally {
         await context.close();

@@ -9,6 +9,7 @@
 
   let CFG = null;
   let ME = null;
+  let magnifyingDock = null;
   let MEMBERS = [];
   let YEARS = [];
   let membersUrl = null;
@@ -52,6 +53,21 @@
     const links = [document.getElementById('membersSiteLink'), document.getElementById('topMembersLink')];
     links.forEach((a) => { a.href = membersUrl; });
 
+    if (window.MagnifyingDock) {
+      magnifyingDock = MagnifyingDock.mount(document.getElementById('magnifyingDock'), {
+        active: 'overview',
+        label: 'ناوبری سریع پنل',
+        items: [
+          { key: 'overview', label: 'داشبورد', icon: 'home' },
+          { key: 'members', label: 'شاگردان', icon: 'members' },
+          { key: 'plans', label: 'تمرینات', icon: 'files' },
+          { key: 'progress', label: 'جدول پیشرفت', icon: 'progress' },
+          { key: 'settings', label: 'تنظیمات', icon: 'settings' }
+        ],
+        onSelect: view => switchView(view)
+      });
+    }
+
     bindNav();
     await refreshBase();
     switchView('overview');
@@ -84,6 +100,7 @@
 
   async function switchView(view) {
     state.view = view;
+    if (magnifyingDock) magnifyingDock.setActive(view);
     document.querySelectorAll('.nav-item[data-view]').forEach((b) => b.classList.toggle('active', b.dataset.view === view));
     document.querySelectorAll('.section').forEach((s) => s.classList.toggle('active', s.id === 'view-' + view));
     document.getElementById('viewTitle').textContent = TITLES[view];

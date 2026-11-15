@@ -15,7 +15,7 @@
   <link rel="stylesheet" href="ui/style.css">
   <link rel="stylesheet" href="ui/shell.css">
 </head>
-<body class="coach-panel">
+<body class="coach-panel has-magnifying-dock">
   <div class="shell">
     <aside class="sidebar">
       <div class="side-head">
@@ -74,11 +74,13 @@
       <section class="section" id="view-progress"></section>
       <section class="section" id="view-news"></section>
       <section class="section" id="view-settings"></section>
+      <div id="magnifyingDock" class="magnifying-dock-slot"></div>
     </main>
   </div>
 
   <script src="ui/jalali.browser.js"></script>
   <script src="ui/ui.js"></script>
+  <script src="ui/MagnifyingDock.js"></script>
   <script src="dashboard.js"></script>
   <script>
     if ('serviceWorker' in navigator) {
