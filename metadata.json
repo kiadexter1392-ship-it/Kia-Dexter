@@ -1,0 +1,8 @@
+{
+  "name": "Arslan Dojo",
+  "description": "باشگاه آنلاین ارسلان دوجو — پنل مربی و پنل شاگردان، برنامه تمرینی، جدول پیشرفت شمسی و اطلاع‌رسانی",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
