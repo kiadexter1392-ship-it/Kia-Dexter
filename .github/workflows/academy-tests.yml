@@ -1,0 +1,31 @@
+name: Academy roles, real data and browser regressions
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  isolated-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - name: Install optional browser test tools
+        run: npm install --no-save --package-lock=false playwright-core@1.65.1 @sparticuz/chromium@153.0.0
+      - run: node tests/academy-migration.js
+      - name: Actual academy forms, permissions, inventory, scores and privacy
+        env:
+          BROWSER: '1'
+        run: node tests/academy.js
+      - run: node tests/contact-account.js && node tests/coach-proxy.js
+      - name: Existing registration and panel navigation
+        env:
+          BROWSER: '1'
+        run: node tests/member-details.js && node tests/port-routing.js
+      - run: node tests/magnifying-dock.browser.js && node tests/stacked-bars.browser.js

@@ -1,0 +1,14 @@
+.git
+node_modules
+data
+deliverables
+.gradle
+app
+gradle
+mobile
+tests
+*.db
+*.db-shm
+*.db-wal
+.env
+.env.*
