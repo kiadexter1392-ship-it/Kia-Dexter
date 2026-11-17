@@ -27,6 +27,8 @@ jobs:
         env:
           BROWSER: '1'
         run: node tests/academy.js
+      - name: Persian font and responsive academy design, real browser
+        run: node tests/academy-design.browser.js
       - run: node tests/contact-account.js && node tests/coach-proxy.js
       - name: Existing registration and panel navigation
         env:

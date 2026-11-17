@@ -28,7 +28,11 @@ async function get(url) {
   } while(Date.now()<deadline);
   assert.ok(available,'Railway public domain did not expose the new academy release: '+lastError);
   const admin = await get(coach+'/admin'); assert.equal(admin.status,200);
-  assert.match(await admin.text(),/id="adminLogin"/);
+  const adminHtml=await admin.text();assert.match(adminHtml,/id="adminLogin"/);
+  assert.match(adminHtml,/ui\/fonts\/vazirmatn\.css/,'new management page must use the local Persian font');
+  assert.match(adminHtml,/id="navSearch"/,'new grouped navigation must be deployed');
+  const font=await get(coach+'/ui/fonts/vazirmatn-arabic-wght-normal.woff2');assert.equal(font.status,200);
+  assert.equal(Buffer.from(await font.arrayBuffer()).subarray(0,4).toString(),'wOF2','public font URL must serve a real WOFF2, not HTML');
   for(const [base,route] of [[coach,'/admin/api/config'],[coach,'/admin/api/records/nutrition'],[coach,'/admin/api/records/invoices'],[member,'/api/academy/records/nutrition'],[member,'/api/academy/records/monthly_scores']]) {
     assert.equal((await get(base+route)).status,401,'Private data must not be readable anonymously: '+route);
   }
@@ -43,6 +47,9 @@ async function get(url) {
       await page.route('**/*',r=>new URL(r.request().url()).origin===new URL(coach).origin?r.continue():r.abort());
       await page.goto(coach+'/admin',{waitUntil:'domcontentloaded'}); await page.locator('#adminLogin').waitFor({state:'visible'});
       assert.equal(await page.locator('#academySession').isVisible(),false);
+      await page.evaluate(()=>document.fonts.ready);
+      assert.ok(await page.evaluate(()=>document.fonts.check('600 16px Vazirmatn','مدیریت آکادمی')),'Persian font must really load on Railway');
+      assert.ok(await page.evaluate(()=>performance.getEntriesByType('resource').some(r=>r.name.includes('/ui/fonts/vazirmatn-arabic-wght-normal.woff2'))),'font must come from the deployed local asset');
       for(const width of [320,390,768,1568]) {await page.setViewportSize({width,height:900});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));}
       await page.goto(member+'/',{waitUntil:'domcontentloaded'});await page.locator('#loginForm').waitFor({state:'visible'});
       assert.deepEqual(errors,[]);

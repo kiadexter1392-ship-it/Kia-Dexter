@@ -7,8 +7,56 @@
   const prefix = document.body.dataset.prefix;
   const admin = /\/admin\/?$/.test(location.pathname);
   const base = prefix + (admin ? '/admin/api' : '/api/academy');
+  if (admin) { $('academyTitle').textContent='مدیریت آکادمی';$('backLink').href=prefix+'/';$('backLink').textContent='صفحهٔ اصلی'; }
   let config, people = [], current = '', editing = null, currentRows = [], version = 0;
   const store = {};
+  // Lightweight inline SVGs and groups, shared by all roles; permissions still
+  // come only from the server schema. No icon library or fabricated counters.
+  const navigationGroups = [
+    { label:'اعضا و آموزش', icon:'people', kinds:['people','users','sports','coaches','classes','attendance','meetings'] },
+    { label:'ارزیابی و پیشرفت', icon:'chart', kinds:['exams','monthly_scores','exam_results','evaluations','leaderboard'] },
+    { label:'رویدادها و افتخارات', icon:'award', kinds:['competitions','honours','challenges','challenge_results'] },
+    { label:'مالی و خدمات', icon:'wallet', kinds:['invoices','discounts','products','orders','nutrition'] },
+    { label:'نظارت و سوابق', icon:'shield', kinds:['review','audit'] }
+  ];
+  const iconPaths = {
+    people:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2m20 0v-2a4 4 0 0 0-3-3.87M15 3.13a4 4 0 0 1 0 7.75"/><circle cx="9" cy="7" r="4"/>',
+    chart:'<path d="M4 3v17h17M8 15v-4m5 4V6m5 9V9"/>',
+    award:'<circle cx="12" cy="8" r="5"/><path d="m8 12-2 9 6-3 6 3-2-9"/>',
+    wallet:'<rect x="3" y="5" width="18" height="15" rx="3"/><path d="M17 12h4m-3-7V3H6a3 3 0 0 0 0 6h15"/>',
+    shield:'<path d="m12 3 8 3v6c0 4-4 7-8 9-4-2-8-5-8-9V6z"/><path d="m8 12 3 3 5-6"/>',
+    calendar:'<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4m10-4v4M3 11h18m-13 5h2m4 0h2"/>'
+  };
+  const groupFor = kind => navigationGroups.find(g=>g.kinds.includes(kind)) || {label:'بخش‌های آکادمی',icon:'calendar'};
+  const icon = kind => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${iconPaths[['classes','attendance','meetings','exams'].includes(kind)?'calendar':groupFor(kind).icon]}</svg>`;
+  let sectionList = [];
+  const normalizeSearch = value => value.replace(/ي/g,'ی').replace(/ك/g,'ک').replace(/[\u200c\u064b-\u065f]/g,'').trim();
+  function filterNavigation() {
+    const query=normalizeSearch($('navSearch').value);
+    document.querySelectorAll('#academyNav button').forEach(button=>{button.hidden=!normalizeSearch(button.textContent).includes(query);});
+    document.querySelectorAll('.academy-nav-group').forEach(group=>{group.hidden=![...group.querySelectorAll('button')].some(button=>!button.hidden);});
+    $('navEmpty').hidden=!!document.querySelector('#academyNav button:not([hidden])');
+  }
+  function renderNavigation(sections) {
+    sectionList=sections;
+    const groups=[...navigationGroups,{label:'بخش‌های آکادمی',icon:'calendar',kinds:sections.map(([kind])=>kind).filter(kind=>!navigationGroups.some(g=>g.kinds.includes(kind)))}];
+    $('academyNav').innerHTML=groups.map((group,index)=>{
+      const available=sections.filter(([kind])=>group.kinds.includes(kind));
+      if(!available.length)return '';
+      return `<section class="academy-nav-group" aria-labelledby="navGroup${index}"><h2 id="navGroup${index}">${esc(group.label)}</h2>${available.map(([kind,label])=>`<button type="button" data-kind="${kind}">${icon(kind)}<span>${esc(label)}</span></button>`).join('')}</section>`;
+    }).join('');
+    $('navSearch').value='';filterNavigation();
+    document.querySelectorAll('#academyNav button').forEach(button=>button.onclick=()=>{
+      if(location.hash.slice(1)===button.dataset.kind)show(button.dataset.kind);
+      else location.hash=button.dataset.kind;
+    });
+  }
+  $('navSearch').oninput=filterNavigation;
+  window.addEventListener('hashchange',()=>{
+    const kind=decodeURIComponent(location.hash.slice(1));
+    if(sectionList.some(([key])=>key===kind))show(kind);
+  });
+
   async function api(path, method = 'GET', body) {
     const response = await fetch(base + path, { method, credentials:'same-origin', headers: { 'Content-Type':'application/json','X-Academy-Request':'1' }, body:body === undefined ? undefined : JSON.stringify(body) });
     const data = await response.json();
@@ -77,6 +125,8 @@
   }
   async function show(kind) {
     current=kind;const request=++version;
+    $('sectionIcon').innerHTML=icon(kind);$('sectionGroup').textContent=groupFor(kind).label;
+    $('sectionBody').setAttribute('aria-busy','true');
     $('academyError').textContent='';$('sectionTools').innerHTML='';$('sectionBody').innerHTML=empty('در حال دریافت اطلاعات…');
     $('sectionTitle').textContent=config.schema[kind]?.label||({leaderboard:'لیدربورد هر رشته',people:'اطلاعات شاگردان و مربیان',review:'بازبینی داده‌های قدیمی',audit:'گزارش تغییرات',users:'ایجاد حساب شاگرد یا مربی'}[kind]);
     $('addRecord').hidden=!(config.schema[kind]?.writable||kind==='users');
@@ -102,6 +152,7 @@
       $('sectionBody').querySelectorAll('[data-delete]').forEach(b=>b.onclick=async()=>{if(!confirm('این رکورد حذف شود؟'))return;try{await api(`/records/${kind}/${b.dataset.delete}`,'DELETE');await loadReferences();await show(kind);}catch(err){error(err);}});
       $('sectionBody').querySelectorAll('[data-order]').forEach(b=>b.onclick=async()=>{try{await api(`/orders/${b.dataset.order}/status`,'POST',{status:b.dataset.status});await loadReferences();await show(kind);}catch(err){error(err);}});
     }catch(err){if(request===version){$('sectionBody').innerHTML=empty('دریافت اطلاعات انجام نشد.');error(err);}}
+    finally{if(request===version)$('sectionBody').setAttribute('aria-busy','false');}
   }
   function recordCard(kind,row) {
     const def=config.schema[kind];
@@ -169,11 +220,15 @@
       $('adminLogin').hidden=true;$('academySession').hidden=false;$('sessionExit').hidden=!admin;
       $('academyTitle').textContent=admin?'مدیریت آکادمی':'خدمات آکادمی';$('welcome').textContent=`${config.user.full_name} · ${ {member:'پنل شاگرد',coach:'پنل مربی',admin:'پنل مدیریت'}[config.role] }`;
       $('backLink').href=admin?prefix+'/':prefix+(config.role==='member'?'/panel':'/dashboard');if(admin)$('backLink').textContent='صفحهٔ اصلی';
+      $('sessionRole').textContent={member:'پنل شاگرد',coach:'پنل مربی',admin:'پنل مدیریت'}[config.role];
+      $('sessionAvatar').textContent=config.user.full_name.trim().slice(0,1);
+      const today=new Date();$('academyToday').dateTime=today.toISOString().slice(0,10);
+      $('academyToday').textContent=new Intl.DateTimeFormat('fa-IR',{dateStyle:'full'}).format(today);
+
       const sections=[...Object.entries(config.schema).map(([k,v])=>[k,v.label]),['leaderboard','لیدربورد هر رشته']];
       if(config.role!=='member')sections.unshift(['people','اطلاعات شاگردان و مربیان']);
       if(admin)sections.push(['users','ایجاد حساب'],['review','بازبینی داده‌های قدیمی'],['audit','گزارش تغییرات']);
-      $('academyNav').innerHTML=sections.map(([kind,label])=>`<button data-kind="${kind}">${esc(label)}</button>`).join('');
-      document.querySelectorAll('#academyNav button').forEach(b=>b.onclick=()=>{location.hash=b.dataset.kind;show(b.dataset.kind);});
+      renderNavigation(sections);
       $('addRecord').onclick=()=>openForm();
       const initial=decodeURIComponent(location.hash.slice(1));await show(sections.some(([k])=>k===initial)?initial:sections[0][0]);
     }catch(err){if(admin){$('adminLogin').hidden=false;$('academySession').hidden=true;if(err.status!==401)error(err);}else error(err);}
