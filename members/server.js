@@ -94,6 +94,8 @@ app.get('/api/config', (ctx) => {
   const j = todayJalali();
   ctx.json({
     ok: true,
+    features: { academy: 'v1', independentAdmin: true, sampleData: false },
+    release: process.env.RAILWAY_GIT_COMMIT_SHA || 'local',
     site: 'member',
     club: 'باشگاه آنلاین ارسلان دوجو',
     jalaliYear: j.jy,

@@ -262,6 +262,17 @@ try {
   throw err;
 }
 
+/* Preserve an on-disk SQLite snapshot before the one-time provenance migration.
+   VACUUM INTO produces a consistent backup even when the source uses WAL. */
+if (!all("PRAGMA table_info('users')").some(c => c.name === 'verified') && get('SELECT COUNT(*) AS c FROM users').c > 0) {
+  const backups = path.join(DATA_DIR, 'backups');
+  fs.mkdirSync(backups, { recursive: true, mode: 0o700 });
+  const snapshot = path.join(backups, `before-academy-${Date.now()}-${process.pid}.db`);
+  db.exec("VACUUM INTO '" + snapshot.replace(/'/g, "''") + "'");
+  fs.chmodSync(snapshot, 0o600);
+  console.log('[db] Consistent pre-migration backup saved in the configured private data directory.');
+}
+
 /* Legacy imports have no reliable provenance. Preserve them for administrator review,
    but never treat them as measured statistics until explicitly verified. */
 execWithRetry('BEGIN IMMEDIATE');

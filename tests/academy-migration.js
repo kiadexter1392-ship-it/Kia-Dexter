@@ -37,5 +37,6 @@ try{
  db.db.close();
  `);
  run(`const assert=require('node:assert/strict'),db=require('./shared/db');require('./shared/academy');require('./shared/seed').seedIfEmpty();assert.equal(db.get('SELECT COUNT(*) c FROM users').c,1);assert.equal(db.progressYear(db.findByUsername('retained').id,1405).months[8].overall,97);db.db.close();`);
+ assert.ok(fs.readdirSync(path.join(dir,'backups')).some(n=>n.endsWith('.db')),'legacy migration must create a consistent backup');
  console.log('PASS MIGRATION: pre-verification schema upgrades without deleting records, changing passwords/sessions or publishing unknown scores; explicit approvals survive subsequent process restarts');
 }finally{fs.rmSync(dir,{recursive:true,force:true});}

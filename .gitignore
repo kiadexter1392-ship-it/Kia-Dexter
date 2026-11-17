@@ -16,3 +16,8 @@ Thumbs.db
 
 # Generated source downloads; reproducible from source, never include databases
 deliverables/
+
+# Android build caches are local, not deployable source
+.gradle/
+**/build/
+local.properties
