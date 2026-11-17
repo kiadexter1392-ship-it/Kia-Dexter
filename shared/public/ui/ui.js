@@ -9,13 +9,17 @@
 
   /* ----------------------------- درخواست HTTP ---------------------------- */
 
+  /* تشخیص پیشوند مسیر (برای Railway: پنل مربی زیر /coach) */
+  const mount = location.pathname.match(/^\/(coach|member)(?:\/|$)/);
+  const PATH_PREFIX = mount ? '/' + mount[1] : '';
+
   async function api(path, options = {}) {
-    const opts = { method: options.method || 'GET', headers: {}, credentials: 'same-origin' };
+    const opts = { method: options.method || 'GET', headers: {}, credentials: 'include' };
     if (options.body !== undefined) {
       opts.headers['Content-Type'] = 'application/json';
       opts.body = JSON.stringify(options.body);
     }
-    const res = await fetch(path, opts);
+    const res = await fetch(PATH_PREFIX + path, opts);
     let data = {};
     try { data = await res.json(); } catch { data = {}; }
     if (!res.ok || data.ok === false) {
@@ -139,6 +143,7 @@
   /* --------------------------- آدرس سایت دیگر ---------------------------- */
   /* در محیط پیش‌نمایش، نام میزبان با شماره پورت شروع می‌شود: 4174-xxxx.e2b.app */
   function peerUrl(port) {
+    if (root.CLUB && root.CLUB.peerSiteUrl) return new URL(root.CLUB.peerSiteUrl, root.location.origin).href;
     const host = root.location.hostname;
     const match = host.match(/^(\d+)-(.+)$/);
     if (match) return `${root.location.protocol}//${port}-${match[2]}`;
@@ -155,8 +160,17 @@
     return esc(text).replace(/\n/g, '<br>');
   }
 
+  const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+  function birthDateValue(value) {
+    if (!value) return '';
+    const date = new Date(value + 'T12:00:00');
+    if (Number.isNaN(date.getTime())) return '';
+    const j = root.Jalali.toJalali(date);
+    return j.jy + '/' + String(j.jm).padStart(2, '0') + '/' + String(j.jd).padStart(2, '0');
+  }
+
   root.UI = {
-    fa, esc, api, toast, modal, closeModal, confirmBox,
-    heatClass, initials, avatar, STATUS, METRICS, peerUrl, loadConfig, nl2br
+    fa, esc, api, toast, modal, closeModal, confirmBox, BLOOD_GROUPS, birthDateValue,
+    heatClass, initials, avatar, STATUS, METRICS, peerUrl, loadConfig, nl2br, PATH_PREFIX
   };
 }(window));

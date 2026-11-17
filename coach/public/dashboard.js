@@ -4,13 +4,15 @@
 (function () {
   'use strict';
 
-  const { api, toast, modal, closeModal, confirmBox, esc, fa, STATUS, METRICS, heatClass, avatar, nl2br, peerUrl } = UI;
+  const { api, toast, modal, closeModal, confirmBox, esc, fa, STATUS, METRICS, heatClass, avatar, nl2br, peerUrl, PATH_PREFIX } = UI;
   const J = window.Jalali;
 
   let CFG = null;
   let ME = null;
+  let magnifyingDock = null;
   let MEMBERS = [];
   let YEARS = [];
+  let membersUrl = null;
 
   const state = {
     view: 'overview',
@@ -41,13 +43,30 @@
       const me = await api('/api/me');
       if (!me.user) throw Object.assign(new Error('not logged in'), { status: 401 });
       ME = me.user;
+      document.getElementById('meAvatar').innerHTML = avatar(ME);
     } catch (err) {
-      location.href = '/';
+      location.href = PATH_PREFIX + '/';
       return;
     }
 
+    membersUrl = CFG.membersSiteUrl || peerUrl(CFG.memberPort);
     const links = [document.getElementById('membersSiteLink'), document.getElementById('topMembersLink')];
-    links.forEach((a) => { a.href = peerUrl(CFG.memberPort); });
+    links.forEach((a) => { a.href = membersUrl; });
+
+    if (window.MagnifyingDock) {
+      magnifyingDock = MagnifyingDock.mount(document.getElementById('magnifyingDock'), {
+        active: 'overview',
+        label: 'ناوبری سریع پنل',
+        items: [
+          { key: 'overview', label: 'داشبورد', icon: 'home' },
+          { key: 'members', label: 'شاگردان', icon: 'members' },
+          { key: 'plans', label: 'تمرینات', icon: 'files' },
+          { key: 'progress', label: 'جدول پیشرفت', icon: 'progress' },
+          { key: 'settings', label: 'تنظیمات', icon: 'settings' }
+        ],
+        onSelect: view => switchView(view)
+      });
+    }
 
     bindNav();
     await refreshBase();
@@ -73,7 +92,7 @@
     });
     document.getElementById('logoutBtn').addEventListener('click', async () => {
       await api('/api/logout', { method: 'POST' });
-      location.href = '/';
+      location.href = PATH_PREFIX + '/';
     });
     document.getElementById('quickAction').addEventListener('click', () => planForm());
     document.getElementById('bellBtn').addEventListener('click', bellBox);
@@ -81,6 +100,7 @@
 
   async function switchView(view) {
     state.view = view;
+    if (magnifyingDock) magnifyingDock.setActive(view);
     document.querySelectorAll('.nav-item[data-view]').forEach((b) => b.classList.toggle('active', b.dataset.view === view));
     document.querySelectorAll('.section').forEach((s) => s.classList.toggle('active', s.id === 'view-' + view));
     document.getElementById('viewTitle').textContent = TITLES[view];
@@ -112,7 +132,7 @@
     const avgByMonth = [];
     for (let m = 1; m <= 12; m += 1) {
       const vals = club.rows.map((r) => (r.months[m] ? r.months[m].overall : null)).filter((v) => v !== null && v !== undefined);
-      avgByMonth.push(vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : 0);
+      avgByMonth.push(vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : null);
     }
     const maxAvg = Math.max(10, ...avgByMonth);
 
@@ -133,7 +153,7 @@
                 <span class="badge dark">نمره کل از ۱۰۰</span>
               </div>
               <div class="mini-bar" style="height:110px">
-                ${avgByMonth.map((v, i) => `<i title="${esc(J.MONTHS[i])}: ${fa(v)}" style="height:${Math.max(4, (v / maxAvg) * 100)}%"></i>`).join('')}
+                ${avgByMonth.map((v, i) => `<i title="${esc(J.MONTHS[i])}: ${v === null ? 'ثبت نشده' : fa(v)}" style="height:${v === null ? 0 : (v / maxAvg) * 100}%"></i>`).join('')}
               </div>
               <div class="row between tiny" style="margin-top:8px">
                 ${J.MONTHS.map((m) => `<span>${esc(m.slice(0, 3))}</span>`).join('')}
@@ -316,10 +336,19 @@
             <div class="field"><label>جنسیت</label>
               <select name="gender"><option value="">—</option><option ${existing && existing.gender === 'مرد' ? 'selected' : ''}>مرد</option><option ${existing && existing.gender === 'زن' ? 'selected' : ''}>زن</option></select>
             </div>
-            <div class="field"><label>سبک تمرینی</label><input name="style" value="${esc(existing ? existing.style || '' : '')}" placeholder="کیوکوشین"></div>
-            <div class="field"><label>سابقه</label><input name="experience" value="${esc(existing ? existing.experience || '' : '')}" placeholder="۲ سال"></div>
+            <div class="field"><label>رشته ورزشی</label>
+              <select name="discipline">
+                <option value="">—</option>
+                ${(CFG.disciplines || ['کاراته', 'کراسفیت', 'بوکس', 'ژیمناستیک', 'موی تای']).map((d) => `<option ${(existing && (existing.discipline || existing.style) === d) ? 'selected' : ''}>${esc(d)}</option>`).join('')}
+              </select>
+            </div>
+            <div class="field"><label>سابقه</label><input name="experience" value="${esc(existing ? existing.experience || '' : '')}"></div>
           </div>
-          ${isEdit ? '' : `<div class="field"><label>رمز عبور اولیه</label><input name="password" class="en" value="123456"><div class="tiny">شاگرد می‌تواند بعداً از پنل خودش رمز را عوض کند.</div></div>`}
+          <div class="grid-2">
+            <div class="field"><label for="mBirthDate">تاریخ دقیق تولد (شمسی)</label><input id="mBirthDate" name="birth_date" class="en" dir="ltr" placeholder="۱۳۹۰/۰۵/۲۱" maxlength="10" value="${esc(UI.birthDateValue(existing && existing.birth_date))}"></div>
+            <div class="field"><label for="mBloodGroup">گروه خونی</label><select id="mBloodGroup" name="blood_group" dir="ltr"><option value="">نامشخص</option>${UI.BLOOD_GROUPS.map(group => `<option ${existing && existing.blood_group === group ? 'selected' : ''}>${group}</option>`).join('')}</select></div>
+          </div>
+          ${isEdit ? '' : `<div class="field"><label>رمز عبور اولیه</label><input name="password" class="en" placeholder="رمز اولیه را وارد کنید" required minlength="6"><div class="tiny">شاگرد می‌تواند بعداً از پنل خودش رمز را عوض کند.</div></div>`}
           <div class="field"><label>یادداشت مربی</label><textarea name="notes" placeholder="مثلاً: روی انعطاف بیشتر کار کند">${esc(existing ? existing.notes || '' : '')}</textarea></div>
           ${isEdit ? `<label class="check"><input type="checkbox" name="active" ${existing.active ? 'checked' : ''}> حساب کاربری فعال باشد</label>` : ''}
         </form>`,
@@ -375,6 +404,10 @@
           </div>
         </div>
 
+        <div class="row wrap" style="margin-bottom:16px">
+          <span>تاریخ تولد: <b dir="ltr">${esc(m.birth_date ? fa(UI.birthDateValue(m.birth_date)) : '—')}</b></span>
+          <span>گروه خونی: <b dir="ltr">${esc(m.blood_group || '—')}</b></span>
+        </div>
         <div class="grid-4" style="margin-bottom:16px">
           ${statTile('میانگین سال', d.progress && Object.keys(d.progress).length ? fa(avgOf(d.progress)) : '—', `سال ${fa(d.year)}`, 'var(--gold)')}
           ${statTile('تمرین باز', fa(d.plans.filter((p) => p.status !== 'done').length), 'در انتظار انجام', 'var(--red)')}
@@ -437,7 +470,7 @@
     modal({
       title: 'بازنشانی رمز عبور',
       body: `<p class="muted small">رمز جدید برای <b>${esc(m.full_name)}</b>:</p>
-        <div class="field"><input id="np" class="en" value="123456"></div>`,
+        <div class="field"><input id="np" class="en" placeholder="رمز اولیه را وارد کنید" required minlength="6"></div>`,
       actions: [
         { label: 'انصراف', class: 'ghost', onClick: closeModal },
         {
@@ -456,7 +489,7 @@
   async function impersonate(m) {
     try {
       const r = await api(`/api/members/${m.id}/impersonate`, { method: 'POST' });
-      const url = `${peerUrl(CFG.memberPort)}/impersonate?token=${r.token}`;
+      const url = `${membersUrl.replace(/\/$/, '')}/impersonate?token=${encodeURIComponent(r.token)}`;
       window.open(url, '_blank', 'noopener');
       toast('پنل شاگرد در تب جدید باز شد', 'ok');
     } catch (err) { toast(err.message, 'warn'); }
@@ -536,12 +569,21 @@
             <div class="field"><label>مدت زمان</label><input name="duration" value="${esc(existing ? existing.duration || '' : '')}" placeholder="۶۰ دقیقه"></div>
           </div>
           <div class="grid-3">
+            <div class="field"><label>رشته ورزشی</label>
+              <select name="sport">
+                <option value="">—</option>
+                ${(CFG.disciplines || ['کاراته', 'کراسفیت', 'بوکس', 'ژیمناستیک', 'موی تای']).map((d) => `<option ${existing && existing.sport === d ? 'selected' : ''}>${esc(d)}</option>`).join('')}
+              </select>
+            </div>
             <div class="field"><label>دسته</label>
               <select name="category">${['تمرین', 'بدنسازی', 'تکنیک', 'کاتا', 'مبارزه', 'کشش و انعطاف'].map((c) => `<option ${existing && existing.category === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select>
             </div>
             <div class="field"><label>سختی</label>
               <select name="difficulty">${['سبک', 'متوسط', 'سنگین'].map((c) => `<option ${existing && existing.difficulty === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select>
             </div>
+          </div>
+          <div class="grid-2">
+            <div class="field"><label>مدت زمان</label><input name="duration" value="${esc(existing ? existing.duration || '' : '')}" placeholder="۶۰ دقیقه"></div>
             <div class="field"><label>مهلت انجام (شمسی)</label>${jalaliDateField('due', existing ? existing.due_on : null)}</div>
           </div>
           <div class="field"><label>شرح تمرین</label>
@@ -756,7 +798,7 @@
       renderProgress(box);
     });
     document.getElementById('exportCsv').addEventListener('click', () => {
-      window.open('/api/export/progress?year=' + state.progressYear, '_blank');
+      window.open(PATH_PREFIX + '/api/export/progress?year=' + state.progressYear, '_blank');
     });
 
     if (state.progressMode === 'club') await renderClubMatrix(document.getElementById('progressBody'));
@@ -1131,8 +1173,8 @@
               <div class="field"><label>نام کاربری</label><input class="en" value="${esc(ME.username)}" disabled></div>
             </div>
             <div class="grid-2">
-              <div class="field"><label>شماره تماس</label><input name="phone" class="en" value="${esc(ME.phone || '')}"></div>
               <div class="field"><label>درجه / کمربند</label><input name="belt" value="${esc(ME.belt || '')}"></div>
+              <div class="field"><label>سبک</label><input name="style" value="${esc(ME.style || '')}"></div>
             </div>
             <div class="field"><label>درباره مربی</label><textarea name="notes" rows="3">${esc(ME.notes || '')}</textarea></div>
             <div><button class="btn primary" type="submit">ذخیره</button></div>
@@ -1152,8 +1194,8 @@
           <div class="card">
             <div class="card-head"><div class="card-title"><span class="dot" style="background:var(--blue)"></span> اتصال به سایت شاگردان</div></div>
             <p class="small muted">سایت دوم (پنل شاگردان) روی همین دیتابیس اجرا می‌شود. هر شاگردی که اینجا ثبت کنید، بلافاصله در سایت دوم قابل ورود است.</p>
-            <a class="btn" href="${esc(peerUrl(CFG.memberPort))}" target="_blank" rel="noopener">باز کردن سایت شاگردان ↗</a>
-            <div class="tiny mt-s">آدرس: <span class="en">${esc(peerUrl(CFG.memberPort))}</span></div>
+            <a class="btn" href="${esc(membersUrl)}" target="_blank" rel="noopener">باز کردن سایت شاگردان ↗</a>
+            <div class="tiny mt-s">آدرس: <span class="en">${esc(membersUrl)}</span></div>
           </div>
 
           <div class="card">
@@ -1175,6 +1217,7 @@
         const r = await api('/api/me', { method: 'PUT', body: data });
         const me = { user: r.user };
         ME = me.user;
+        document.getElementById('meAvatar').innerHTML = avatar(ME);
         toast('اطلاعات مربی ذخیره شد', 'ok');
       } catch (err) { toast(err.message, 'warn'); }
     });

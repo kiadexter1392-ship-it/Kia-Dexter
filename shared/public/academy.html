@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="fa" dir="rtl"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>آکادمی ارسلان — خدمات و مدیریت</title>
+<link rel="stylesheet" href="__ASSET_BASE__/ui/style.css"><link rel="stylesheet" href="__ASSET_BASE__/ui/shell.css"><link rel="stylesheet" href="__ASSET_BASE__/ui/academy.css">
+</head><body class="academy-app" data-prefix="__ASSET_BASE__">
+<header class="academy-header"><a id="backLink" href="./">بازگشت به پنل</a><h1 id="academyTitle">خدمات آکادمی</h1><button id="sessionExit" class="btn ghost" hidden>خروج مدیر</button></header>
+<main class="academy-layout">
+<section id="adminLogin" class="card academy-login" hidden><h2>ورود مدیریت آکادمی</h2><p>این ورود مستقل از پنل مربی است. فقط حسابی که مدیر سرور ایجاد کرده مجوز دارد.</p>
+<form id="loginForm"><label>نام کاربری<input name="username" autocomplete="username" required dir="ltr"></label><label>رمز عبور<input name="password" type="password" autocomplete="current-password" required dir="ltr"></label><button class="btn primary" type="submit">ورود مدیر</button></form></section>
+<div id="academySession" hidden><p id="welcome"></p><p class="hint">تنها اطلاعات ثبت‌شده نمایش داده می‌شود. جای خالی یعنی داده‌ای ثبت نشده، نه نمره یا رتبهٔ صفر.</p>
+<nav id="academyNav" class="academy-nav" aria-label="بخش‌های آکادمی"></nav>
+<section class="card academy-content"><div class="row between wrap"><h2 id="sectionTitle"></h2><button id="addRecord" class="btn primary" hidden>ثبت جدید</button></div><div id="sectionTools"></div><div id="sectionBody" aria-live="polite"></div></section>
+</div><p id="academyError" class="academy-error" role="alert"></p>
+</main>
+<dialog id="recordDialog"><form id="recordForm"><div class="row between"><h2 id="formTitle">ثبت اطلاعات</h2><button id="closeDialog" type="button" class="btn ghost" aria-label="بستن">✕</button></div><div id="formFields" class="academy-form-grid"></div><p id="formError" role="alert" class="academy-error"></p><button id="saveRecord" class="btn primary" type="submit">ذخیره اطلاعات</button></form></dialog>
+<script src="__ASSET_BASE__/ui/academy.js"></script></body></html>

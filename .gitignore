@@ -13,3 +13,6 @@ Thumbs.db
 .idea/
 .vscode/
 *.log
+
+# Generated source downloads; reproducible from source, never include databases
+deliverables/

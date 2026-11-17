@@ -1,18 +1,21 @@
 'use strict';
 /*
  * سایت شماره ۱ — پنل مربی «باشگاه آنلاین ارسلان دوجو»
- * پورت پیش‌فرض: ۴۱۷۳
+ * پورت پیش‌فرض: ۴۱۷۴
  */
 
 const path = require('node:path');
-const { createServer } = require('../shared/server');
+const { readPorts } = require('../shared/ports');
+const { proxy } = require('../shared/proxy');
+const { createServer, rateLimit, sanitize } = require('../shared/server');
 const db = require('../shared/db');
 const { seedIfEmpty, DEMO } = require('../shared/seed');
 const { JALALI_MONTHS, todayJalali, formatJalali, faNum } = require('../shared/jalali');
 
-const PORT = Number(process.env.COACH_PORT || 4173);
-const MEMBER_PORT = Number(process.env.MEMBER_PORT || 4174);
+const { coach: PORT, member: MEMBER_PORT } = readPorts();
 const SITE = 'coach';
+const memberUrl = (process.env.MEMBERS_SITE_URL || '').trim();
+const MEMBERS_SITE_URL = ['', 'null', 'undefined'].includes(memberUrl) ? null : memberUrl;
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const SHARED_PUBLIC = path.join(__dirname, '..', 'shared', 'public');
 
@@ -21,13 +24,34 @@ seedIfEmpty();
 const app = createServer({
   name: 'coach-site',
   cookieName: 'arslan_coach_session',
-  publicDirs: [PUBLIC_DIR, SHARED_PUBLIC]
+  publicDirs: [PUBLIC_DIR, SHARED_PUBLIC],
+  onRequest(req, res) {
+    const url = new URL(req.url, 'http://localhost');
+    if (url.pathname === '/member') {
+      res.writeHead(302, { Location: '/member/' + url.search });
+      res.end();
+      return true;
+    }
+    if (url.pathname.startsWith('/member/')) {
+      req.url = req.url.slice('/member'.length);
+      proxy(MEMBER_PORT, { prefix: '/member' })(req, res);
+      return true;
+    }
+    // Keep previously saved /coach links working on the dedicated coach domain.
+    if (url.pathname === '/coach' || url.pathname.startsWith('/coach/')) {
+      res.writeHead(307, { Location: (url.pathname.slice('/coach'.length) || '/') + url.search });
+      res.end();
+      return true;
+    }
+    return false;
+  }
 });
 
 /* -------------------------------- ابزارها -------------------------------- */
 
 function coach(ctx) {
-  return db.sessionUser(ctx.cookies[app.cookieName], SITE);
+  const u = db.sessionUser(ctx.cookies[app.cookieName], SITE);
+  return u && u.role === 'coach' && !db.get('SELECT user_id FROM academy_admins WHERE user_id=?',u.id) ? u : null;
 }
 
 function needCoach(ctx) {
@@ -47,13 +71,15 @@ function bad(ctx, msg, status = 400) {
 function numOrNull(v) {
   if (v === undefined || v === null || v === '') return null;
   const n = Number(v);
-  return Number.isFinite(n) ? n : null;
+  if (!Number.isFinite(n)) throw Object.assign(new Error('مقدار عددی معتبر نیست'),{status:400});
+  return n;
 }
 
 function clampScore(v) {
   const n = numOrNull(v);
   if (n === null) return null;
-  return Math.max(0, Math.min(100, Math.round(n)));
+  if (n<0 || n>100) throw Object.assign(new Error('نمره باید بین صفر و صد باشد'),{status:400});
+  return n;
 }
 
 /* ------------------------------ صفحه‌های HTML ----------------------------- */
@@ -62,6 +88,9 @@ app.get('/', (ctx) => {
   if (coach(ctx)) return ctx.redirect('/dashboard');
   ctx.file(path.join(PUBLIC_DIR, 'index.html'));
 });
+
+// Old bookmarks from the former student site must not strand users after the port swap.
+app.get('/panel', (ctx) => ctx.redirect('/dashboard'));
 
 app.get('/dashboard', (ctx) => {
   if (!coach(ctx)) return ctx.redirect('/');
@@ -79,29 +108,102 @@ app.get('/api/config', (ctx) => {
     jalaliYear: j.jy,
     jalaliMonth: j.jm,
     memberPort: MEMBER_PORT,
+    peerSiteUrl: ctx.req.headers['x-dojo-proxy'] === '1' ? '/' : '/member/',
+    membersSiteUrl: MEMBERS_SITE_URL,
     months: JALALI_MONTHS,
-    belts: ['سفید', 'زرد', 'نارنجی', 'سبز', 'آبی', 'قهوه‌ای', 'مشکی دان ۱', 'مشکی دان ۲', 'مشکی دان ۳', 'مشکی دان ۴']
+    belts: ['سفید', 'زرد', 'نارنجی', 'سبز', 'آبی', 'قهوه‌ای', 'مشکی دان ۱', 'مشکی دان ۲', 'مشکی دان ۳', 'مشکی دان ۴'],
+    disciplines: ['کاراته', 'کراسفیت', 'بوکس', 'ژیمناستیک', 'موی تای'],
+    supportPhone: '+989016399804',
+    baleLink: 'https://ble.ir/+989016399804'
   });
 });
 
 /* ------------------------------ ورود و خروج ------------------------------ */
 
 app.post('/api/login', (ctx) => {
+  const ip = ctx.req.headers['x-forwarded-for'] || ctx.req.socket.remoteAddress || '';
+  if (!rateLimit('coach-login:' + ip, 10, 300000)) {
+    return bad(ctx, 'تعداد تلاش بیش از حد — لطفاً ۵ دقیقه صبر کنید', 429);
+  }
   const { username, password } = ctx.body || {};
   const user = db.findByUsername(username);
-  if (!user || user.role !== 'coach' || !db.verifyPassword(password, user.password_hash, user.password_salt)) {
+  if (!user || user.role !== 'coach' || db.get('SELECT user_id FROM academy_admins WHERE user_id=?',user.id) || !db.verifyPassword(password, user.password_hash, user.password_salt)) {
     return bad(ctx, 'نام کاربری یا رمز عبور اشتباه است', 401);
   }
   if (!user.active) return bad(ctx, 'این حساب غیرفعال شده است', 403);
-  const { token } = db.createSession(user.id, SITE, 30);
-  ctx.setCookie(token, { maxAgeSeconds: 30 * 86400 });
+  const { token } = db.createSession(user.id, SITE, 90);
+  ctx.setCookie(token, { maxAgeSeconds: 90 * 86400 });
   db.logActivity(user.id, user.full_name, 'وارد پنل مربی شد', null);
   ctx.json({ ok: true, user: db.publicUser(user) });
+});
+
+app.post('/login', (ctx) => {
+  const ip = ctx.req.headers['x-forwarded-for'] || ctx.req.socket.remoteAddress || '';
+  if (!rateLimit('coach-login:' + ip, 10, 300000)) {
+    ctx.redirect('/?error=' + encodeURIComponent('تعداد تلاش بیش از حد — لطفاً ۵ دقیقه صبر کنید'));
+    return;
+  }
+  const b = ctx.body || {};
+  const user = db.findByUsername(b.username);
+  if (!user || user.role !== 'coach' || db.get('SELECT user_id FROM academy_admins WHERE user_id=?',user.id) || !db.verifyPassword(b.password, user.password_hash, user.password_salt)) {
+    ctx.redirect('/?error=' + encodeURIComponent('نام کاربری یا رمز عبور اشتباه است'));
+    return;
+  }
+  if (!user.active) {
+    ctx.redirect('/?error=' + encodeURIComponent('این حساب غیرفعال شده است'));
+    return;
+  }
+  const { token } = db.createSession(user.id, SITE, 90);
+  ctx.setCookie(token, { maxAgeSeconds: 90 * 86400 });
+  db.logActivity(user.id, user.full_name, 'وارد پنل مربی شد', null);
+  ctx.redirect('/dashboard');
 });
 
 app.post('/api/logout', (ctx) => {
   db.destroySession(ctx.cookies[app.cookieName]);
   ctx.clearCookie();
+  ctx.json({ ok: true });
+});
+
+/* --------------------------- API Key Management --------------------------- */
+
+/* middleware: احراز هویت با API key یا session */
+function coachOrApiKey(ctx) {
+  /* اول session */
+  const u = coach(ctx);
+  if (u) return u;
+  /* بعد API key */
+  const authHeader = ctx.req.headers['authorization'] || '';
+  const apiKey = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : ctx.req.headers['x-api-key'];
+  if (apiKey) {
+    const keyUser = db.apiKeyUser(apiKey);
+    if (keyUser && keyUser.role === 'coach') return keyUser;
+  }
+  return null;
+}
+
+app.get('/api/api-keys', (ctx) => {
+  const u = coach(ctx);
+  if (!u) return ctx.json({ ok: false, error: 'unauthorized' }, 401);
+  ctx.json({ ok: true, keys: db.listApiKeys(u.id).map(k => ({
+    ...k,
+    key: k.key.slice(0, 15) + '...' + k.key.slice(-6) /* فقط بخشی از key نمایش داده بشه */
+  })) });
+});
+
+app.post('/api/api-keys', (ctx) => {
+  const u = coach(ctx);
+  if (!u) return ctx.json({ ok: false, error: 'unauthorized' }, 401);
+  const { name, permissions } = ctx.body || {};
+  const result = db.createApiKey(u.id, name || 'default', permissions || 'read');
+  db.logActivity(u.id, u.full_name, 'API key جدید ساخت', name || 'default');
+  ctx.json({ ok: true, key: result }); /* فقط همین‌بار key کامل نشون داده می‌شه */
+});
+
+app.delete('/api/api-keys/:id', (ctx) => {
+  const u = coach(ctx);
+  if (!u) return ctx.json({ ok: false, error: 'unauthorized' }, 401);
+  db.deleteApiKey(ctx.params.id, u.id);
   ctx.json({ ok: true });
 });
 
@@ -132,8 +234,8 @@ app.post('/api/password', (ctx) => {
   if (!db.verifyPassword(current, u.password_hash, u.password_salt)) return bad(ctx, 'رمز فعلی درست نیست');
   if (!next || String(next).length < 6) return bad(ctx, 'رمز جدید باید حداقل ۶ حرف باشد');
   db.setPassword(u.id, next);
-  const { token } = db.createSession(u.id, SITE, 30);
-  ctx.setCookie(token, { maxAgeSeconds: 30 * 86400 });
+  const { token } = db.createSession(u.id, SITE, 90);
+  ctx.setCookie(token, { maxAgeSeconds: 90 * 86400 });
   ctx.json({ ok: true });
 });
 
@@ -146,14 +248,14 @@ app.get('/api/overview', (ctx) => {
   const doneFeed = db.all(
     `SELECT pa.*, u.full_name, u.avatar_color, u.belt, p.title AS plan_title
      FROM plan_assignments pa JOIN users u ON u.id = pa.user_id JOIN plans p ON p.id = pa.plan_id
-     WHERE pa.status = 'done' ORDER BY pa.completed_at DESC LIMIT 8`
+     WHERE pa.verified=1 AND p.verified=1 AND u.verified=1 AND pa.status = 'done' ORDER BY pa.completed_at DESC LIMIT 8`
   );
   const selfReports = db.all(
     `SELECT sr.*, u.full_name FROM self_reports sr JOIN users u ON u.id = sr.user_id
-     ORDER BY sr.created_at DESC LIMIT 8`
+     WHERE sr.verified=1 AND u.verified=1 ORDER BY sr.created_at DESC LIMIT 8`
   );
   const latestMembers = db.all(
-    "SELECT id, full_name, username, belt, avatar_color, join_date, created_at FROM users WHERE role='member' ORDER BY created_at DESC LIMIT 5"
+    "SELECT id, full_name, username, belt, avatar_color, join_date, created_at FROM users WHERE verified=1 AND role='member' ORDER BY created_at DESC LIMIT 5"
   );
   ctx.json({
     ok: true,
@@ -180,7 +282,7 @@ app.get('/api/members', (ctx) => {
     const { rows: pr } = db.progressYear(m.id, j.jy);
     const filled = pr.filter((r) => r.overall !== null);
     const last = [...pr].sort((a, b) => b.month - a.month)[0] || null;
-    const pending = db.get('SELECT COUNT(*) AS c FROM plan_assignments WHERE user_id = ? AND status != ?', m.id, 'done').c;
+    const pending = db.get('SELECT COUNT(*) AS c FROM plan_assignments WHERE verified=1 AND plan_id IN (SELECT id FROM plans WHERE verified=1) AND user_id = ? AND status != ?', m.id, 'done').c;
     return {
       ...db.publicUser(m),
       avg: filled.length ? Math.round(filled.reduce((s, r) => s + r.overall, 0) / filled.length) : null,
@@ -189,7 +291,7 @@ app.get('/api/members', (ctx) => {
       pending
     };
   });
-  ctx.json({ ok: true, members, belts: db.all("SELECT DISTINCT belt FROM users WHERE role='member' AND belt IS NOT NULL ORDER BY belt").map((r) => r.belt) });
+  ctx.json({ ok: true, members, belts: db.all("SELECT DISTINCT belt FROM users WHERE verified=1 AND role='member' AND belt IS NOT NULL ORDER BY belt").map((r) => r.belt) });
 });
 
 app.post('/api/members', (ctx) => {
@@ -201,13 +303,13 @@ app.post('/api/members', (ctx) => {
     return bad(ctx, 'نام کاربری باید انگلیسی و حداقل ۳ حرف باشد');
   }
   if (db.findByUsername(b.username)) return bad(ctx, 'این نام کاربری قبلاً گرفته شده است');
-  const password = b.password || DEMO.memberPassword;
-  if (String(password).length < 4) return bad(ctx, 'رمز عبور باید حداقل ۴ حرف باشد');
+  const password = b.password;
+  if (!password || String(password).length < 4) return bad(ctx, 'رمز عبور باید حداقل ۴ حرف باشد');
   const member = db.createUser({ ...b, username: String(b.username).trim().toLowerCase(), password }, 'member');
   db.logActivity(u.id, u.full_name, 'شاگرد جدید ثبت کرد', member.full_name);
 
   // اگر تمرین‌های «برای همه» فعال باشند، به او هم اختصاص بده
-  for (const plan of db.all('SELECT * FROM plans WHERE target_all = 1')) {
+  for (const plan of db.all('SELECT * FROM plans WHERE verified=1 AND target_all = 1')) {
     db.run('INSERT OR IGNORE INTO plan_assignments (plan_id, user_id, status, assigned_at) VALUES (?,?,?,?)',
       plan.id, member.id, 'todo', db.now());
   }
@@ -223,13 +325,13 @@ app.get('/api/members/:id', (ctx) => {
   if (!needCoach(ctx)) return;
   const m = db.findById(ctx.params.id);
   if (!m || m.role !== 'member') return bad(ctx, 'شاگرد پیدا نشد', 404);
-  const years = db.all('SELECT DISTINCT year FROM progress ORDER BY year DESC').map((r) => r.year);
+  const years = db.all('SELECT DISTINCT year FROM progress WHERE verified=1 ORDER BY year DESC').map((r) => r.year);
   const year = Number(ctx.query.year) || todayJalali().jy;
   const prog = db.progressYear(m.id, year);
-  const reports = db.all('SELECT * FROM self_reports WHERE user_id = ? ORDER BY year DESC, month DESC', m.id);
+  const reports = db.all('SELECT * FROM self_reports WHERE verified=1 AND user_id = ? ORDER BY year DESC, month DESC', m.id);
   const plans = db.all(
     `SELECT pa.*, p.title, p.category, p.due_on FROM plan_assignments pa JOIN plans p ON p.id = pa.plan_id
-     WHERE pa.user_id = ? ORDER BY p.created_at DESC`, m.id
+     WHERE pa.verified=1 AND p.verified=1 AND pa.user_id = ? ORDER BY p.created_at DESC`, m.id
   );
   ctx.json({
     ok: true,
@@ -239,7 +341,7 @@ app.get('/api/members/:id', (ctx) => {
     progress: prog.months,
     reports,
     plans,
-    activity: db.all('SELECT * FROM activity WHERE actor_id = ? ORDER BY created_at DESC LIMIT 10', m.id)
+    activity: db.all('SELECT * FROM activity WHERE verified=1 AND actor_id = ? ORDER BY created_at DESC LIMIT 10', m.id)
   });
 });
 
@@ -270,6 +372,7 @@ app.delete('/api/members/:id', (ctx) => {
   if (!u) return;
   const m = db.findById(ctx.params.id);
   if (!m || m.role !== 'member') return bad(ctx, 'شاگرد پیدا نشد', 404);
+  if (db.get('SELECT record_id FROM academy_record_people WHERE user_id=? LIMIT 1', m.id) || db.get('SELECT id FROM academy_records WHERE user_id=? OR author_id=? LIMIT 1',m.id,m.id)) return bad(ctx,'برای حفظ سوابق، حساب را غیرفعال کنید؛ این فرد سابقهٔ آکادمی دارد',409);
   db.run('DELETE FROM users WHERE id = ?', m.id);
   db.logActivity(u.id, u.full_name, 'شاگرد را حذف کرد', m.full_name);
   ctx.json({ ok: true });
@@ -311,7 +414,8 @@ app.post('/api/plans', (ctx) => {
     due_on: b.due_on,
     duration: b.duration,
     targets,
-    all_members: !!b.all_members
+    all_members: !!b.all_members,
+    sport: b.sport || null
   });
   db.logActivity(u.id, u.full_name, 'تمرین ارسال کرد', `${plan.title} — ${plan.total} شاگرد`);
   ctx.json({ ok: true, plan });
@@ -399,7 +503,7 @@ app.get('/api/progress', (ctx) => {
   if (!m || m.role !== 'member') return bad(ctx, 'شاگرد پیدا نشد', 404);
   const year = Number(ctx.query.year) || todayJalali().jy;
   const prog = db.progressYear(userId, year);
-  const reports = db.all('SELECT * FROM self_reports WHERE user_id = ? AND year = ? ORDER BY month', userId, year);
+  const reports = db.all('SELECT * FROM self_reports WHERE verified=1 AND user_id = ? AND year = ? ORDER BY month', userId, year);
   ctx.json({ ok: true, member: db.publicUser(m), year, progress: prog.months, selfReports: reports });
 });
 
@@ -451,7 +555,7 @@ app.get('/api/progress/club', (ctx) => {
 
 app.get('/api/years', (ctx) => {
   if (!needCoach(ctx)) return;
-  const years = db.all('SELECT DISTINCT year FROM progress ORDER BY year DESC').map((r) => r.year);
+  const years = db.all('SELECT DISTINCT year FROM progress WHERE verified=1 ORDER BY year DESC').map((r) => r.year);
   const current = todayJalali().jy;
   if (!years.includes(current)) years.unshift(current);
   ctx.json({ ok: true, years });
@@ -557,7 +661,46 @@ app.post('/api/notifications/read', (ctx) => {
   ctx.json({ ok: true });
 });
 
+/* =========================== Public API (با API key) ========================= */
+/* این endpoints برای دسترسی از بیرون (اپلیکیشن موبایل، integrations و...) با API key هستن */
+
+app.get('/v1/members', (ctx) => {
+  const u = coachOrApiKey(ctx);
+  if (!u) return ctx.json({ ok: false, error: 'unauthorized' }, 401);
+  ctx.json({ ok: true, members: db.listMembers().map(m => db.publicUser(m)) });
+});
+
+app.get('/v1/plans', (ctx) => {
+  const u = coachOrApiKey(ctx);
+  if (!u) return ctx.json({ ok: false, error: 'unauthorized' }, 401);
+  ctx.json({ ok: true, plans: db.listPlans() });
+});
+
+app.get('/v1/stats', (ctx) => {
+  const u = coachOrApiKey(ctx);
+  if (!u) return ctx.json({ ok: false, error: 'unauthorized' }, 401);
+  ctx.json({ ok: true, stats: db.stats() });
+});
+
+app.get('/v1/progress/:userId', (ctx) => {
+  const u = coachOrApiKey(ctx);
+  if (!u) return ctx.json({ ok: false, error: 'unauthorized' }, 401);
+  const year = Number(ctx.query.year) || todayJalali().jy;
+  const prog = db.progressYear(Number(ctx.params.userId), year);
+  ctx.json({ ok: true, progress: prog });
+});
+
+app.get('/v1/announcements', (ctx) => {
+  const u = coachOrApiKey(ctx);
+  if (!u) return ctx.json({ ok: false, error: 'unauthorized' }, 401);
+  ctx.json({ ok: true, announcements: db.all('SELECT * FROM announcements WHERE verified=1 ORDER BY created_at DESC LIMIT 50') });
+});
+
+require('../shared/academy').mount(app, { role: 'coach', user: coach });
+require('../shared/academy').mount(app, { admin: true });
+
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`پنل مربی: http://localhost:${PORT}  |  ورود: ${DEMO.coach.username} / ${DEMO.coach.password}`);
+  console.log(`پنل مربی: http://localhost:${PORT}`);
   console.log(`دیتابیس: ${db.DB_PATH}`);
+  console.log(`API endpoints: /v1/members, /v1/plans, /v1/stats, /v1/progress/:id, /v1/announcements`);
 });

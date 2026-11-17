@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "description": "باشگاه آنلاین ارسلان دوجو — دو سایت: پنل مربی و پنل شاگردان (Node.js + SQLite، بدون وابستگی بیرونی)",
-  "main": "coach/server.js",
+  "main": "start.js",
   "scripts": {
     "start": "node start.js",
     "start:coach": "node coach/server.js",

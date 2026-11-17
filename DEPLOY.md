@@ -1,0 +1,114 @@
+# 🚀 راهنمای دیپلوی برای ارسال به کارفرما
+
+## گزینه ۱: Railway (ساده‌ترین - رایگان)
+
+### مراحل:
+1. وارد [railway.app](https://railway.app) بشو
+2. با اکانت GitHub لاگین کن
+3. دکمه **New Project** → **Deploy from GitHub repo**
+4. ریپوی `Kia-Dexter` رو انتخاب کن
+5. Railway خودش Node.js رو تشخیص میده
+6. بعد از دیپلوی، یه لینک عمومی مثل `https://arslan-dojo-production.up.railway.app` می‌گیری
+7. این لینک رو برای کارفرما بفرست!
+
+### تنظیمات Railway:
+- **Start Command:** `npm start`
+- **Variables:** `PORT=8080`, `COACH_PORT=4174`, `MEMBER_PORT=4173`
+- **Networking → Public Networking:** دامنهٔ شاگردان را به **Target Port 8080** و دامنهٔ مربی را به **Target Port 4174** وصل کنید.
+- دامنه‌ای که قبلاً Target Port آن 4174 بود بعد از این تغییر صفحهٔ مربی را باز می‌کند؛ لازم نیست آن را حذف کنید.
+- در دامنهٔ مربی، `/member/` شاگردان را باز می‌کند؛ لینک‌های داخل پنل‌ها به پورت داخلی یا localhost نمی‌روند.
+- اگر فقط یک دامنه دارید، Target Port آن را 4174 بگذارید: `/` مربی و `/member/` شاگردان.
+- `MEMBERS_SITE_URL` اختیاری است؛ فقط اگر دامنهٔ مستقل شاگردان واقعاً فعال است آن را تنظیم کنید. در غیر این صورت حذفش کنید.
+- دامنهٔ Railway که پیام «The train has not arrived» می‌دهد باید در Networking اصلاح شود؛ این خطای برنامه نیست.
+
+---
+
+## گزینه ۲: Render (رایگان)
+
+### مراحل:
+1. وارد [render.com](https://render.com) بشو
+2. با GitHub لاگین کن
+3. **New +** → **Web Service**
+4. ریپوی `Kia-Dexter` رو انتخاب کن
+5. تنظیمات:
+   - **Name:** `arslan-dojo`
+   - **Environment:** `Node`
+   - **Build Command:** `npm install`
+   - **Start Command:** `node start.js`
+6. دکمه **Create Web Service** رو بزن
+7. بعد از چند دقیقه، لینک آماده‌ست!
+
+---
+
+## گزینه ۳: VPS (برای پروژه واقعی و دائمی)
+
+### سرورهای پیشنهادی:
+- **Hetzner** (آلمان): ماهانه ~۴ یورو - [hetzner.com](https://hetzner.com)
+- **Liara** (ایران): ماهانه ~۱۰۰ هزار تومان - [liara.ir](https://liara.ir)
+- **DigitalOcean**: ماهانه ~۶ دلار - [digitalocean.com](https://digitalocean.com)
+
+### مراحل دیپلوی روی VPS:
+
+```bash
+# 1. اتصال به سرور
+ssh root@YOUR_SERVER_IP
+
+# 2. نصب Node.js
+curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+apt-get install -y nodejs
+
+# 3. کپی پروژه
+git clone https://github.com/YOUR_USERNAME/Kia-Dexter.git
+cd Kia-Dexter
+
+# 4. نصب وابستگی‌ها
+npm install --production
+
+# 5. اجرای سایت
+node start.js
+
+# 6. (اختیاری) اجرای دائمی با PM2
+npm install -g pm2
+pm2 start start.js --name "arslan-dojo"
+pm2 save
+pm2 startup
+```
+
+### تنظیم دامنه:
+اگه دامنه داری (مثل `arslandujo.ir`)، می‌تونی با Nginx یا Caddy سایت رو پشت دامنه بذاری.
+
+---
+
+## 🔧 تغییرات لازم برای دیپلوی
+
+### 1. پورت داینامیک
+کد الان از `PORT` environment variable استفاده می‌کنه، پس روی Railway/Render کار می‌کنه.
+
+### 2. دیتابیس
+برای ماندگاری SQLite باید یک Volume به سرویس وصل کنید و `ARSLAN_DATA_DIR` را به مسیر همان Volume تنظیم کنید. بدون Volume دیسک کانتینر ممکن است با انتشار مجدد از بین برود. `RESET_DB` نباید `1` باشد.
+
+### 3. HTTPS
+Railway و Render خودشون HTTPS رو فعال می‌کنن.
+
+---
+
+## 📤 بعد از دیپلوی
+
+لینک سایت رو برای کارفرما بفرست همراه با:
+- پنل مربی: ریشهٔ دامنهٔ متصل به Target Port 4174
+- پنل شاگردان: ریشهٔ دامنهٔ متصل به Target Port 8080، یا `/member/` در دامنهٔ مربی
+- روی دامنهٔ عمومی Railway شمارهٔ پورت داخلی مانند `:4174` را ننویسید؛ Railway HTTPS را به Target Port تنظیم‌شده هدایت می‌کند.
+- حساب پیش‌فرض وجود ندارد. اولین مدیر/مربی را با `scripts/create-account.js` و متغیرهای امن `ACCOUNT_*` طبق README بسازید.
+- مدیریت مستقل: `/admin` روی دامنهٔ مربی یا درگاه شاگردان.
+- قبل از مهاجرت، پشتیبان SQLite تهیه کنید؛ داده‌های قدیمی تا بازبینی مدیر از آمار خارج می‌شوند.
+
+**نکته:** هیچ رمز مشترک یا دادهٔ نمایشی در محیط واقعی فعال نکنید. `DOJO_TEST_FIXTURES` را روی سرور تنظیم نکنید. اتصال خودکار درگاه هنوز پیاده نشده؛ `PAYMENT_PORTAL_URL` صرفاً لینک سامانهٔ واقعی پرداخت بیرونی است.
+
+---
+
+## 💡 نکات مهم
+
+1. **حجم پروژه:** این پروژه خیلی سبکه (~2MB) و روی همه پلن‌های رایگان اجرا می‌شه
+2. **دیتابیس:** SQLite هست و نیازی به دیتابیس خارجی نداره
+3. **Node.js:** نسخه 22.5 یا بالاتر لازم داره (Railway و Render هر دو پشتیبانی می‌کنن)
+4. **بدون وابستگی:** هیچ `npm install` برای اجرا لازم نیست (به جز jsdom برای تست)

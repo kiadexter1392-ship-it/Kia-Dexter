@@ -84,6 +84,24 @@ function matchRoute(pattern, pathname) {
 
 const SAFE_FILE = /^[A-Za-z0-9._\-/\u0600-\u06FF ]+$/;
 
+/* Input sanitization */
+function sanitize(input) {
+  if (typeof input !== "string") return input;
+  return input.replace(/[<>]/g, "").replace(/javascript:/gi, "").replace(/on\w+\s*=/gi, "").trim().slice(0, 5000);
+}
+
+const SECURITY_HEADERS = {
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'SAMEORIGIN',
+  'X-XSS-Protection': '1; mode=block',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+  'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+  'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self';",
+  'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+  'Cross-Origin-Opener-Policy': 'same-origin',
+  'Cross-Origin-Resource-Policy': 'same-origin'
+};
+
 function sendFile(res, filePath, status = 200) {
   const ext = path.extname(filePath).toLowerCase();
   const type = MIME[ext] || 'application/octet-stream';
@@ -95,9 +113,35 @@ function sendFile(res, filePath, status = 200) {
   res.writeHead(status, {
     'Content-Type': type,
     'Cache-Control': 'no-cache',
-    'X-Content-Type-Options': 'nosniff'
+    ...SECURITY_HEADERS
   });
   stream.pipe(res);
+}
+
+/* -------------------- Rate Limiter (ساده — در حافظه) -------------------- */
+const _rateBuckets = new Map();
+function rateLimit(key, maxAttempts, windowMs) {
+  const now = Date.now();
+  const bucket = _rateBuckets.get(key) || { count: 0, resetAt: now + windowMs };
+  if (now > bucket.resetAt) { bucket.count = 0; bucket.resetAt = now + windowMs; }
+  bucket.count++;
+  _rateBuckets.set(key, bucket);
+  if (bucket.count > maxAttempts) {
+    return false;
+  }
+  return true;
+}
+
+/* پاک‌سازی دوره‌ای باکت‌های منقضی شده */
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of _rateBuckets) {
+    if (now > v.resetAt) _rateBuckets.delete(k);
+  }
+}, 60000).unref();
+
+function getClientIp(req) {
+  return req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.headers['x-real-ip'] || req.socket.remoteAddress || 'unknown';
 }
 
 function createServer(options = {}) {
@@ -129,6 +173,8 @@ function createServer(options = {}) {
   const middlewares = [];
 
   async function handle(req, res) {
+    // Mount proxies must receive the untouched request stream, before parsing POST bodies.
+    if (options.onRequest && options.onRequest(req, res)) return;
     const url = new URL(req.url, 'http://' + (req.headers.host || 'localhost'));
     const pathname = decodeURIComponent(url.pathname).replace(/\/{2,}/g, '/') || '/';
     const method = req.method.toUpperCase();
@@ -166,7 +212,7 @@ function createServer(options = {}) {
       json(data, status = 200) { return json(res, data, status, setCookies); },
       text(data, status = 200, type = 'text/plain; charset=utf-8') {
         for (const c of setCookies) res.setHeader('Set-Cookie', c);
-        res.writeHead(status, { 'Content-Type': type, 'Cache-Control': 'no-store' });
+        res.writeHead(status, { 'Content-Type': type, 'Cache-Control': 'no-store', ...SECURITY_HEADERS });
         res.end(data);
       },
       redirect(to, status = 302) {
@@ -226,7 +272,7 @@ function createServer(options = {}) {
       'Content-Type': 'application/json; charset=utf-8',
       'Content-Length': payload.length,
       'Cache-Control': 'no-store',
-      'X-Content-Type-Options': 'nosniff'
+      ...SECURITY_HEADERS
     });
     res.end(payload);
   }
@@ -250,4 +296,4 @@ function createServer(options = {}) {
   return app;
 }
 
-module.exports = { createServer, parseCookies, sendFile, MIME };
+module.exports = { createServer, parseCookies, sendFile, MIME, rateLimit, sanitize };

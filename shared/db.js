@@ -7,10 +7,16 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
+const { normalizeMemberDetails } = require('./member-details');
 const { DatabaseSync } = require('node:sqlite');
 
 const DATA_DIR = process.env.ARSLAN_DATA_DIR || path.join(__dirname, '..', 'data');
 const DB_PATH = process.env.ARSLAN_DB || path.join(DATA_DIR, 'arslan-dojo.db');
+
+/* اگر env var RESET_DB=1 ست شده باشد، دیتابیس قبلی پاک می‌شود */
+if (process.env.RESET_DB === '1') {
+  try { fs.unlinkSync(DB_PATH); console.log('[DB] دیتابیس قبلی پاک شد'); } catch { /* نبود که مشکلی نیست */ }
+}
 
 fs.mkdirSync(DATA_DIR, { recursive: true });
 
@@ -213,10 +219,63 @@ CREATE TABLE IF NOT EXISTS activity (
   created_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS api_keys (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  key        TEXT UNIQUE NOT NULL,
+  user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name       TEXT NOT NULL DEFAULT 'default',
+  permissions TEXT DEFAULT 'read',
+  active     INTEGER DEFAULT 1,
+  created_at TEXT NOT NULL,
+  last_used  TEXT
+);
+
 CREATE INDEX IF NOT EXISTS idx_progress_user ON progress(user_id, year, month);
 CREATE INDEX IF NOT EXISTS idx_assign_user ON plan_assignments(user_id, status);
 CREATE INDEX IF NOT EXISTS idx_notif_user ON notifications(user_id, read);
 `);
+
+/* -------- مهاجرت: افزودن ستون discipline در صورت نبود -------- */
+try {
+  const cols = all("PRAGMA table_info('users')").map(c => c.name);
+  if (!cols.includes('discipline')) {
+    db.exec("ALTER TABLE users ADD COLUMN discipline TEXT DEFAULT NULL;");
+  }
+} catch { /* نادیده */ }
+
+try {
+  const cols2 = all("PRAGMA table_info('plans')").map(c => c.name);
+  if (!cols2.includes('sport')) {
+    db.exec("ALTER TABLE plans ADD COLUMN sport TEXT DEFAULT NULL;");
+  }
+} catch { /* نادیده */ }
+
+/* Adding a nullable field preserves all existing members; both servers may start together. */
+execWithRetry('BEGIN IMMEDIATE');
+try {
+  if (!all("PRAGMA table_info('users')").some(c => c.name === 'blood_group')) {
+    db.exec('ALTER TABLE users ADD COLUMN blood_group TEXT DEFAULT NULL');
+  }
+  db.exec('COMMIT');
+} catch (err) {
+  db.exec('ROLLBACK');
+  throw err;
+}
+
+/* Legacy imports have no reliable provenance. Preserve them for administrator review,
+   but never treat them as measured statistics until explicitly verified. */
+execWithRetry('BEGIN IMMEDIATE');
+try {
+  if (!all("PRAGMA table_info('sessions')").some(c => c.name === 'impersonated')) db.exec('ALTER TABLE sessions ADD COLUMN impersonated INTEGER NOT NULL DEFAULT 0');
+  for (const table of ['users','progress','plans','plan_assignments','announcements','announcement_reads','activity','notifications','self_reports']) {
+    if (!all(`PRAGMA table_info('${table}')`).some(c => c.name === 'verified')) {
+      db.exec(`ALTER TABLE ${table} ADD COLUMN verified INTEGER NOT NULL DEFAULT 0`);
+    }
+    db.exec(`CREATE TRIGGER IF NOT EXISTS verified_new_${table} AFTER INSERT ON ${table}
+      BEGIN UPDATE ${table} SET verified=1 WHERE id=NEW.id; END`);
+  }
+  db.exec('COMMIT');
+} catch (error) { db.exec('ROLLBACK'); throw error; }
 
 /* -------------------------------- رمز عبور -------------------------------- */
 
@@ -249,14 +308,18 @@ function findById(id) {
 
 function publicUser(u) {
   if (!u) return null;
+  // Unreviewed imported sporting claims must not appear as facts, even in a profile.
+  if (!u.verified) u = { ...u, belt:null, experience:null, notes:null, join_date:null };
   return {
     id: u.id,
     role: u.role,
+    verified: !!u.verified,
     full_name: u.full_name,
     username: u.username,
     phone: u.phone,
     gender: u.gender,
     birth_date: u.birth_date,
+    blood_group: u.blood_group || null,
     age: u.age,
     weight_kg: u.weight_kg,
     height_cm: u.height_cm,
@@ -266,20 +329,22 @@ function publicUser(u) {
     join_date: u.join_date,
     notes: u.notes,
     avatar_color: u.avatar_color,
+    discipline: u.discipline || null,
     active: !!u.active,
     created_at: u.created_at
   };
 }
 
 function createUser(data, role = 'member') {
+  data = { ...data, ...normalizeMemberDetails(data) };
   const { hash, salt } = hashPassword(data.password);
   const ts = now();
   const colors = ['#e2483d', '#d9a441', '#3fa7d6', '#5cb85c', '#a06cd5', '#ef7f57', '#2fa8a0'];
   const color = data.avatar_color || colors[(data.full_name || 'a').length % colors.length];
   const info = run(
     `INSERT INTO users (role, full_name, username, phone, password_hash, password_salt, gender, birth_date, age,
-      weight_kg, height_cm, belt, style, experience, join_date, notes, avatar_color, active, created_at, updated_at)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      weight_kg, height_cm, belt, style, experience, join_date, notes, avatar_color, active, created_at, updated_at, discipline, blood_group)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     role,
     String(data.full_name || '').trim(),
     String(data.username || '').trim().toLowerCase(),
@@ -291,24 +356,27 @@ function createUser(data, role = 'member') {
     data.age ? Number(data.age) : null,
     data.weight_kg ? Number(data.weight_kg) : null,
     data.height_cm ? Number(data.height_cm) : null,
-    data.belt || 'سفید',
-    data.style || null,
+    data.belt || null,
+    data.style || data.discipline || null,
     data.experience || null,
     data.join_date || ts.slice(0, 10),
     data.notes || null,
     color,
     data.active === undefined ? 1 : (data.active ? 1 : 0),
     ts,
-    ts
+    ts,
+    data.discipline || data.style || null,
+    data.blood_group || null
   );
   return findById(info.lastInsertRowid);
 }
 
 function updateUser(id, data) {
+  data = { ...data, ...normalizeMemberDetails(data) };
   const fields = [];
   const values = [];
-  const allowed = ['full_name', 'phone', 'gender', 'birth_date', 'age', 'weight_kg', 'height_cm',
-    'belt', 'style', 'experience', 'notes', 'active', 'avatar_color', 'join_date'];
+  const allowed = ['full_name', 'phone', 'gender', 'birth_date', 'blood_group', 'age', 'weight_kg', 'height_cm',
+    'belt', 'style', 'experience', 'notes', 'active', 'avatar_color', 'join_date', 'discipline'];
   for (const key of allowed) {
     if (data[key] !== undefined) {
       fields.push(`${key} = ?`);
@@ -323,11 +391,12 @@ function updateUser(id, data) {
   values.push(now());
   values.push(Number(id));
   run(`UPDATE users SET ${fields.join(', ')} WHERE id = ?`, ...values);
+  if (data.active === false || data.active === 0) run('DELETE FROM sessions WHERE user_id=?',Number(id));
   return findById(id);
 }
 
 function listMembers(query = {}) {
-  const where = ["role = 'member'"];
+  const where = ["role = 'member'", 'verified = 1'];
   const params = [];
   if (query.q) {
     where.push('(full_name LIKE ? OR username LIKE ? OR phone LIKE ?)');
@@ -363,6 +432,7 @@ function sessionUser(token, site) {
   if (!row) return null;
   const user = findById(row.user_id);
   if (!user || !user.active) return null;
+  user.impersonated = !!row.impersonated;
   return user;
 }
 
@@ -410,24 +480,24 @@ function getAnnouncement(id) {
   if (!a) return null;
   a.targets = all('SELECT user_id FROM announcement_targets WHERE announcement_id = ?', a.id).map((r) => r.user_id);
   a.author = a.author_id ? (get('SELECT full_name FROM users WHERE id = ?', a.author_id) || {}).full_name : null;
-  a.read_count = get('SELECT COUNT(*) AS c FROM announcement_reads WHERE announcement_id = ?', a.id).c;
+  a.read_count = get('SELECT COUNT(*) AS c FROM announcement_reads WHERE verified=1 AND announcement_id = ?', a.id).c;
   a.reach = a.target_all ? listMembers({ active: 1 }).length : a.targets.length;
   return a;
 }
 
 function listAnnouncements() {
-  return all('SELECT * FROM announcements ORDER BY pinned DESC, created_at DESC').map((a) => getAnnouncement(a.id));
+  return all('SELECT * FROM announcements WHERE verified=1 ORDER BY pinned DESC, created_at DESC').map((a) => getAnnouncement(a.id));
 }
 
 function announcementsFor(userId) {
   return all(
     `SELECT a.* FROM announcements a
      LEFT JOIN announcement_targets t ON t.announcement_id = a.id
-     WHERE a.target_all = 1 OR t.user_id = ?
+     WHERE a.verified=1 AND (a.target_all = 1 OR t.user_id = ?)
      GROUP BY a.id ORDER BY a.pinned DESC, a.created_at DESC`,
     Number(userId)
   ).map((a) => {
-    const read = get('SELECT id FROM announcement_reads WHERE announcement_id = ? AND user_id = ?', a.id, Number(userId));
+    const read = get('SELECT id FROM announcement_reads WHERE verified=1 AND announcement_id = ? AND user_id = ?', a.id, Number(userId));
     a.read = !!read;
     a.author = a.author_id ? (get('SELECT full_name FROM users WHERE id = ?', a.author_id) || {}).full_name : null;
     return a;
@@ -435,6 +505,7 @@ function announcementsFor(userId) {
 }
 
 function markAnnouncementRead(id, userId) {
+  run('UPDATE announcement_reads SET verified=1 WHERE announcement_id=? AND user_id=?',Number(id),Number(userId));
   run('INSERT OR IGNORE INTO announcement_reads (announcement_id, user_id, read_at) VALUES (?,?,?)',
     Number(id), Number(userId), now());
 }
@@ -475,11 +546,11 @@ function pushNotification(userId, { type, title, body }) {
 }
 
 function notificationsFor(userId, limit = 40) {
-  return all('SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT ?', Number(userId), Number(limit));
+  return all('SELECT * FROM notifications WHERE verified=1 AND user_id = ? ORDER BY created_at DESC LIMIT ?', Number(userId), Number(limit));
 }
 
 function unreadCount(userId) {
-  return get('SELECT COUNT(*) AS c FROM notifications WHERE user_id = ? AND read = 0', Number(userId)).c;
+  return get('SELECT COUNT(*) AS c FROM notifications WHERE verified=1 AND user_id = ? AND read = 0', Number(userId)).c;
 }
 
 function markNotificationsRead(userId) {
@@ -488,12 +559,12 @@ function markNotificationsRead(userId) {
 
 /* -------------------------------- تمرینات -------------------------------- */
 
-function createPlan({ author_id, title, body, category, difficulty, starts_on, due_on, duration, targets = [], all_members = false }) {
+function createPlan({ author_id, title, body, category, difficulty, starts_on, due_on, duration, targets = [], all_members = false, sport = null }) {
   const info = run(
-    `INSERT INTO plans (author_id, title, body, category, difficulty, starts_on, due_on, duration, target_all, created_at)
-     VALUES (?,?,?,?,?,?,?,?,?,?)`,
+    `INSERT INTO plans (author_id, title, body, category, difficulty, starts_on, due_on, duration, target_all, created_at, sport)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
     author_id || null, title, body || '', category || 'تمرین', difficulty || 'متوسط',
-    starts_on || null, due_on || null, duration || null, all_members || targets.length === 0 ? 1 : 0, now()
+    starts_on || null, due_on || null, duration || null, all_members || targets.length === 0 ? 1 : 0, now(), sport || null
   );
   const id = Number(info.lastInsertRowid);
   const ids = all_members || targets.length === 0 ? listMembers({ active: 1 }).map((m) => m.id) : targets;
@@ -514,7 +585,7 @@ function getPlan(id) {
   if (!p) return null;
   p.assignments = all(
     `SELECT pa.*, u.full_name, u.belt, u.avatar_color FROM plan_assignments pa
-     JOIN users u ON u.id = pa.user_id WHERE pa.plan_id = ? ORDER BY u.full_name COLLATE NOCASE`,
+     JOIN users u ON u.id = pa.user_id WHERE pa.verified=1 AND u.verified=1 AND pa.plan_id = ? ORDER BY u.full_name COLLATE NOCASE`,
     p.id
   );
   p.done_count = p.assignments.filter((a) => a.status === 'done').length;
@@ -524,7 +595,7 @@ function getPlan(id) {
 }
 
 function listPlans() {
-  return all('SELECT * FROM plans ORDER BY created_at DESC').map((p) => getPlan(p.id));
+  return all('SELECT * FROM plans WHERE verified=1 ORDER BY created_at DESC').map((p) => getPlan(p.id));
 }
 
 function updatePlan(id, patch) {
@@ -546,7 +617,7 @@ function plansForUser(userId) {
   const rows = all(
     `SELECT pa.*, p.title, p.body, p.category, p.difficulty, p.starts_on, p.due_on, p.duration, p.created_at AS plan_created_at
      FROM plan_assignments pa JOIN plans p ON p.id = pa.plan_id
-     WHERE pa.user_id = ? ORDER BY
+     WHERE pa.verified=1 AND p.verified=1 AND pa.user_id = ? ORDER BY
        CASE pa.status WHEN 'todo' THEN 0 WHEN 'doing' THEN 1 ELSE 2 END,
        COALESCE(p.due_on, '9999') ASC, p.created_at DESC`,
     Number(userId)
@@ -557,7 +628,7 @@ function plansForUser(userId) {
 function setAssignmentStatus(assignmentId, userId, status, note) {
   const a = get('SELECT * FROM plan_assignments WHERE id = ? AND user_id = ?', Number(assignmentId), Number(userId));
   if (!a) return null;
-  run('UPDATE plan_assignments SET status = ?, completed_at = ?, member_note = ? WHERE id = ?',
+  run('UPDATE plan_assignments SET verified=1, status = ?, completed_at = ?, member_note = ? WHERE id = ?',
     status, status === 'done' ? now() : null, note === undefined ? a.member_note : note, a.id);
   const plan = get('SELECT title FROM plans WHERE id = ?', a.plan_id);
   const member = findById(userId);
@@ -594,7 +665,7 @@ function progressRow(userId, year, month) {
 }
 
 function progressYear(userId, year) {
-  const rows = all('SELECT * FROM progress WHERE user_id = ? AND year = ? ORDER BY month',
+  const rows = all('SELECT * FROM progress WHERE verified=1 AND user_id = ? AND year = ? ORDER BY month',
     Number(userId), Number(year));
   const map = {};
   for (const r of rows) {
@@ -605,6 +676,13 @@ function progressYear(userId, year) {
 }
 
 function saveProgress({ user_id, year, month, sessions, endurance, strength, technique, flexibility, discipline, weight_kg, overall, note }, updated_by) {
+  const invalid = message => { throw Object.assign(new Error(message),{status:400}); };
+  if (!Number.isInteger(Number(year)) || Number(year)<1300 || Number(year)>1600 || !Number.isInteger(Number(month)) || Number(month)<1 || Number(month)>12) invalid('سال و ماه معتبر نیست');
+  for (const [key,value] of Object.entries({sessions,endurance,strength,technique,flexibility,discipline,weight_kg,overall})) {
+    if (value===null || value===undefined || value==='') continue;
+    const n=Number(value), max=key==='sessions'?1000:key==='weight_kg'?400:100;
+    if (!Number.isFinite(n) || n<0 || n>max || (key==='sessions'&&!Number.isInteger(n))) invalid('مقدار شاخص '+key+' معتبر نیست');
+  }
   const existing = progressRow(user_id, year, month);
   const num = (v) => (v === undefined || v === null || v === '' ? null : Number(v));
   const payload = {
@@ -619,7 +697,7 @@ function saveProgress({ user_id, year, month, sessions, endurance, strength, tec
     note: note === undefined ? null : note
   };
   if (existing) {
-    run(`UPDATE progress SET sessions=?, endurance=?, strength=?, technique=?, flexibility=?, discipline=?,
+    run(`UPDATE progress SET verified=1, sessions=?, endurance=?, strength=?, technique=?, flexibility=?, discipline=?,
          weight_kg=?, overall=?, note=?, updated_by=?, updated_at=? WHERE id=?`,
     payload.sessions, payload.endurance, payload.strength, payload.technique, payload.flexibility,
     payload.discipline, payload.weight_kg, payload.overall, payload.note, updated_by || null, now(), existing.id);
@@ -641,7 +719,7 @@ function saveSelfReport({ user_id, year, month, sessions, feeling, note }) {
   const existing = get('SELECT id FROM self_reports WHERE user_id = ? AND year = ? AND month = ?',
     Number(user_id), Number(year), Number(month));
   if (existing) {
-    run('UPDATE self_reports SET sessions=?, feeling=?, note=?, created_at=? WHERE id=?',
+    run('UPDATE self_reports SET verified=1, sessions=?, feeling=?, note=?, created_at=? WHERE id=?',
       Number(sessions) || 0, feeling || null, note || null, now(), existing.id);
   } else {
     run('INSERT INTO self_reports (user_id, year, month, sessions, feeling, note, created_at) VALUES (?,?,?,?,?,?,?)',
@@ -677,22 +755,57 @@ function logActivity(actor_id, actor_name, action, detail) {
 }
 
 function recentActivity(limit = 12) {
-  return all('SELECT * FROM activity ORDER BY created_at DESC LIMIT ?', Number(limit));
+  return all('SELECT * FROM activity WHERE verified=1 ORDER BY created_at DESC LIMIT ?', Number(limit));
 }
 
 /* -------------------------------- آمار کلی -------------------------------- */
 
 function stats() {
-  const members = get("SELECT COUNT(*) AS c FROM users WHERE role = 'member'").c;
-  const activeMembers = get("SELECT COUNT(*) AS c FROM users WHERE role = 'member' AND active = 1").c;
-  const plans = get('SELECT COUNT(*) AS c FROM plans').c;
-  const done = get("SELECT COUNT(*) AS c FROM plan_assignments WHERE status = 'done'").c;
-  const pending = get("SELECT COUNT(*) AS c FROM plan_assignments WHERE status != 'done'").c;
-  const announcements = get('SELECT COUNT(*) AS c FROM announcements').c;
-  const selfReports = get('SELECT COUNT(*) AS c FROM self_reports').c;
+  const members = get("SELECT COUNT(*) AS c FROM users WHERE verified=1 AND role = 'member'").c;
+  const activeMembers = get("SELECT COUNT(*) AS c FROM users WHERE verified=1 AND role = 'member' AND active = 1").c;
+  const plans = get('SELECT COUNT(*) AS c FROM plans WHERE verified=1').c;
+  const done = get("SELECT COUNT(*) AS c FROM plan_assignments WHERE verified=1 AND plan_id IN (SELECT id FROM plans WHERE verified=1) AND user_id IN (SELECT id FROM users WHERE verified=1) AND status = 'done'").c;
+  const pending = get("SELECT COUNT(*) AS c FROM plan_assignments WHERE verified=1 AND plan_id IN (SELECT id FROM plans WHERE verified=1) AND user_id IN (SELECT id FROM users WHERE verified=1) AND status != 'done'").c;
+  const announcements = get('SELECT COUNT(*) AS c FROM announcements WHERE verified=1').c;
+  const selfReports = get('SELECT COUNT(*) AS c FROM self_reports WHERE verified=1').c;
   const j = require('./jalali').todayJalali();
-  const thisMonth = get('SELECT COUNT(*) AS c FROM progress WHERE year = ? AND month = ?', j.jy, j.jm).c;
+  const thisMonth = get(`SELECT COUNT(*) AS c FROM progress WHERE verified=1 AND user_id IN (SELECT id FROM users WHERE verified=1 AND role='member') AND year = ? AND month = ?`, j.jy, j.jm).c;
   return { members, activeMembers, plans, done, pending, announcements, selfReports, thisMonth };
+}
+
+/* --------------------------------- API Keys -------------------------------- */
+
+function createApiKey(userId, name = 'default', permissions = 'read') {
+  const key = 'arslan_' + crypto.randomBytes(32).toString('hex');
+  run('INSERT INTO api_keys (key, user_id, name, permissions, created_at) VALUES (?,?,?,?,?)',
+    key, Number(userId), name, permissions, now());
+  return { key, name, permissions };
+}
+
+function apiKeyUser(key) {
+  if (!key || !key.startsWith('arslan_')) return null;
+  const row = get(
+    'SELECT ak.*, u.role FROM api_keys ak JOIN users u ON u.id = ak.user_id WHERE ak.key = ? AND ak.active = 1',
+    key
+  );
+  if (!row) return null;
+  run('UPDATE api_keys SET last_used = ? WHERE key = ?', now(), key);
+  const user = findById(row.user_id);
+  if (!user || !user.active) return null;
+  user.apiPermissions = row.permissions;
+  return user;
+}
+
+function listApiKeys(userId) {
+  return all('SELECT id, key, name, permissions, created_at, last_used FROM api_keys WHERE user_id = ? ORDER BY created_at DESC', Number(userId));
+}
+
+function deleteApiKey(keyId, userId) {
+  run('DELETE FROM api_keys WHERE id = ? AND user_id = ?', Number(keyId), Number(userId));
+}
+
+function revokeApiKey(keyId, userId) {
+  run('UPDATE api_keys SET active = 0 WHERE id = ? AND user_id = ?', Number(keyId), Number(userId));
 }
 
 module.exports = {
@@ -706,5 +819,6 @@ module.exports = {
   pushNotification, notificationsFor, unreadCount, markNotificationsRead,
   createPlan, getPlan, listPlans, updatePlan, deletePlan, plansForUser, setAssignmentStatus,
   METRIC_KEYS, computeOverall, progressRow, progressYear, saveProgress, deleteProgress,
-  saveSelfReport, clubMatrix, logActivity, recentActivity, stats
+  saveSelfReport, clubMatrix, logActivity, recentActivity, stats,
+  createApiKey, apiKeyUser, listApiKeys, deleteApiKey, revokeApiKey
 };

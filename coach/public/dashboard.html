@@ -2,14 +2,20 @@
 <html lang="fa" dir="rtl">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#c9a44e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ارسلان دوجو">
   <title>پنل مربی — باشگاه آنلاین ارسلان دوجو</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'><circle cx='24' cy='24' r='20' fill='%23e2483d'/></svg>">
+  <link rel="apple-touch-icon" href="ui/icons/icon-192.png">
+  <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css">
-  <link rel="stylesheet" href="/ui/style.css">
-  <link rel="stylesheet" href="/ui/shell.css">
+  <link rel="stylesheet" href="ui/style.css">
+  <link rel="stylesheet" href="ui/shell.css">
 </head>
-<body>
+<body class="coach-panel has-magnifying-dock">
   <div class="shell">
     <aside class="sidebar">
       <div class="side-head">
@@ -41,6 +47,9 @@
       <button class="nav-item" data-view="news"><span class="ic">✦</span> اطلاع‌رسانی <span class="count hidden" id="cntNews"></span></button>
       <button class="nav-item" data-view="settings"><span class="ic">⚙</span> تنظیمات</button>
 
+      <a class="nav-item" href="academy">خدمات آکادمی و امکانات جدید</a>
+      <a class="nav-item" href="admin">ورود مدیریت</a>
+
       <div class="side-foot">
         <a class="nav-item" id="membersSiteLink" href="#" target="_blank" rel="noopener"><span class="ic">↗</span> سایت شاگردان</a>
         <button class="nav-item" id="logoutBtn"><span class="ic">⎋</span> خروج از حساب</button>
@@ -50,9 +59,12 @@
 
     <main class="main">
       <div class="topbar">
-        <div class="grow">
+        <div class="row grow" style="gap:12px">
+          <span id="meAvatar"></span>
+          <div class="grow">
           <h1 id="viewTitle">داشبورد</h1>
           <div class="sub" id="todayLabel">—</div>
+          </div>
         </div>
         <button class="btn icon bell" id="bellBtn" title="اعلان‌ها">🔔<span class="dot hidden" id="bellDot">0</span></button>
         <a class="btn ghost" id="topMembersLink" href="#" target="_blank" rel="noopener">سایت شاگردان ↗</a>
@@ -65,11 +77,18 @@
       <section class="section" id="view-progress"></section>
       <section class="section" id="view-news"></section>
       <section class="section" id="view-settings"></section>
+      <div id="magnifyingDock" class="magnifying-dock-slot"></div>
     </main>
   </div>
 
-  <script src="/ui/jalali.browser.js"></script>
-  <script src="/ui/ui.js"></script>
-  <script src="/dashboard.js"></script>
+  <script src="ui/jalali.browser.js"></script>
+  <script src="ui/ui.js"></script>
+  <script src="ui/MagnifyingDock.js"></script>
+  <script src="dashboard.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(function(e) {});
+    }
+  </script>
 </body>
 </html>

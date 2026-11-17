@@ -9,6 +9,7 @@
 
   let CFG = null;
   let ME = null;
+  let magnifyingDock = null;
   const state = { view: 'home', year: null, newsTab: 'news' };
 
   const TITLES = {
@@ -16,6 +17,8 @@
     plans: 'تمرینات من',
     progress: 'جدول پیشرفت من',
     news: 'اطلاعیه‌ها و اعلان‌ها',
+    payment: 'پرداخت شهریه',
+    support: 'پشتیبانی',
     profile: 'پروفایل من'
   };
 
@@ -29,7 +32,7 @@
       ME = me.user;
       state.year = me.jalali.year;
     } catch (err) {
-      location.href = '/';
+      location.href = UI.PATH_PREFIX + '/';
       return;
     }
 
@@ -40,10 +43,25 @@
     document.querySelectorAll('.nav-item[data-view]').forEach((b) => b.addEventListener('click', () => switchView(b.dataset.view)));
     document.getElementById('logoutBtn').addEventListener('click', async () => {
       await api('/api/logout', { method: 'POST' });
-      location.href = '/';
+      location.href = UI.PATH_PREFIX + '/';
     });
     document.getElementById('bellBtn').addEventListener('click', bellBox);
     document.getElementById('quickProgress').addEventListener('click', selfReportForm);
+
+    if (window.MagnifyingDock) {
+      magnifyingDock = MagnifyingDock.mount(document.getElementById('magnifyingDock'), {
+        active: 'home',
+        label: 'ناوبری سریع پنل',
+        items: [
+          { key: 'home', label: 'خانه', icon: 'home' },
+          { key: 'plans', label: 'تمرینات من', icon: 'files' },
+          { key: 'progress', label: 'پیشرفت', icon: 'progress' },
+          { key: 'news', label: 'اطلاعیه‌ها', icon: 'news' },
+          { key: 'profile', label: 'پروفایل من', icon: 'you' }
+        ],
+        onSelect: view => switchView(view)
+      });
+    }
 
     await switchView('home');
     pollBell();
@@ -55,6 +73,7 @@
 
   async function switchView(view) {
     state.view = view;
+    if (magnifyingDock) magnifyingDock.setActive(view);
     document.querySelectorAll('.nav-item[data-view]').forEach((b) => b.classList.toggle('active', b.dataset.view === view));
     document.querySelectorAll('.section').forEach((s) => s.classList.toggle('active', s.id === 'view-' + view));
     document.getElementById('viewTitle').textContent = TITLES[view];
@@ -65,6 +84,8 @@
       else if (view === 'plans') await renderPlans(box);
       else if (view === 'progress') await renderProgress(box);
       else if (view === 'news') await renderNews(box);
+      else if (view === 'payment') await renderPayment(box);
+      else if (view === 'support') await renderSupport(box);
       else if (view === 'profile') renderProfile(box);
     } catch (err) {
       box.innerHTML = `<div class="card empty"><span class="big">⚠</span>${esc(err.message)}</div>`;
@@ -98,10 +119,10 @@
               <div>
                 <div class="bold" style="font-size:19px">سلام ${esc(ME.full_name)} 🥋</div>
                 <div class="row" style="gap:6px;margin-top:6px;flex-wrap:wrap">
-                  <span class="badge gold">کمربند ${esc(ME.belt || 'سفید')}</span>
+                  ${ME.belt ? `<span class="badge gold">کمربند ${esc(ME.belt)}</span>` : '<span class="badge">کمربند ثبت نشده</span>'}
                   ${ME.style ? `<span class="badge blue">${esc(ME.style)}</span>` : ''}
                   ${ME.experience ? `<span class="badge">سابقه: ${esc(ME.experience)}</span>` : ''}
-                  <span class="badge dark">عضو از ${J.formatShort(ME.created_at)}</span>
+                  ${ME.verified ? `<span class="badge dark">عضو از ${J.formatShort(ME.created_at)}</span>` : '<span class="badge">اطلاعات قدیمی در انتظار بازبینی مدیر</span>'}
                 </div>
               </div>
             </div>
@@ -126,14 +147,14 @@
                 <div class="card-title"><span class="dot"></span> تمرین‌های پیش رو</div>
                 <button class="btn sm ghost" data-goto="plans">همه ←</button>
               </div>
-              ${open.length ? open.slice(0, 4).map((p) => planRow(p)).join('') : emptyHTML('تمرین بازی نداری — آفرین! 🎉', '⚑')}
+              ${open.length ? open.slice(0, 4).map((p) => planRow(p)).join('') : emptyHTML('تمرین بازی ثبت نشده است', '⚑')}
             </div>
 
             <div class="card">
               <div class="card-head"><div class="card-title"><span class="dot" style="background:var(--gold);box-shadow:0 0 10px var(--gold)"></span> روند نمره کل</div></div>
               ${series.length > 1 ? `
                 <div class="mini-bar" style="height:120px">
-                  ${series.map((s) => `<i title="${esc(J.MONTHS[s.month - 1])} ${fa(s.year)}: ${fa(s.overall)}" style="height:${Math.max(6, s.overall)}%"></i>`).join('')}
+                  ${series.map((s) => `<i title="${esc(J.MONTHS[s.month - 1])} ${fa(s.year)}: ${fa(s.overall)}" style="height:${s.overall}%"></i>`).join('')}
                 </div>
                 <div class="row between tiny" style="margin-top:8px">
                   ${series.map((s) => `<span>${esc(J.MONTHS[s.month - 1].slice(0, 4))}</span>`).join('')}
@@ -513,6 +534,151 @@
     pollBell();
   }
 
+  /* ============================= پرداخت شهریه ============================ */
+
+  async function renderPayment(box) {
+    let paymentData, faqData;
+    try {
+      const [p, f] = await Promise.all([api('/api/payment'), api('/api/faq')]);
+      paymentData = p; faqData = f;
+    } catch (err) {
+      box.innerHTML = '<div class="card empty"><span class="big">⚠</span>' + esc(err.message) + '</div>';
+      return;
+    }
+
+    box.innerHTML = `
+      <div class="stack">
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title"><span class="dot" style="background:var(--gold);box-shadow:0 0 10px var(--gold)"></span> 💳 شماره کارت‌های شهریه</div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px">
+            ${paymentData.cards.map(function (c) {
+              return '<div class="tuition-bank-card">' +
+                '<div class="tuition-bank-label">' + esc(c.label) + '</div>' +
+                '<div class="tuition-bank-number" dir="ltr">' +
+                  esc(c.number.replace(/(.{4})/g, '$1 ').trim()) +
+                '</div>' +
+                '<div class="tuition-bank-holder">' + esc(c.holder) + '</div>' +
+                '<button class="btn sm ghost" data-copy="' + esc(c.number) + '">📋 کپی شماره کارت</button>' +
+              '</div>';
+            }).join('')}
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title"><span class="dot"></span> 📋 تعرفه شهریه ماهانه</div>
+          </div>
+          <div class="table-wrap">
+            <table class="data">
+              <thead><tr><th>رشته</th><th>شهریه (هزار تومان)</th><th>پرداخت</th></tr></thead>
+              <tbody>
+                ${paymentData.pricing.map(function (p) {
+                  return '<tr>' +
+                    '<td class="bold">' + esc(p.discipline) + '</td>' +
+                    '<td><span class="badge gold">' + esc(p.price) + ' هزار تومان</span></td>' +
+                    '<td><a href="' + esc(paymentData.baleLink) + '" target="_blank" class="btn sm primary">ارسال فیش</a></td>' +
+                  '</tr>';
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+          <p class="tiny" style="margin-top:12px">📌 مهلت پرداخت شهریه تا ۱۲ هر ماه. لطفاً پس از واریز فیش را از بله ارسال نمایید.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title"><span class="dot" style="background:var(--blue);box-shadow:0 0 10px var(--blue)"></span> ❓ سوالات متداول</div>
+          </div>
+          <div id="panelFaq">
+            ${(faqData.faqs || []).map(function (f, i) {
+              return '<div style="border-bottom:1px solid var(--line-soft);padding:12px 0">' +
+                '<div style="font-weight:600;cursor:pointer;font-size:13.5px" data-faq-toggle="' + i + '">' + esc(f.q) + ' ▾</div>' +
+                '<div class="small muted" style="margin-top:6px;display:none;line-height:2" data-faq-body="' + i + '">' + esc(f.a) + '</div>' +
+              '</div>';
+            }).join('')}
+          </div>
+        </div>
+      </div>`;
+
+    // کپی شماره کارت
+    box.querySelectorAll('[data-copy]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        navigator.clipboard.writeText(btn.dataset.copy).then(function () {
+          toast('شماره کارت کپی شد', 'ok');
+        }).catch(function () {
+          toast('کپی نشد', 'warn');
+        });
+      });
+    });
+
+    // باز/بسته کردن FAQ
+    box.querySelectorAll('[data-faq-toggle]').forEach(function (el) {
+      el.addEventListener('click', function () {
+        var idx = el.dataset.faqToggle;
+        var body = box.querySelector('[data-faq-body="' + idx + '"]');
+        body.style.display = body.style.display === 'none' ? 'block' : 'none';
+      });
+    });
+  }
+
+  /* ============================== پشتیبانی ============================== */
+
+  async function renderSupport(box) {
+    let faqData;
+    try { faqData = await api('/api/faq'); } catch { faqData = { faqs: [] }; }
+
+    box.innerHTML = `
+      <div class="stack">
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title"><span class="dot" style="background:var(--green);box-shadow:0 0 10px var(--green)"></span> 📞 راه‌های ارتباطی</div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px">
+            <div style="text-align:center;padding:24px;background:var(--bg-2);border-radius:16px;border:1px solid var(--line)">
+              <div style="font-size:36px;margin-bottom:12px">📱</div>
+              <h4 style="margin:0 0 8px">پیام‌رسان بله</h4>
+              <p class="muted small" style="margin:0 0 14px">سریع‌ترین راه ارتباط با ما</p>
+              <a href="https://ble.ir/+989016399804" target="_blank" class="btn primary">باز کردن بله</a>
+              <div class="en tiny" style="margin-top:10px;color:var(--gold)">+989016399804</div>
+            </div>
+            <div style="text-align:center;padding:24px;background:var(--bg-2);border-radius:16px;border:1px solid var(--line)">
+              <div style="font-size:36px;margin-bottom:12px">📞</div>
+              <h4 style="margin:0 0 8px">تماس تلفنی</h4>
+              <p class="muted small" style="margin:0 0 14px">در ساعات اداری</p>
+              <a href="tel:+989016399804" class="btn ghost">تماس بگیرید</a>
+              <div class="en tiny" style="margin-top:10px;color:var(--gold)">+989016399804</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title"><span class="dot" style="background:var(--blue);box-shadow:0 0 10px var(--blue)"></span> ❓ سوالات متداول</div>
+          </div>
+          <div id="supportFaq">
+            ${(faqData.faqs || []).map(function (f, i) {
+              return '<div style="border-bottom:1px solid var(--line-soft);padding:14px 0">' +
+                '<div style="font-weight:600;cursor:pointer;font-size:14px" data-sfaq-toggle="' + i + '">' + esc(f.q) + ' ◂</div>' +
+                '<div class="small muted" style="margin-top:8px;display:none;line-height:2.2" data-sfaq-body="' + i + '">' + esc(f.a) + '</div>' +
+              '</div>';
+            }).join('')}
+          </div>
+        </div>
+      </div>`;
+
+    box.querySelectorAll('[data-sfaq-toggle]').forEach(function (el) {
+      el.addEventListener('click', function () {
+        var idx = el.dataset.sfaqToggle;
+        var body = box.querySelector('[data-sfaq-body="' + idx + '"]');
+        var isOpen = body.style.display === 'block';
+        body.style.display = isOpen ? 'none' : 'block';
+        el.textContent = faqData.faqs[idx].q + (isOpen ? ' ◂' : ' ▾');
+      });
+    });
+  }
+
   /* ============================== پروفایل =============================== */
 
   function renderProfile(box) {
@@ -536,12 +702,18 @@
             <div class="grid-3">
               <div class="field"><label>قد (سانتی‌متر)</label><input name="height_cm" type="number" value="${ME.height_cm || ''}"></div>
               <div class="field"><label>وزن (کیلوگرم)</label><input name="weight_kg" type="number" step="0.1" value="${ME.weight_kg || ''}"></div>
-              <div class="field"><label>کمربند</label>
-                <select name="belt">${belts.map((b) => `<option ${ME.belt === b ? 'selected' : ''}>${esc(b)}</option>`).join('')}</select>
+              <div class="field"><label>رشته ورزشی</label>
+                <select name="discipline">
+                  <option value="">—</option>
+                  ${(CFG.disciplines || ['کاراته', 'کراسفیت', 'بوکس', 'ژیمناستیک', 'موی تای']).map((d) => `<option ${(ME.discipline || ME.style) === d ? 'selected' : ''}>${esc(d)}</option>`).join('')}
+                </select>
               </div>
             </div>
             <div class="grid-2">
-              <div class="field"><label>سبک تمرینی</label><input name="style" value="${esc(ME.style || '')}"></div>
+              <div class="field"><label for="pBirthDate">تاریخ دقیق تولد (شمسی)</label><input id="pBirthDate" name="birth_date" class="en" dir="ltr" placeholder="۱۳۹۰/۰۵/۲۱" maxlength="10" value="${esc(UI.birthDateValue(ME.birth_date))}"></div>
+              <div class="field"><label for="pBloodGroup">گروه خونی</label><select id="pBloodGroup" name="blood_group" dir="ltr"><option value="">نامشخص</option>${UI.BLOOD_GROUPS.map(group => `<option ${ME.blood_group === group ? 'selected' : ''}>${group}</option>`).join('')}</select></div>
+            </div>
+            <div class="grid-2">
               <div class="field"><label>سابقه تمرین</label><input name="experience" value="${esc(ME.experience || '')}"></div>
             </div>
             <div><button class="btn primary" type="submit">ذخیره تغییرات</button></div>
@@ -562,9 +734,7 @@
             <div class="card-head"><div class="card-title"><span class="dot" style="background:var(--green);box-shadow:0 0 10px var(--green)"></span> خلاصه عضویت</div></div>
             <ul class="small muted" style="margin:0;padding-inline-start:18px">
               <li>عضو از: ${J.formatJalali(ME.created_at)}</li>
-              <li>کمربند ثبت‌شده: ${esc(ME.belt || 'سفید')}</li>
-              <li>اطلاعات تو در دیتابیس باشگاه ذخیره شده و پاک نمی‌شود.</li>
-              <li>مربی می‌تواند جدول پیشرفت تو را ماه‌به‌ماه ببیند و پر کند.</li>
+              <li>کمربند ثبت‌شده: ${esc(ME.belt || 'ثبت نشده')}</li>
             </ul>
           </div>
         </div>

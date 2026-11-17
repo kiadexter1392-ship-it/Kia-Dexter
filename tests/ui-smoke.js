@@ -7,8 +7,8 @@
 
 const { JSDOM, VirtualConsole } = require('jsdom');
 
-const COACH = process.env.COACH_URL || 'http://localhost:4173';
-const MEMBER = process.env.MEMBER_URL || 'http://localhost:4174';
+const COACH = process.env.COACH_URL || 'http://localhost:4174';
+const MEMBER = process.env.MEMBER_URL || 'http://localhost:8080';
 
 let passed = 0;
 let failed = 0;
