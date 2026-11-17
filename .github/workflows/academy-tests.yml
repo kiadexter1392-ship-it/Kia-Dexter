@@ -19,6 +19,10 @@ jobs:
       - name: Install optional browser test tools
         run: npm install --no-save --package-lock=false playwright-core@1.65.1 @sparticuz/chromium@153.0.0
       - run: node tests/academy-migration.js
+      - name: Remembered login after real browser close and server restart
+        env:
+          BROWSER: '1'
+        run: node tests/persistent-login.js
       - name: Actual academy forms, permissions, inventory, scores and privacy
         env:
           BROWSER: '1'
