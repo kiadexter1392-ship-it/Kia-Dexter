@@ -112,7 +112,7 @@ function sendFile(res, filePath, status = 200) {
   });
   res.writeHead(status, {
     'Content-Type': type,
-    'Cache-Control': 'no-cache',
+    'Cache-Control': ext === '.html' ? 'no-store' : 'no-cache',
     ...SECURITY_HEADERS
   });
   stream.pipe(res);
@@ -201,27 +201,36 @@ function createServer(options = {}) {
       body,
       cookies: cookieJar,
       setCookie(value, opts = {}) {
-        const parts = [`${cookieName}=${encodeURIComponent(value)}`, 'Path=/', 'HttpOnly', 'SameSite=Lax'];
-        if (opts.maxAgeSeconds) parts.push(`Max-Age=${opts.maxAgeSeconds}`);
+        const name = opts.name || cookieName;
+        if (!/^[A-Za-z0-9_]+$/.test(name)) throw new Error('Invalid cookie name');
+        const sameSite = opts.sameSite === 'Strict' ? 'Strict' : 'Lax';
+        const parts = [`${name}=${encodeURIComponent(value)}`, 'Path=/', 'HttpOnly', `SameSite=${sameSite}`];
+        if (opts.maxAgeSeconds !== undefined) parts.push(`Max-Age=${Math.floor(opts.maxAgeSeconds)}`);
         if (opts.expires) parts.push(`Expires=${opts.expires}`);
+        // Railway terminates TLS upstream and forwards the original HTTPS scheme.
+        const proto = String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim();
+        if (req.socket.encrypted || proto === 'https') parts.push('Secure');
+        // Only the last value for a given cookie can win (renewal then password change).
+        const previous = setCookies.findIndex(c => c.startsWith(name + '='));
+        if (previous >= 0) setCookies.splice(previous, 1);
         setCookies.push(parts.join('; '));
       },
-      clearCookie() {
-        setCookies.push(`${cookieName}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`);
+      clearCookie(opts = {}) {
+        this.setCookie('', { ...opts, maxAgeSeconds: 0, expires: 'Thu, 01 Jan 1970 00:00:00 GMT' });
       },
       json(data, status = 200) { return json(res, data, status, setCookies); },
       text(data, status = 200, type = 'text/plain; charset=utf-8') {
-        for (const c of setCookies) res.setHeader('Set-Cookie', c);
+        if (setCookies.length) res.setHeader('Set-Cookie', setCookies);
         res.writeHead(status, { 'Content-Type': type, 'Cache-Control': 'no-store', ...SECURITY_HEADERS });
         res.end(data);
       },
       redirect(to, status = 302) {
-        for (const c of setCookies) res.setHeader('Set-Cookie', c);
-        res.writeHead(status, { Location: to });
+        if (setCookies.length) res.setHeader('Set-Cookie', setCookies);
+        res.writeHead(status, { Location: to, 'Cache-Control': 'no-store', ...SECURITY_HEADERS });
         res.end();
       },
       file(filePath, status) {
-        for (const c of setCookies) res.setHeader('Set-Cookie', c);
+        if (setCookies.length) res.setHeader('Set-Cookie', setCookies);
         sendFile(res, filePath, status);
       }
     };
@@ -256,7 +265,7 @@ function createServer(options = {}) {
       for (const dir of publicDirs) {
         const candidate = path.join(dir, rel);
         if (candidate.startsWith(dir) && fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {
-          for (const c of setCookies) res.setHeader('Set-Cookie', c);
+          if (setCookies.length) res.setHeader('Set-Cookie', setCookies);
           return sendFile(res, candidate);
         }
       }
@@ -266,7 +275,7 @@ function createServer(options = {}) {
   }
 
   function json(res, data, status = 200, setCookies = []) {
-    for (const c of setCookies) res.setHeader('Set-Cookie', c);
+    if (setCookies.length) res.setHeader('Set-Cookie', setCookies);
     const payload = Buffer.from(JSON.stringify(data), 'utf8');
     res.writeHead(status, {
       'Content-Type': 'application/json; charset=utf-8',

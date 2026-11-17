@@ -7,6 +7,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
+const { lifetimeSeconds, RENEW_INTERVAL_SECONDS } = require('./session-policy');
 const { normalizeMemberDetails } = require('./member-details');
 const { DatabaseSync } = require('node:sqlite');
 
@@ -447,6 +448,20 @@ function sessionUser(token, site) {
   return user;
 }
 
+function renewSession(token, site) {
+  if (!token) return null;
+  const ts = now();
+  const row = get(`SELECT s.expires_at FROM sessions s JOIN users u ON u.id=s.user_id
+    WHERE s.token=? AND s.site=? AND s.expires_at>? AND s.impersonated=0 AND u.active=1`, token, site, ts);
+  if (!row) return null;
+  const expires = new Date(Date.now() + lifetimeSeconds(site) * 1000).toISOString();
+  if (Date.parse(row.expires_at) > Date.parse(expires) - RENEW_INTERVAL_SECONDS * 1000) return null;
+  // A concurrent logout/password reset must never be undone by renewing a token.
+  const result = run(`UPDATE sessions SET expires_at=? WHERE token=? AND site=?
+    AND expires_at>? AND impersonated=0 AND user_id IN (SELECT id FROM users WHERE active=1)`, expires, token, site, ts);
+  return Number(result.changes) ? { expires } : null;
+}
+
 function destroySession(token) {
   if (token) run('DELETE FROM sessions WHERE token = ?', token);
 }
@@ -824,7 +839,7 @@ module.exports = {
   all, get, run, now,
   hashPassword, verifyPassword,
   findByUsername, findById, publicUser, createUser, updateUser, listMembers,
-  createSession, sessionUser, destroySession, setPassword,
+  createSession, sessionUser, renewSession, destroySession, setPassword,
   createAnnouncement, getAnnouncement, listAnnouncements, announcementsFor,
   markAnnouncementRead, updateAnnouncement, deleteAnnouncement,
   pushNotification, notificationsFor, unreadCount, markNotificationsRead,

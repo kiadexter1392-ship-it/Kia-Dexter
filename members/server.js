@@ -9,6 +9,7 @@ const fs = require('node:fs');
 const { readPorts } = require('../shared/ports');
 const { createServer, rateLimit, sanitize } = require('../shared/server');
 const db = require('../shared/db');
+const authSession = require('../shared/auth-session');
 const { seedIfEmpty, DEMO } = require('../shared/seed');
 const { JALALI_MONTHS, todayJalali, formatJalali, faNum } = require('../shared/jalali');
 
@@ -28,8 +29,7 @@ const app = createServer({
 /* -------------------------------- ابزارها -------------------------------- */
 
 function member(ctx) {
-  const u = db.sessionUser(ctx.cookies[app.cookieName], SITE);
-  return u && u.role === 'member' ? u : null;
+  return authSession.restore(ctx, app.cookieName, SITE, u => u.role === 'member');
 }
 
 function needMember(ctx) {
@@ -208,8 +208,7 @@ function doRegister(ctx, b) {
     join_date: new Date().toISOString().slice(0, 10)
   }, 'member');
 
-  const { token } = db.createSession(user.id, SITE, 90);
-  ctx.setCookie(token, { maxAgeSeconds: 90 * 86400 });
+  authSession.signIn(ctx, user.id, SITE, app.cookieName);
 
   db.pushNotification(user.id, {
     type: 'welcome',
@@ -270,8 +269,7 @@ app.post('/login', (ctx) => {
     ctx.redirect('/?error=' + encodeURIComponent('حساب شما غیرفعال است'));
     return;
   }
-  const { token } = db.createSession(u.id, SITE, 90);
-  ctx.setCookie(token, { maxAgeSeconds: 90 * 86400 });
+  authSession.signIn(ctx, u.id, SITE, app.cookieName);
   db.logActivity(u.id, u.full_name, 'وارد پنل کاربری شد', null);
   ctx.redirect('/panel');
 });
@@ -283,15 +281,13 @@ app.post('/api/login', (ctx) => {
     return bad(ctx, 'نام کاربری یا رمز عبور اشتباه است', 401);
   }
   if (!u.active) return bad(ctx, 'حساب کاربری شما غیرفعال است؛ با مربی تماس بگیرید', 403);
-  const { token } = db.createSession(u.id, SITE, 90);
-  ctx.setCookie(token, { maxAgeSeconds: 90 * 86400 });
+  authSession.signIn(ctx, u.id, SITE, app.cookieName);
   db.logActivity(u.id, u.full_name, 'وارد پنل کاربری شد', null);
   ctx.json({ ok: true, user: db.publicUser(u) });
 });
 
 app.post('/api/logout', (ctx) => {
-  db.destroySession(ctx.cookies[app.cookieName]);
-  ctx.clearCookie();
+  authSession.signOut(ctx, app.cookieName, SITE);
   ctx.json({ ok: true });
 });
 
@@ -337,8 +333,7 @@ app.post('/api/password', (ctx) => {
   if (!db.verifyPassword(current, u.password_hash, u.password_salt)) return bad(ctx, 'رمز فعلی درست نیست');
   if (!next || String(next).length < 6) return bad(ctx, 'رمز جدید باید حداقل ۶ حرف باشد');
   db.setPassword(u.id, next);
-  const { token } = db.createSession(u.id, SITE, 90);
-  ctx.setCookie(token, { maxAgeSeconds: 90 * 86400 });
+  authSession.signIn(ctx, u.id, SITE, app.cookieName);
   ctx.json({ ok: true });
 });
 

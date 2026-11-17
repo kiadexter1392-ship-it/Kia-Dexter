@@ -2,6 +2,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const db = require('./db');
+const authSession = require('./auth-session');
 const schema = require('./academy-schema');
 const { todayJalali, enNum } = require('./jalali');
 const { rateLimit } = require('./server');
@@ -211,8 +212,7 @@ function save(kind, raw, actor, role, id) {
   });
 }
 function adminUser(ctx) {
-  const user = db.sessionUser(ctx.cookies[ADMIN_COOKIE], 'admin');
-  return user && db.get('SELECT user_id FROM academy_admins WHERE user_id=?',user.id) ? user : null;
+  return authSession.restore(ctx, ADMIN_COOKIE, 'admin', user => !!db.get('SELECT user_id FROM academy_admins WHERE user_id=?',user.id));
 }
 function paymentPortal() {
   const raw = process.env.PAYMENT_PORTAL_URL || '';
@@ -247,12 +247,10 @@ function mount(app, options) {
       if (!rateLimit('academy-admin:'+ctx.req.socket.remoteAddress,5,300000)) fail('تعداد تلاش زیاد است؛ بعداً تلاش کنید',429);
       const user = db.findByUsername(String(ctx.body.username || '').trim());
       if (!user || !user.active || !db.get('SELECT user_id FROM academy_admins WHERE user_id=?',user.id) || !db.verifyPassword(ctx.body.password,user.password_hash,user.password_salt)) fail('نام کاربری یا رمز مدیر صحیح نیست',401);
-      const { token } = db.createSession(user.id,'admin',1);
-      const secure = ctx.req.headers['x-forwarded-proto'] === 'https' || ctx.req.socket.encrypted;
-      ctx.res.setHeader('Set-Cookie',`${ADMIN_COOKIE}=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=86400${secure ? '; Secure' : ''}`);
+      authSession.signIn(ctx, user.id, 'admin', ADMIN_COOKIE);
       ctx.json({ok:true});
     });
-    app.post(base+'/logout', ctx => { mutating(ctx); db.destroySession(ctx.cookies[ADMIN_COOKIE]); ctx.res.setHeader('Set-Cookie',`${ADMIN_COOKIE}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0`); ctx.json({ok:true}); });
+    app.post(base+'/logout', ctx => { mutating(ctx); authSession.signOut(ctx, ADMIN_COOKIE, 'admin'); ctx.json({ok:true}); });
   }
   app.get(base+'/config', ctx => {
     const user = auth(ctx), role = roleFor();
