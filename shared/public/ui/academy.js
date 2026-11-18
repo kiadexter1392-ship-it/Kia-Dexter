@@ -13,6 +13,7 @@
   // Lightweight inline SVGs and groups, shared by all roles; permissions still
   // come only from the server schema. No icon library or fabricated counters.
   const navigationGroups = [
+    { label:'نمای کلی', icon:'grid', kinds:['dashboard'] },
     { label:'اعضا و آموزش', icon:'people', kinds:['people','users','sports','coaches','classes','attendance','meetings'] },
     { label:'ارزیابی و پیشرفت', icon:'chart', kinds:['exams','monthly_scores','exam_results','evaluations','leaderboard'] },
     { label:'رویدادها و افتخارات', icon:'award', kinds:['competitions','honours','challenges','challenge_results'] },
@@ -25,7 +26,8 @@
     award:'<circle cx="12" cy="8" r="5"/><path d="m8 12-2 9 6-3 6 3-2-9"/>',
     wallet:'<rect x="3" y="5" width="18" height="15" rx="3"/><path d="M17 12h4m-3-7V3H6a3 3 0 0 0 0 6h15"/>',
     shield:'<path d="m12 3 8 3v6c0 4-4 7-8 9-4-2-8-5-8-9V6z"/><path d="m8 12 3 3 5-6"/>',
-    calendar:'<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4m10-4v4M3 11h18m-13 5h2m4 0h2"/>'
+    calendar:'<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4m10-4v4M3 11h18m-13 5h2m4 0h2"/>',
+    grid:'<rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/>'
   };
   const groupFor = kind => navigationGroups.find(g=>g.kinds.includes(kind)) || {label:'بخش‌های آکادمی',icon:'calendar'};
   const icon = kind => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${iconPaths[['classes','attendance','meetings','exams'].includes(kind)?'calendar':groupFor(kind).icon]}</svg>`;
@@ -150,10 +152,11 @@
     $('sectionIcon').innerHTML=icon(kind);$('sectionGroup').textContent=groupFor(kind).label;
     $('sectionBody').setAttribute('aria-busy','true');
     $('academyError').textContent='';$('sectionTools').innerHTML='';$('sectionBody').innerHTML=empty('در حال دریافت اطلاعات…');
-    $('sectionTitle').textContent=config.schema[kind]?.label||({leaderboard:'لیدربورد هر رشته',people:'اطلاعات شاگردان و مربیان',review:'بازبینی داده‌های قدیمی',audit:'گزارش تغییرات',users:'ایجاد حساب شاگرد یا مربی'}[kind]);
+    $('sectionTitle').textContent=config.schema[kind]?.label||({dashboard:'داشبورد',leaderboard:'لیدربورد هر رشته',people:'اطلاعات شاگردان و مربیان',review:'بازبینی داده‌های قدیمی',audit:'گزارش تغییرات',users:'ایجاد حساب شاگرد یا مربی'}[kind]);
     $('addRecord').hidden=!(config.schema[kind]?.writable||kind==='users');
     document.querySelectorAll('#academyNav button').forEach(b=>{if(b.dataset.kind===kind)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
     try{
+      if(kind==='dashboard')return await dashboardView();
       if(kind==='leaderboard')return leaderboard();
       if(kind==='people'||kind==='users')return await peopleView();
       if(kind==='review')return await review();
@@ -247,6 +250,147 @@
     let searchFrame;
     $('peopleSearch').oninput=()=>{cancelAnimationFrame(searchFrame);searchFrame=requestAnimationFrame(()=>{if(['people','users'].includes(current))draw();});};draw();
   }
+  // Overview dashboard: every figure comes from /dashboard (real rows only).
+  // A null value renders as "داده‌ای ثبت نشده" — never as a fabricated zero.
+  const dashNum = value => value === null || value === undefined ? '—' : fa(value);
+  function miniBars(series) {
+    const values = (series || []).filter(v => v !== null && v !== undefined);
+    if (!values.length) return '<span class="dash-mini-empty">داده‌ای ثبت نشده</span>';
+    const max = Math.max(...values, 1);
+    return `<span class="dash-mini" aria-hidden="true">${(series || []).map(v => `<i style="height:${v === null || v === undefined ? 0 : Math.max(8, v / max * 100)}%"></i>`).join('')}</span>`;
+  }
+  function trendText(trend) {
+    if (!trend) return '';
+    return `<span class="dash-trend ${trend.up ? 'up' : 'down'}">${trend.up ? '▲' : '▼'} ${fa(Math.abs(trend.value))}</span>`;
+  }
+  function areaChart(points) {
+    const data = points.filter(p => p.value !== null && p.value !== undefined);
+    if (!data.length) return empty('برای این بازه داده‌ای ثبت نشده است.');
+    const w = 560, h = 190, pad = 26;
+    const max = Math.max(...data.map(p => p.value), 1);
+    const step = data.length > 1 ? (w - pad * 2) / (data.length - 1) : 0;
+    const coords = data.map((p, i) => [w - pad - i * step, h - pad - (p.value / max) * (h - pad * 2)]);
+    const line = coords.map((c, i) => `${i ? 'L' : 'M'}${c[0].toFixed(1)},${c[1].toFixed(1)}`).join(' ');
+    const dots = coords.map((c, i) => `<circle cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" r="3.5"/><text x="${c[0].toFixed(1)}" y="${h - 6}" text-anchor="middle">${esc(data[i].label)}</text><text x="${c[0].toFixed(1)}" y="${(c[1] - 8).toFixed(1)}" text-anchor="middle" class="dash-chart-value">${fa(data[i].value)}</text>`).join('');
+    return `<svg class="dash-area" viewBox="0 0 ${w} ${h}" role="img" aria-label="نمودار عملکرد ماهانه"><defs><linearGradient id="dashAreaFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#c9a462" stop-opacity=".35"/><stop offset="100%" stop-color="#c9a462" stop-opacity="0"/></linearGradient></defs><path d="${line} L${coords[coords.length - 1][0]},${h - pad} L${coords[0][0]},${h - pad} Z" fill="url(#dashAreaFill)"/><path d="${line}" fill="none" stroke="#967137" stroke-width="2.5" stroke-linecap="round"/>${dots}</svg>`;
+  }
+  function barChart(rows, series) {
+    const max = Math.max(1, ...rows.flatMap(r => series.map(s => r[s.key] || 0)));
+    return `<div class="dash-bars" role="img" aria-label="نمودار میله‌ای">${rows.map(r => `<figure><span class="dash-bar-group">${series.map(s => `<i class="dash-bar ${s.key}" style="height:${Math.max(r[s.key] ? 3 : 0, (r[s.key] || 0) / max * 100)}%" title="${esc(s.label)}: ${fa(r[s.key] || 0)}"></i>`).join('')}</span><figcaption>${esc(r.label)}</figcaption></figure>`).join('')}</div>`;
+  }
+  async function dashboardView() {
+    const d = await api('/dashboard');
+    if (current !== 'dashboard') return;
+    const dash = d.dashboard;
+    const isAttendance = dash.chart && dash.chart.kind === 'attendance';
+    const rangeOptions = isAttendance
+      ? [['weeks', 'هفته‌های اخیر'], ['months', 'ماه‌های اخیر']]
+      : [['6', '۶ ماه اخیر'], ['3', '۳ ماه اخیر']];
+    const dateText = new Intl.DateTimeFormat('fa-IR', { dateStyle: 'full' }).format(new Date(dash.today.iso + 'T12:00:00Z'));
+    const loadRows = dash.load || [];
+    const loadTotal = loadRows.reduce((s, r) => s + (r.value || 0), 0);
+    const capacity = dash.capacity;
+    const capacityMax = capacity ? Math.max(1, ...capacity.rows.map(r => r.value)) : 1;
+    $('sectionBody').innerHTML = `
+      <div class="dash">
+        <div class="dash-head">
+          <div class="dash-greeting">
+            <h3>سلام، ${esc(config.user.full_name)}</h3>
+            <p><time datetime="${esc(dash.today.iso)}">${esc(dateText)}</time></p>
+          </div>
+          <div class="dash-actions">
+            <button type="button" class="btn" id="dashExport">خروجی CSV</button>
+            <label class="dash-range">بازه<select id="dashRange">${rangeOptions.map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></label>
+            <button type="button" class="btn primary" id="dashAdd">ثبت جدید</button>
+          </div>
+        </div>
+        <div class="dash-metrics">
+          ${dash.metrics.map(m => `<article class="dash-metric"><div class="dash-metric-top"><h4>${esc(m.label)}</h4></div><div class="dash-metric-bottom"><div><p class="dash-metric-value">${dashNum(m.value)}</p><p class="dash-metric-trend">${trendText(m.trend)}</p></div>${miniBars(m.series)}</div></article>`).join('')}
+        </div>
+        <div class="dash-row">
+          <section class="dash-card dash-chart-card">
+            <div class="dash-card-head"><h4>${esc(dash.chart.title)}</h4><div class="dash-legend" id="dashLegend"></div></div>
+            <div class="dash-chart-stats">${dash.chart.stats.map(s => `<div><b>${dashNum(s.value)}</b><span>${esc(s.label)}</span></div>`).join('')}</div>
+            <div id="dashChart"></div>
+          </section>
+          <section class="dash-card dash-load-card">
+            <div class="dash-card-head"><h4>${esc(dash.loadTitle || 'شاگردان به تفکیک رشته')}</h4></div>
+            ${loadRows.length ? `<div class="dash-load-total"><span>مجموع</span><b>${fa(loadTotal)}</b></div><div class="dash-load-bar">${loadRows.map((r, i) => `<i style="width:${loadTotal ? (r.value || 0) / loadTotal * 100 : 0}%" class="dash-load-seg seg-${i % 5}"></i>`).join('')}</div><ul class="dash-load-list">${loadRows.map((r, i) => `<li><span class="dash-swatch seg-${i % 5}"></span><span class="dash-load-name">${esc(r.label)}</span><span class="dash-load-line"></span><b>${fa(r.value)}</b><span class="dash-load-pct">${fa(r.percent)}٪</span></li>`).join('')}</ul>` : empty('داده‌ای ثبت نشده است.')}
+          </section>
+        </div>
+        <div class="dash-row">
+          <section class="dash-card dash-table-card">
+            <div class="dash-card-head"><h4>${esc(dash.table.title)}</h4></div>
+            ${dash.table.rows.length ? `<div class="academy-scroll"><table><thead><tr>${dash.table.columns.map(c => `<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${dash.table.rows.map(r => `<tr>${r.map(c => `<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>` : empty('برای نمایش چیزی ثبت نشده است.')}
+          </section>
+          <div class="dash-side">
+            <section class="dash-card dash-perf-card">
+              <div class="dash-card-head"><h4>${esc(dash.performance.title)}</h4></div>
+              ${dash.performance.rows.length ? `<ul class="dash-perf-list">${dash.performance.rows.map(r => `<li>${r.id ? `<button type="button" class="dash-perf-row" data-person="${r.id}">` : '<span class="dash-perf-row">'}<span class="dash-avatar">${esc(r.name.trim().slice(0, 1))}</span><span class="dash-perf-info"><b>${esc(r.name)}</b><small>${esc(r.discipline)}</small></span><span class="dash-perf-stats"><b>${dashNum(r.avg)}</b><small>از ۵ · ${fa(r.count)} ارزیابی</small></span>${r.id ? '</button>' : '</span>'}</li>`).join('')}</ul>` : empty('ارزیابی ثبت‌شده‌ای وجود ندارد.')}
+            </section>
+            ${capacity ? `<section class="dash-card dash-cap-card"><div class="dash-card-head"><h4>${esc(capacity.title)}</h4></div>${capacity.rows.length ? `<ul class="dash-cap-list">${capacity.rows.map(r => `<li><span class="dash-cap-name">${esc(r.label)}</span><span class="dash-cap-bar"><i style="width:${r.value / capacityMax * 100}%"></i></span><b>${fa(r.value)}</b></li>`).join('')}</ul>` : empty('کلاسی ثبت نشده است.')}</section>` : ''}
+          </div>
+        </div>
+      </div>
+      <dialog id="personDialog" aria-labelledby="personTitle">
+        <div class="academy-dialog-head"><div><span class="academy-eyebrow">جزئیات</span><h2 id="personTitle">—</h2></div><button type="button" class="btn ghost" id="closePerson" aria-label="بستن">✕</button></div>
+        <div id="personBody"></div>
+      </dialog>`;
+    const drawChart = () => {
+      const range = $('dashRange').value;
+      if (isAttendance) {
+        const rows = range === 'months' ? dash.chart.months : dash.chart.weeks;
+        const series = [{ key: 'present', label: 'حضور' }, { key: 'absent', label: 'غیبت' }, { key: 'excused', label: 'موجه' }];
+        $('dashLegend').innerHTML = series.map(s => `<span><i class="dash-swatch ${s.key}"></i>${s.label}</span>`).join('');
+        $('dashChart').innerHTML = barChart(rows, series);
+      } else {
+        const rows = dash.chart.months.slice(range === '3' ? -3 : undefined);
+        $('dashLegend').innerHTML = '';
+        $('dashChart').innerHTML = areaChart(rows);
+      }
+    };
+    $('dashRange').onchange = drawChart;
+    drawChart();
+    $('dashExport').onclick = () => {
+      const rows = isAttendance
+        ? ($('dashRange').value === 'months' ? dash.chart.months : dash.chart.weeks).map(r => [r.label, r.present, r.absent, r.excused])
+        : dash.chart.months.map(r => [r.label, r.value ?? '']);
+      const header = isAttendance ? ['بازه', 'حضور', 'غیبت', 'موجه'] : ['ماه', 'نمره'];
+      const cell = v => '"' + String(v ?? '').replace(/^[=+\-@\t\r]/, "'$&").replace(/"/g, '""') + '"';
+      const lines = [header, ...rows].map(row => row.map(cell).join(',')).join('\r\n');
+      const url = URL.createObjectURL(new Blob(['\uFEFF' + lines], { type: 'text/csv;charset=utf-8' }));
+      const a = document.createElement('a'); a.href = url; a.download = 'academy-dashboard.csv'; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    };
+    $('dashAdd').onclick = () => {
+      const writable = Object.entries(config.schema).find(([, v]) => v.writable);
+      if (writable) { location.hash = writable[0]; }
+    };
+    $('sectionBody').querySelectorAll('[data-person]').forEach(b => b.onclick = () => openPerson(Number(b.dataset.person)));
+    $('closePerson').onclick = () => $('personDialog').close();
+  }
+  async function openPerson(id) {
+    const dialog = $('personDialog');
+    $('personBody').innerHTML = empty('در حال دریافت اطلاعات…');
+    if (!dialog.open) dialog.showModal();
+    try {
+      const d = await api('/dashboard/person/' + id);
+      const p = d.person;
+      $('personTitle').textContent = p.name;
+      const extra = p.role === 'coach'
+        ? `<div class="dash-person-stats"><div><b>${fa(p.classes)}</b><span>کلاس فعال</span></div><div><b>${dashNum(p.evalAvg)}</b><span>میانگین ارزیابی از ۵</span></div><div><b>${fa(p.evalCount)}</b><span>تعداد ارزیابی</span></div></div>`
+        : `<div class="dash-person-stats"><div><b>${fa(p.classes)}</b><span>کلاس فعال</span></div></div>`;
+      $('personBody').innerHTML = `
+        <div class="dash-person-head"><span class="dash-avatar big">${esc(p.name.trim().slice(0, 1))}</span><div><h3>${esc(p.name)}</h3><p>${p.role === 'coach' ? 'مربی' : 'شاگرد'} · ${esc(p.discipline)}</p></div></div>
+        ${extra}
+        <h4 class="dash-person-h">عملکرد ماهانه</h4>
+        ${areaChart(p.months)}
+        <h4 class="dash-person-h">اطلاعات ثبت‌شده</h4>
+        ${p.info.length ? `<dl class="dash-person-info">${p.info.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>` : empty('اطلاعات تکمیلی ثبت نشده است.')}`;
+    } catch (err) {
+      $('personBody').innerHTML = empty(err.message);
+    }
+  }
   function leaderboard(){
     $('sectionTools').innerHTML=`<form id="rankForm" class="academy-tools"><label>رشته<select name="discipline">${config.sports.map(x=>`<option>${x}</option>`).join('')}</select></label><label>سال شمسی<input name="year" type="number" min="1300" max="1600" value="${config.jy}" required></label><label>ماه<input name="month" type="number" min="1" max="12" value="${config.jm}" required></label><button class="btn primary">نمایش</button></form>`;
     $('sectionBody').innerHTML=empty('رشته و ماه را انتخاب کنید؛ رتبه فقط از نمرهٔ ماهانهٔ تأییدشده محاسبه می‌شود.');
@@ -268,8 +412,8 @@
       const today=new Date();$('academyToday').dateTime=today.toISOString().slice(0,10);
       $('academyToday').textContent=new Intl.DateTimeFormat('fa-IR',{dateStyle:'full'}).format(today);
 
-      const sections=[...Object.entries(config.schema).map(([k,v])=>[k,v.label]),['leaderboard','لیدربورد هر رشته']];
-      if(config.role!=='member')sections.unshift(['people','اطلاعات شاگردان و مربیان']);
+      const sections=[['dashboard','داشبورد'],...Object.entries(config.schema).map(([k,v])=>[k,v.label]),['leaderboard','لیدربورد هر رشته']];
+      if(config.role!=='member')sections.splice(1,0,['people','اطلاعات شاگردان و مربیان']);
       if(admin)sections.push(['users','ایجاد حساب'],['review','بازبینی داده‌های قدیمی'],['audit','گزارش تغییرات']);
       renderNavigation(sections);
       $('addRecord').onclick=()=>openForm();

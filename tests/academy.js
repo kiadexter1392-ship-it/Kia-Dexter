@@ -115,6 +115,37 @@ async function freePort(){const s=net.createServer().listen(0,'127.0.0.1');await
      const restricted=(await req(base,'/api/academy/config','GET',undefined,cookie)).data.schema;
      for(const kind of ['attendance','meetings','discounts'])assert.equal(restricted[kind],undefined);
    }
+   // Dashboard aggregates: real rows only, role-scoped, no fabricated figures.
+   const dashAdmin=(await req(coach,'/admin/api/dashboard','GET',undefined,cookieA)).data.dashboard;
+   assert.equal(dashAdmin.metrics.length,4);
+   assert.equal(dashAdmin.chart.kind,'attendance');
+   assert.equal(dashAdmin.chart.weeks.length,8);
+   assert.equal(dashAdmin.chart.weeks.reduce((s,w)=>s+w.present,0),2,'both real attendance rows counted');
+   assert.equal(dashAdmin.load.reduce((s,r)=>s+r.value,0),3,'all verified members counted by sport');
+   assert.equal(dashAdmin.performance.rows.length,1,'only coaches with real evaluations appear');
+   assert.equal(dashAdmin.performance.rows[0].avg,4);
+   assert.equal(dashAdmin.capacity.rows.length,1);
+   assert.equal(dashAdmin.capacity.rows[0].value,1);
+   const dashCoach=(await req(coach,'/api/academy/dashboard','GET',undefined,cookieC)).data.dashboard;
+   assert.equal(dashCoach.chart.kind,'scores');
+   assert.equal(dashCoach.metrics.find(x=>x.key==='members').value,1,'coach sees only own class members');
+   assert.equal(dashCoach.table.title,'کلاس‌های من');
+   const dashMember=(await req(member,'/api/academy/dashboard','GET',undefined,cookieM)).data.dashboard;
+   assert.equal(dashMember.chart.kind,'scores','member dashboard never exposes attendance');
+   assert.equal(dashMember.metrics.find(x=>x.key==='score').value,80,'member sees own real score');
+   assert.equal(dashMember.capacity,null);
+   assert.ok(!JSON.stringify(dashMember).includes('حضور هفتگی'));
+   await req(member,'/api/academy/dashboard','GET',undefined,undefined,401);
+   const personAdmin=(await req(coach,'/admin/api/dashboard/person/'+m.id,'GET',undefined,cookieA)).data.person;
+   assert.equal(personAdmin.name,m.full_name);
+   assert.equal(personAdmin.months.filter(x=>x.value!==null).length,1,'only the real scored month is plotted');
+   const personSelf=(await req(member,'/api/academy/dashboard/person/'+m.id,'GET',undefined,cookieM)).data.person;
+   assert.equal(personSelf.id,m.id);
+   await req(member,'/api/academy/dashboard/person/'+m2.id,'GET',undefined,cookieM,403);
+   await req(coach,'/api/academy/dashboard/person/'+m2.id,'GET',undefined,cookieC,403);
+   await req(coach,'/api/academy/dashboard/person/'+c2.id,'GET',undefined,cookieC,403);
+   const personCoach=(await req(coach,'/api/academy/dashboard/person/'+c.id,'GET',undefined,cookieC)).data.person;
+   assert.equal(personCoach.evalCount,1);
    await post('meetings',{title:'جلسه مدیر',event_date:'2026-11-13',starts_at:'18:00'},'admin');
    const invoice=(await post('invoices',{user_id:m.id,title:'شهریه واقعی',amount:1000000,discount_percent:10,due_on:'2026-12-01',status:'پرداخت‌نشده',payable:1},'admin')).data.record;
    assert.equal(invoice.data.payable,900000);

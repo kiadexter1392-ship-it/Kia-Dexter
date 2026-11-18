@@ -223,6 +223,232 @@ function save(kind, raw, actor, role, id) {
     return { id, data };
   });
 }
+const MONTH_NAMES = ['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'];
+function monthShift(year, month, delta) {
+  const total = year * 12 + (month - 1) + delta;
+  return [Math.floor(total / 12), total % 12 + 1];
+}
+function lastMonths(count) {
+  const j = todayJalali();
+  const out = [];
+  for (let i = count - 1; i >= 0; i--) out.push(monthShift(j.jy, j.jm, -i));
+  return out;
+}
+function verifiedProgress(userId) {
+  const rows = userId === undefined
+    ? db.all('SELECT * FROM progress WHERE verified=1 ORDER BY year,month')
+    : db.all('SELECT * FROM progress WHERE verified=1 AND user_id=? ORDER BY year,month', userId);
+  return rows.map(r => ({ ...r, overall: db.computeOverall(r) })).filter(r => r.overall !== null);
+}
+function average(values) {
+  const list = values.filter(v => v !== null && v !== undefined);
+  return list.length ? Math.round(list.reduce((s, v) => s + v, 0) / list.length) : null;
+}
+function trendOf(current, previous) {
+  if (current === null || previous === null) return null;
+  return { value: current - previous, up: current >= previous };
+}
+// Overview aggregates for the dashboard. Every number is computed from real
+// rows; a missing period yields null (rendered as "no data"), never zero.
+function dashboardData(actor, role) {
+  const j = todayJalali();
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const users = db.all(`SELECT * FROM users WHERE verified=1 AND active=1 AND id NOT IN (SELECT user_id FROM academy_admins)`);
+  const nameOf = id => db.findById(id)?.full_name || 'ثبت نشده';
+  const allClasses = records('classes');
+  const progress = verifiedProgress();
+  const months = lastMonths(6);
+  const [prevY, prevM] = monthShift(j.jy, j.jm, -1);
+  const thisMonth = progress.filter(r => r.year === j.jy && r.month === j.jm);
+  const prevMonthRows = progress.filter(r => r.year === prevY && r.month === prevM);
+  const metric = (key, label, value, series, trend) => ({ key, label, value, series, trend });
+  const data = { role, today: { jy: j.jy, jm: j.jm, jd: j.jd, iso: todayIso }, metrics: [], chart: null, load: [], table: [], performance: [], capacity: [] };
+
+  if (role === 'admin') {
+    const members = users.filter(u => u.role === 'member');
+    const att = records('attendance').map(r => r.data);
+    const weekStartIso = iso => { const d = new Date(iso + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7)); return d.toISOString().slice(0, 10); };
+    const addDays = (iso, n) => { const d = new Date(iso + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+    const fmtDay = iso => new Intl.DateTimeFormat('fa-IR', { month: 'short', day: 'numeric', timeZone: 'UTC' }).format(new Date(iso + 'T12:00:00Z'));
+    const thisWeekStart = weekStartIso(todayIso);
+    const lastWeekStart = addDays(thisWeekStart, -7);
+    const inRange = (rows, from, to) => rows.filter(r => r.event_date >= from && r.event_date <= to);
+    const present = rows => rows.filter(r => r.status === 'حاضر').length;
+    const thisWeek = inRange(att, thisWeekStart, todayIso);
+    const lastWeek = inRange(att, lastWeekStart, addDays(thisWeekStart, -1));
+    const daySeries = [];
+    for (let i = 5; i >= 0; i--) daySeries.push(present(att.filter(r => r.event_date === addDays(todayIso, -i))));
+    const memberSeries = months.map(([y, m]) => members.filter(u => u.created_at && u.created_at.slice(0, 7) <= `${y}-${String(m).padStart(2, '0')}`).length);
+    const scoreSeries = months.map(([y, m]) => average(progress.filter(r => r.year === y && r.month === m).map(r => r.overall)));
+    data.metrics = [
+      metric('members', 'شاگردان فعال', members.length, memberSeries, null),
+      metric('classes', 'کلاس‌های فعال', allClasses.length, SPORTS.map(s => allClasses.filter(c => c.data.discipline === s).length), null),
+      metric('attendance', 'حضور این هفته', present(thisWeek), daySeries, trendOf(present(thisWeek), present(lastWeek))),
+      metric('score', 'میانگین نمرهٔ ماه جاری', average(thisMonth.map(r => r.overall)), scoreSeries, trendOf(average(thisMonth.map(r => r.overall)), average(prevMonthRows.map(r => r.overall)))),
+    ];
+    const weeks = [];
+    for (let i = 7; i >= 0; i--) {
+      const from = addDays(thisWeekStart, -i * 7);
+      const rows = inRange(att, from, addDays(from, 6));
+      weeks.push({ label: fmtDay(from), present: present(rows), absent: rows.filter(r => r.status === 'غایب').length, excused: rows.filter(r => r.status === 'موجه').length });
+    }
+    const monthAtt = months.map(([y, m]) => {
+      const rows = att.filter(r => { const d = new Date(r.event_date + 'T12:00:00Z'); return Number(new Intl.DateTimeFormat('en-US-u-ca-persian', { year: 'numeric', month: 'numeric', timeZone: 'UTC' }).format(d).split('/')[0]) === y; });
+      return rows;
+    });
+    data.chart = {
+      title: 'حضور هفتگی', kind: 'attendance', weeks,
+      months: months.map(([y, m], i) => ({ label: MONTH_NAMES[m - 1], present: present(monthAtt[i]), absent: monthAtt[i].filter(r => r.status === 'غایب').length, excused: monthAtt[i].filter(r => r.status === 'موجه').length })),
+      stats: [
+        { value: present(thisWeek), label: 'حضور این هفته' },
+        { value: present(lastWeek), label: 'حضور هفتهٔ قبل' },
+        { value: att.filter(r => r.status === 'غایب').length, label: 'غیبت ثبت‌شده' },
+      ],
+    };
+    const total = members.length || 1;
+    data.load = SPORTS.map(s => { const count = members.filter(u => u.discipline === s).length; return { label: s, value: count, percent: Math.round(count / total * 100) }; }).filter(r => r.value > 0);
+    const todayAtt = att.filter(r => r.event_date === todayIso);
+    const classById = new Map(allClasses.map(c => [c.id, c.data]));
+    data.table = {
+      title: 'جلسات امروز',
+      columns: ['ساعت', 'کلاس', 'شاگرد', 'وضعیت'],
+      rows: todayAtt.slice(0, 12).map(r => {
+        const c = classById.get(r.class_id) || {};
+        return [c.starts_at || '—', c.title || 'ثبت نشده', nameOf(r.user_id), r.status];
+      }),
+    };
+    const evals = records('evaluations');
+    data.performance = {
+      title: 'عملکرد مربیان',
+      rows: users.filter(u => u.role === 'coach').map(c => {
+        const mine = evals.filter(r => r.data.coach_id === c.id);
+        return { id: c.id, name: c.full_name, discipline: c.discipline || 'ثبت نشده', avg: average(mine.map(r => r.data.score)), count: mine.length };
+      }).filter(r => r.count > 0).sort((a, b) => (b.avg || 0) - (a.avg || 0)),
+    };
+    data.capacity = {
+      title: 'تعداد شاگردان کلاس‌ها',
+      rows: allClasses.map(c => ({ id: c.id, label: c.data.title, value: (c.data.member_ids || []).length })).sort((a, b) => b.value - a.value),
+    };
+  } else if (role === 'coach') {
+    const myClasses = allClasses.filter(c => c.data.coach_id === actor.id);
+    const memberIds = new Set(myClasses.flatMap(c => c.data.member_ids || []));
+    const myMembers = users.filter(u => u.role === 'member' && memberIds.has(u.id));
+    const myProgress = progress.filter(r => memberIds.has(r.user_id));
+    const myThis = myProgress.filter(r => r.year === j.jy && r.month === j.jm);
+    const myPrev = myProgress.filter(r => r.year === prevY && r.month === prevM);
+    const evals = records('evaluations').filter(r => r.data.coach_id === actor.id);
+    const evalThis = evals.filter(r => r.data.year === j.jy && r.data.month === j.jm);
+    const scoreSeries = months.map(([y, m]) => average(myProgress.filter(r => r.year === y && r.month === m).map(r => r.overall)));
+    data.metrics = [
+      metric('members', 'شاگردان کلاس‌های من', myMembers.length, SPORTS.map(s => myMembers.filter(u => u.discipline === s).length), null),
+      metric('classes', 'کلاس‌های من', myClasses.length, SPORTS.map(s => myClasses.filter(c => c.data.discipline === s).length), null),
+      metric('score', 'میانگین نمرهٔ شاگردانم', average(myThis.map(r => r.overall)), scoreSeries, trendOf(average(myThis.map(r => r.overall)), average(myPrev.map(r => r.overall)))),
+      metric('evals', 'ارزیابی‌های این ماه', evalThis.length, months.map(([y, m]) => evals.filter(r => r.data.year === y && r.data.month === m).length), null),
+    ];
+    data.chart = {
+      title: 'میانگین نمرهٔ ماهانهٔ شاگردانم', kind: 'scores',
+      months: months.map(([y, m]) => ({ label: MONTH_NAMES[m - 1], value: average(myProgress.filter(r => r.year === y && r.month === m).map(r => r.overall)) })),
+      stats: [
+        { value: average(myThis.map(r => r.overall)), label: 'میانگین ماه جاری' },
+        { value: average(myPrev.map(r => r.overall)), label: 'میانگین ماه قبل' },
+        { value: myMembers.length, label: 'شاگرد تحت آموزش' },
+      ],
+    };
+    const total = myMembers.length || 1;
+    data.load = SPORTS.map(s => { const count = myMembers.filter(u => u.discipline === s).length; return { label: s, value: count, percent: Math.round(count / total * 100) }; }).filter(r => r.value > 0);
+    data.table = {
+      title: 'کلاس‌های من',
+      columns: ['ساعت', 'کلاس', 'رشته', 'شاگردان'],
+      rows: myClasses.map(c => [c.data.starts_at || '—', c.data.title, c.data.discipline, String((c.data.member_ids || []).length)]),
+    };
+    data.performance = {
+      title: 'ارزیابی‌های من',
+      rows: months.map(([y, m]) => {
+        const mine = evals.filter(r => r.data.year === y && r.data.month === m);
+        return { id: null, name: `${MONTH_NAMES[m - 1]} ${y}`, discipline: 'ارزیابی شاگردان', avg: average(mine.map(r => r.data.score)), count: mine.length };
+      }).filter(r => r.count > 0).reverse(),
+    };
+    data.capacity = {
+      title: 'تعداد شاگردان کلاس‌های من',
+      rows: myClasses.map(c => ({ id: c.id, label: c.data.title, value: (c.data.member_ids || []).length })).sort((a, b) => b.value - a.value),
+    };
+  } else {
+    const mine = progress.filter(r => r.user_id === actor.id);
+    const myThis = mine.filter(r => r.year === j.jy && r.month === j.jm);
+    const myPrev = mine.filter(r => r.year === prevY && r.month === prevM);
+    const myClasses = allClasses.filter(c => (c.data.member_ids || []).includes(actor.id));
+    const myResults = records('challenge_results').filter(r => r.data.user_id === actor.id);
+    const myEvals = records('evaluations').filter(r => r.user_id === actor.id);
+    const scoreSeries = months.map(([y, m]) => { const row = mine.find(r => r.year === y && r.month === m); return row ? row.overall : null; });
+    data.metrics = [
+      metric('score', 'میانگین نمرهٔ من', average(myThis.map(r => r.overall)), scoreSeries, trendOf(average(myThis.map(r => r.overall)), average(myPrev.map(r => r.overall)))),
+      metric('sessions', 'جلسات این ماه', myThis.length ? (myThis[0].sessions ?? null) : null, months.map(([y, m]) => { const row = mine.find(r => r.year === y && r.month === m); return row ? (row.sessions ?? null) : null; }), null),
+      metric('challenges', 'نتایج چالش من', myResults.length, null, null),
+      metric('evals', 'ارزیابی‌های ثبت‌شدهٔ من', myEvals.length, null, null),
+    ];
+    data.chart = {
+      title: 'نمرات ماهانهٔ من', kind: 'scores',
+      months: months.map(([y, m]) => ({ label: MONTH_NAMES[m - 1], value: scoreSeries[months.findIndex(([yy, mm]) => yy === y && mm === m)] })),
+      stats: [
+        { value: average(myThis.map(r => r.overall)), label: 'نمرهٔ ماه جاری' },
+        { value: average(myPrev.map(r => r.overall)), label: 'نمرهٔ ماه قبل' },
+        { value: mine.length, label: 'ماه دارای نمره' },
+      ],
+    };
+    const current = myThis[0];
+    data.load = current ? [
+      { label: 'استقامت', value: current.endurance, percent: current.endurance },
+      { label: 'قدرت', value: current.strength, percent: current.strength },
+      { label: 'تکنیک', value: current.technique, percent: current.technique },
+      { label: 'انعطاف', value: current.flexibility, percent: current.flexibility },
+      { label: 'انضباط', value: current.discipline, percent: current.discipline },
+    ].filter(r => r.value !== null && r.value !== undefined) : [];
+    data.loadTitle = 'مؤلفه‌های نمرهٔ ماه جاری';
+    data.table = {
+      title: 'کلاس‌های من',
+      columns: ['ساعت', 'کلاس', 'رشته', 'مربی'],
+      rows: myClasses.map(c => [c.data.starts_at || '—', c.data.title, c.data.discipline, nameOf(c.data.coach_id)]),
+    };
+    data.performance = {
+      title: 'مربیان من',
+      rows: myClasses.map(c => {
+        const ev = myEvals.find(r => r.data.coach_id === c.data.coach_id && r.data.year === j.jy && r.data.month === j.jm);
+        return { id: c.data.coach_id, name: nameOf(c.data.coach_id), discipline: c.data.discipline, avg: ev ? ev.data.score : null, count: ev ? 1 : 0 };
+      }),
+    };
+    data.capacity = null;
+  }
+  return data;
+}
+function personDetail(actor, role, id) {
+  const u = db.findById(id);
+  if (!u || !u.verified || !u.active || db.get('SELECT user_id FROM academy_admins WHERE user_id=?', id)) fail('کاربر پیدا نشد', 404);
+  if (role === 'member' && id !== actor.id) fail('دسترسی مجاز نیست', 403);
+  if (role === 'coach' && id !== actor.id) {
+    const allowed = u.role === 'member' && records('classes').some(r => r.data.coach_id === actor.id && (r.data.member_ids || []).includes(id));
+    if (!allowed) fail('دسترسی مجاز نیست', 403);
+  }
+  const j = todayJalali();
+  const months = lastMonths(6).map(([y, m]) => {
+    const row = db.progressRow(id, y, m);
+    return { label: MONTH_NAMES[m - 1], value: row && row.verified ? db.computeOverall(row) : null };
+  });
+  const info = [
+    ['رشته', u.discipline], ['جنسیت', u.gender], ['تاریخ تولد', u.birth_date], ['سن', u.age],
+    ['وزن (کیلوگرم)', u.weight_kg], ['قد (سانتی‌متر)', u.height_cm], ['کمربند', u.belt],
+    ['تلفن', u.phone], ['تاریخ عضویت', u.join_date],
+  ].filter(([, v]) => v !== null && v !== undefined && v !== '');
+  const detail = { id: u.id, name: u.full_name, role: u.role, discipline: u.discipline || 'ثبت نشده', months, info };
+  if (u.role === 'coach') {
+    const evals = records('evaluations').filter(r => r.data.coach_id === id);
+    detail.classes = records('classes').filter(r => r.data.coach_id === id).length;
+    detail.evalAvg = average(evals.map(r => r.data.score));
+    detail.evalCount = evals.length;
+  } else {
+    detail.classes = records('classes').filter(r => (r.data.member_ids || []).includes(id)).length;
+  }
+  return detail;
+}
 function adminUser(ctx) {
   return authSession.restore(ctx, ADMIN_COOKIE, 'admin', user => !!db.get('SELECT user_id FROM academy_admins WHERE user_id=?',user.id));
 }
@@ -269,6 +495,8 @@ function mount(app, options) {
     const defs = Object.fromEntries(Object.entries(schema).filter(([k]) => canRead(k,role)).map(([k,v]) => [k,{ ...v, writable:v.write.includes(role) }]));
     ctx.json({ ok:true, user: {id:user.id,full_name:user.full_name}, role, schema:defs, sports:SPORTS, ...todayJalali(), paymentPortal:paymentPortal() });
   });
+  app.get(base+'/dashboard', ctx => { const u=auth(ctx); ctx.json({ok:true,dashboard:dashboardData(u,roleFor())}); });
+  app.get(base+'/dashboard/person/:id', ctx => { const u=auth(ctx); ctx.json({ok:true,person:personDetail(u,roleFor(),Number(ctx.params.id))}); });
   app.get(base+'/people', ctx => {
     const user = auth(ctx), role = roleFor();
     let people = db.all(`SELECT * FROM users WHERE verified=1 ${role==='admin'?'':'AND active=1'} AND id NOT IN (SELECT user_id FROM academy_admins) ORDER BY full_name`);
