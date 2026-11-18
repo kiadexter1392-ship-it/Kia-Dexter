@@ -113,8 +113,9 @@
     const series = progress.history.filter((h) => h.overall !== null).slice(-8);
 
     box.innerHTML = `
-      <div class="stack">
-        <div class="card pad-lg">
+      <div class="stack member-overview">
+        <div class="member-overview-heading"><div><span>پنل شاگرد</span><h2>نمای کلی</h2><p>خلاصهٔ تمرین‌ها و پیشرفت شما</p></div><a href="/academy">خدمات آکادمی ←</a></div>
+        <div class="card pad-lg member-welcome">
           <div class="row between wrap" style="gap:16px">
             <div class="row" style="gap:14px">
               ${avatar(ME, 'lg')}
@@ -135,21 +136,21 @@
           </div>
         </div>
 
-        <div class="grid-4">
+        <div class="grid-4 member-metrics" aria-label="خلاصهٔ وضعیت">
           ${stat('تمرین باز', fa(open.length), 'باید انجام دهی', 'var(--red)')}
           ${stat('تکمیل‌شده', fa(done.length), 'از ابتدای عضویت', 'var(--green)')}
           ${stat('آخرین نمره', last && last.overall !== null ? fa(last.overall) : '—', lastMonth ? J.MONTHS[lastMonth - 1] + ' ' + fa(state.year) : 'ثبت نشده', 'var(--gold)')}
           ${stat('اطلاعیه خوانده‌نشده', fa(unreadNews), 'از سمت باشگاه', 'var(--blue)')}
         </div>
 
-        <div class="split">
+        <div class="split member-overview-grid">
           <div class="stack">
             <div class="card">
               <div class="card-head">
                 <div class="card-title"><span class="dot"></span> تمرین‌های پیش رو</div>
-                <button class="btn sm ghost" data-goto="plans">همه ←</button>
+                <div class="member-plan-controls"><label for="homePlanFilter">وضعیت</label><select id="homePlanFilter"><option value="all">همهٔ تمرین‌های باز</option><option value="todo">شروع نشده</option><option value="doing">در حال انجام</option></select><button class="btn sm ghost" data-goto="plans">همه ←</button></div>
               </div>
-              ${open.length ? open.slice(0, 4).map((p) => planRow(p)).join('') : emptyHTML('تمرین بازی ثبت نشده است', '⚑')}
+              <div id="homePlanRows">${open.length ? open.slice(0, 4).map((p) => `<div data-home-plan-status="${esc(p.status)}">${planRow(p)}</div>`).join('') : emptyHTML('تمرین بازی ثبت نشده است', '⚑')}</div><p class="member-filter-empty" id="homePlanEmpty" hidden>تمرینی با این وضعیت ثبت نشده است.</p>
             </div>
 
             <div class="card">
@@ -190,13 +191,23 @@
       </div>`;
 
     wireGoto(box);
+    const planFilter = box.querySelector('#homePlanFilter');
+    planFilter.addEventListener('change', () => {
+      const rows = open.filter(p => planFilter.value === 'all' || p.status === planFilter.value).slice(0, 4);
+      box.querySelector('#homePlanRows').innerHTML = rows.map(p => `<div data-home-plan-status="${esc(p.status)}">${planRow(p)}</div>`).join('');
+      box.querySelector('#homePlanEmpty').hidden = rows.length > 0;
+      bindHomePlans();
+    });
     box.querySelectorAll('[data-open-ann]').forEach((el) => el.addEventListener('click', () => openAnnouncement(Number(el.dataset.openAnn))));
+    function bindHomePlans() {
     box.querySelectorAll('[data-plan-open]').forEach((b) => b.addEventListener('click', () => planModal(plans.plans.find((p) => p.id === Number(b.dataset.planOpen)))));
     box.querySelectorAll('[data-quick-done]').forEach((b) => b.addEventListener('click', async (e) => {
       e.stopPropagation();
       await markDone(Number(b.dataset.quickDone));
       switchView('home');
     }));
+    }
+    bindHomePlans();
   }
 
   function stat(label, value, sub, color) {
