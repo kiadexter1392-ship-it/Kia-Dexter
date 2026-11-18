@@ -203,3 +203,9 @@
 @media (prefers-reduced-motion: reduce) {
   .academy-app *, .academy-app *::before, .academy-app *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
 }
+
+/* 08 — Bounded card pages keep long rosters responsive without hiding records. */
+.academy-pagination { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; padding-top:22px; margin-top:20px; border-top:1px solid var(--academy-line); }
+.academy-pagination span { font-size:12px; color:var(--academy-muted); }
+.academy-pagination .btn { font-size:12px; }
+@media (max-width:600px) { .academy-pagination { gap:8px; } .academy-pagination span { order:3; width:100%; text-align:center; } }

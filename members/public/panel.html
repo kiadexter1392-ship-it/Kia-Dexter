@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#c9a44e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ارسلان دوجو">
+  <title>پنل شاگرد — باشگاه آنلاین ارسلان دوجو</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'><circle cx='24' cy='24' r='20' fill='%23d9a441'/></svg>">
+  <link rel="apple-touch-icon" href="/ui/icons/icon-192.png">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css">
+  <link rel="stylesheet" href="/ui/style.css">
+  <link rel="stylesheet" href="/ui/shell.css?v=chart-tabs-2">
+</head>
+<body class="has-magnifying-dock">
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="side-head">
+        <div class="brand">
+          <span class="mark sm">
+            <svg viewBox="0 0 48 48" aria-hidden="true">
+              <defs>
+                <linearGradient id="ensoG" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stop-color="#ff6b5e"></stop>
+                  <stop offset="100%" stop-color="#d9a441"></stop>
+                </linearGradient>
+              </defs>
+              <path d="M33.5 8.6A19 19 0 1 0 42.6 27.4" fill="none" stroke="url(#ensoG)" stroke-width="4.6" stroke-linecap="round"></path>
+              <circle cx="24" cy="24" r="4.2" fill="url(#ensoG)"></circle>
+            </svg>
+          </span>
+          <div>
+            <div class="name">ارسلان دوجو</div>
+            <div class="sub">پنل شاگرد</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="side-label">پنل کاربری</div>
+      <button class="nav-item active" data-view="home"><span class="ic">◈</span> خانه</button>
+      <button class="nav-item" data-view="plans"><span class="ic">⚑</span> تمرینات من <span class="count hidden" id="cntPlans"></span></button>
+      <button class="nav-item" data-view="progress"><span class="ic">▦</span> جدول پیشرفت</button>
+      <button class="nav-item" data-view="news"><span class="ic">✦</span> اطلاعیه‌ها <span class="count hidden" id="cntNews"></span></button>
+      <button class="nav-item" data-view="payment"><span class="ic">💳</span> پرداخت شهریه</button>
+      <button class="nav-item" data-view="support"><span class="ic">📞</span> پشتیبانی</button>
+      <button class="nav-item" data-view="profile"><span class="ic">☺</span> پروفایل من</button>
+
+      <a class="nav-item" href="/academy">خدمات آکادمی و امکانات جدید</a>
+
+      <div class="side-foot">
+        <a class="nav-item" id="coachLink" href="#" target="_blank" rel="noopener"><span class="ic">↗</span> پنل مربی</a>
+        <button class="nav-item" id="logoutBtn"><span class="ic">⎋</span> خروج</button>
+        <div class="tiny" style="padding:8px">سایت شماره ۲ از ۲</div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="topbar">
+        <div class="row grow" style="gap:12px">
+          <span id="meAvatar"></span>
+          <div class="grow">
+            <h1 id="viewTitle">خانه</h1>
+            <div class="sub" id="todayLabel">—</div>
+          </div>
+        </div>
+        <button class="btn icon bell" id="bellBtn" title="اعلان‌ها">🔔<span class="dot hidden" id="bellDot">0</span></button>
+        <button class="btn" id="quickProgress">ثبت خودارزیابی</button>
+      </div>
+
+      <section class="section active" id="view-home"></section>
+
+      <!-- CardSwap — decorative stack in home view -->
+      <div id="cardSwapRoot" class="cardswap-wrap" style="display:none"></div>
+
+      <!-- StackedBars — progress chart -->
+      <div id="stackedBarsRoot" style="display:flex;justify-content:center;padding:20px 0"></div>
+
+      <!-- ToastStack — notification stack -->
+      <div id="toastStackRoot" style="display:flex;justify-content:center;padding:20px 0"></div>
+      <section class="section" id="view-plans"></section>
+      <section class="section" id="view-progress"></section>
+      <section class="section" id="view-news"></section>
+      <section class="section" id="view-payment"></section>
+      <section class="section" id="view-support"></section>
+      <section class="section" id="view-profile"></section>
+      <div id="magnifyingDock" class="magnifying-dock-slot"></div>
+    </main>
+  </div>
+
+  <script src="/ui/jalali.browser.js"></script>
+  <script src="/ui/ui.js"></script>
+  <script src="/ui/MagnifyingDock.js"></script>
+  <script src="/panel.js"></script>
+  <script src="/ui/sport-catalog.js"></script>
+  <script src="/CardSwap.js"></script>
+  <script src="/StackedBars.js?v=chart-tabs-2"></script>
+  <script src="/ToastStack.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register(UI.PATH_PREFIX + '/sw.js').catch(function(e) {});
+    }
+    /* CardSwap — show in home view after panel loads */
+    (function() {
+      function showCardSwap() {
+        var root = document.getElementById('cardSwapRoot');
+        if (root && window.CardSwap && window.CardSwap.mount) {
+          root.style.display = 'flex';
+          window.CardSwap.mount(root, { auto: true, every: 5 });
+        }
+      }
+      var stackedBarsInstance = null;
+
+      function makeBarsFromAPI(progress, mode) {
+        // Only actual monthly observations exist. Never invent daily/weekly values
+        // by dividing a monthly score, or replace an unmeasured metric with zero.
+        if (mode !== 'Month') return [];
+        var names = ['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'];
+        return Object.keys(progress).map(Number).sort(function(a,b){return a-b;}).filter(function(month) {
+          var row=progress[month];
+          return ['endurance','strength','technique','flexibility'].every(function(key){return Number.isFinite(row[key]);});
+        }).map(function(month) {
+          var row=progress[month];
+          return { vals:[row.endurance,row.strength,row.technique,row.flexibility],esc:row.sessions,
+            label:names[month-1],short:names[month-1] };
+        });
+      }
+
+      var stackedBarsRequest = 0;
+      function loadStackedBarsData(instance, mode) {
+        if (!instance || !UI) return;
+        var request = ++stackedBarsRequest;
+        UI.api('/api/progress?year=' + Jalali.toJalali(new Date()).jy).then(function(d) {
+          // A slower response from a previous tab must not replace the latest view.
+          if (request !== stackedBarsRequest) return;
+          if (d.ok && d.progress) {
+            var bars = makeBarsFromAPI(d.progress, mode);
+            instance.render(bars);
+          }
+        }).catch(function() { document.getElementById('stackedBarsRoot').textContent='دریافت نمودار انجام نشد.'; });
+      }
+
+      var toastStackInstance = null;
+
+      function showStackedBars() {
+        var root = document.getElementById('stackedBarsRoot');
+        if (root && window.StackedBars && window.StackedBars.mount) {
+          stackedBarsInstance = window.StackedBars.mount(root, {
+            colour: 'Colour',
+            initialMode: 'Month',
+            monthlyOnly: true,
+            onModeChange: function(mode) {
+              loadStackedBarsData(stackedBarsInstance, mode);
+            }
+          });
+          stackedBarsInstance.render([]);
+          loadStackedBarsData(stackedBarsInstance, 'Month');
+        }
+      }
+
+      function showToastStack() {
+        var root = document.getElementById('toastStackRoot');
+        if (root && window.ToastStack && window.ToastStack.mount && !toastStackInstance) {
+          UI.api('/api/notifications').then(function(data) {
+            toastStackInstance = window.ToastStack.mount(root, { peek:14,gap:10,corner:16,items:data.notifications.slice(0,3).map(function(n){return {kind:'info',title:n.title,body:n.body};}) });
+          }).catch(function(){ root.textContent='دریافت اعلان‌ها انجام نشد.'; });
+        }
+      }
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+          setTimeout(showCardSwap, 800);
+          setTimeout(showStackedBars, 600);
+          setTimeout(showToastStack, 1200);
+        });
+      } else {
+        setTimeout(showCardSwap, 800);
+        setTimeout(showStackedBars, 600);
+        setTimeout(showToastStack, 1200);
+      }
+    })();
+  </script>
+</body>
+</html>

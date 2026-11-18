@@ -57,16 +57,34 @@
     if(sectionList.some(([key])=>key===kind))show(kind);
   });
 
-  async function api(path, method = 'GET', body) {
-    const response = await fetch(base + path, { method, credentials:'same-origin', headers: { 'Content-Type':'application/json','X-Academy-Request':'1' }, body:body === undefined ? undefined : JSON.stringify(body) });
-    const data = await response.json();
-    if (!response.ok || data.ok === false) throw Object.assign(new Error(data.error || 'درخواست انجام نشد'),{status:response.status});
-    return data;
+  // Only coalesce simultaneous reads, never persist private API responses.
+  // Clear in-flight sharing on writes so a post-save read cannot reuse old data.
+  const pendingReads = new Map();
+  function api(path, method = 'GET', body) {
+    if(method==='GET' && pendingReads.has(path))return pendingReads.get(path);
+    if(method!=='GET')pendingReads.clear();
+    const request=(async()=>{
+      const response = await fetch(base + path, { method, credentials:'same-origin', headers: { 'Content-Type':'application/json','X-Academy-Request':'1' }, body:body === undefined ? undefined : JSON.stringify(body) });
+      const data = await response.json();
+      if (!response.ok || data.ok === false) throw Object.assign(new Error(data.error || 'درخواست انجام نشد'),{status:response.status});
+      return data;
+    })();
+    if(method==='GET') {
+      pendingReads.set(path,request);
+      request.finally(()=>{if(pendingReads.get(path)===request)pendingReads.delete(path);}).catch(()=>{});
+    }
+    return request;
   }
   function error(err) { $('academyError').textContent = err.message; }
   const referenceTypes = ['classes','challenges','exams','products'];
-  function person(id) { return people.find(p => p.id === Number(id)); }
-  function labelFor(kind, id) { const r = (store[kind] || []).find(r => r.id === Number(id)); return r ? (r.data.title || r.data.product_title || `#${id}`) : `#${id}`; }
+  let peopleIndex=new Map(),peopleTime=0;
+  const referenceTime=new Map(),referenceIndex=new Map();
+  function setPeople(rows){people=rows;peopleIndex=new Map(rows.map(p=>[p.id,p]));peopleTime=Date.now();}
+  async function loadPeople(force=false){if(force || !peopleTime || Date.now()-peopleTime>30000)setPeople((await api('/people')).people);}
+  function person(id) { return peopleIndex.get(Number(id)); }
+  function setReference(kind,rows){store[kind]=rows;referenceTime.set(kind,Date.now());referenceIndex.set(kind,new Map(rows.map(r=>[r.id,r])));}
+  function invalidateReferences(kind){referenceTime.delete(kind);if(kind==='orders')referenceTime.delete('products');}
+  function labelFor(kind, id) { const r = referenceIndex.get(kind)?.get(Number(id)); return r ? (r.data.title || r.data.product_title || `#${id}`) : `#${id}`; }
   function format(field, value) {
     if (value === null || value === undefined || value === '') return 'ثبت نشده';
     if (field.type === 'checkbox') return value ? 'تأیید شده' : 'خیر';
@@ -95,7 +113,10 @@
     else html=`<input id="${id}" name="${key}" type="${field.type==='checkbox'?'checkbox':field.type}"${field.type==='checkbox'?(value?' checked':''):` value="${esc(value??'')}"`}${field.min!==undefined?` min="${field.min}" max="${field.max}" step="${['age','year','month','top_rank','quantity','stock','percent','discount_percent','amount','price'].includes(key)?'1':'any'}"`:''}${field.type==='text'?' maxlength="1000"':''}${required}>`;
     return `<label class="${field.type==='textarea'||field.type==='members'?'academy-wide':''}" for="${id}">${esc(field.label)}${field.required?' *':''}${html}</label>`;
   }
-  function openForm(row) {
+  async function openForm(row) {
+    const kind=current, request=version;
+    try{await loadReferences(referencesFor(kind));}catch(err){error(err);return;}
+    if(current!==kind || request!==version)return;
     editing=row||null;
     const fields=['users','people'].includes(current)?userFields(!!row):config.schema[current].fields;
     $('formTitle').textContent=(row?'ویرایش ':'ثبت ')+(['users','people'].includes(current)?'حساب کاربری':config.schema[current].label);
@@ -114,11 +135,12 @@
     const fd=new FormData(event.currentTarget),body={};
     for(const [key,field]of Object.entries(fields))body[key]=field.type==='checkbox'?fd.has(key):field.type==='members'?fd.getAll(key).map(Number):fd.get(key);
     $('saveRecord').disabled=true;$('formError').textContent='';
-    try{await api(['users','people'].includes(formKind)?'/users'+(row?'/'+row.id:''):`/records/${formKind}${row?'/'+row.id:''}`,row?'PUT':'POST',body);$('recordDialog').close();await loadReferences();if(['users','people'].includes(formKind))people=(await api('/people')).people;if(current===formKind)await show(formKind);}
+    try{await api(['users','people'].includes(formKind)?'/users'+(row?'/'+row.id:''):`/records/${formKind}${row?'/'+row.id:''}`,row?'PUT':'POST',body);$('recordDialog').close();invalidateReferences(formKind);if(['users','people'].includes(formKind))await loadPeople(true);if(current===formKind)await show(formKind);}
     catch(err){$('formError').textContent=err.message;}finally{$('saveRecord').disabled=false;}
   };
-  async function loadReferences() {
-    await Promise.all(referenceTypes.map(async kind=>{if(config.schema[kind])store[kind]=(await api('/records/'+kind)).records;}));
+  function referencesFor(kind){return [...new Set(Object.values(config.schema[kind]?.fields||{}).map(f=>f.type).filter(type=>referenceTypes.includes(type)))];}
+  async function loadReferences(kinds=[]) {
+    await Promise.all(kinds.map(async kind=>{if(config.schema[kind] && (!referenceTime.has(kind) || Date.now()-referenceTime.get(kind)>30000))setReference(kind,(await api('/records/'+kind)).records);}));
   }
   function paymentNotice() {
     return config.paymentPortal?`<div class="academy-notice"><a href="${esc(config.paymentPortal)}" target="_blank" rel="noopener noreferrer">ورود به سامانهٔ واقعی پرداخت شهریه</a><p>این لینک به سامانهٔ بیرونی است. بازگشت از آن به معنی تأیید خودکار پرداخت نیست؛ سابقهٔ بانکی باید تطبیق داده شود.</p></div>`:'<p class="academy-notice">درگاه بانکی هنوز پیکربندی نشده است. هیچ پرداخت آنلاین یا رسید موفق نمایشی تولید نمی‌شود. کارت‌های شهریه در پنل اصلی موجودند؛ تأیید واریز فقط با شماره پیگیری توسط مدیر انجام می‌شود.</p>';
@@ -133,10 +155,12 @@
     document.querySelectorAll('#academyNav button').forEach(b=>{if(b.dataset.kind===kind)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
     try{
       if(kind==='leaderboard')return leaderboard();
-      if(kind==='people'||kind==='users')return peopleView();
-      if(kind==='review')return review();
+      if(kind==='people'||kind==='users')return await peopleView();
+      if(kind==='review')return await review();
       if(kind==='audit'){const d=await api('/audit');if(request===version)$('sectionBody').innerHTML=d.rows.length?`<div class="academy-scroll"><table><thead><tr><th>زمان</th><th>عملیات</th><th>بخش</th><th>شناسه</th></tr></thead><tbody>${d.rows.map(r=>`<tr><td>${esc(r.created_at)}</td><td>${esc(r.action)}</td><td>${esc(r.kind)}</td><td>${r.record_id}</td></tr>`).join('')}</tbody></table></div>`:empty();return;}
-      const rows=(await api('/records/'+kind)).records;if(request!==version)return;currentRows=rows;
+      const [data]=await Promise.all([api('/records/'+kind),loadReferences(referencesFor(kind))]);
+      if(request!==version)return;const rows=data.records;currentRows=rows;
+      if(referenceTypes.includes(kind))setReference(kind,rows);
       if(kind==='evaluations'&&config.role==='coach'){
         $('sectionBody').innerHTML=rows.length?rows.map(r=>`<article class="academy-record"><h3>${esc(r.period)}</h3><p>تعداد ارزیابی: ${fa(r.count)} · میانگین واقعی: ${fa(r.average)} از ۵</p></article>`).join(''):empty('ارزیابی ماهانه‌ای برای شما ثبت نشده است.');return;
       }
@@ -144,15 +168,32 @@
       if(kind==='evaluations')notice+='<p class="academy-notice">ارزیابی فقط برای ماه جاری و مربی کلاس ثبت‌شدهٔ خودتان است. هر ماه یک ارزیابی قابل ویرایش دارید. مربی فقط میانگین و تعداد را می‌بیند.</p>';
       if(kind==='exam_results'||kind==='monthly_scores')notice+='<div id="examChart"></div>';
       if(kind==='challenge_results')notice+='<div id="challengeBoard"></div>';
-      $('sectionBody').innerHTML=notice+(rows.length?`<div class="academy-grid">${rows.map(r=>recordCard(kind,r)).join('')}</div>`:empty());
+      renderRecords(kind,rows,notice);
+    }catch(err){if(request===version){$('sectionBody').innerHTML=empty('دریافت اطلاعات انجام نشد.');error(err);}}
+    finally{if(request===version)$('sectionBody').setAttribute('aria-busy','false');}
+  }
+  // Keep at most 24 full cards in the DOM. This is pagination, not truncation:
+  // every real record remains reachable; no data is dropped from the API.
+  function pageCards(rows,card,afterDraw,leading='') {
+    const size=24;let page=0;
+    function draw(){
+      const pages=Math.max(1,Math.ceil(rows.length/size));
+      $('sectionBody').innerHTML=leading+(rows.length?`<div class="academy-grid">${rows.slice(page*size,(page+1)*size).map(card).join('')}</div>`:empty())+(pages>1?`<nav class="academy-pagination" aria-label="صفحه‌بندی رکوردها"><button class="btn" data-page-step="-1"${page===0?' disabled':''}>صفحهٔ قبل</button><span role="status">صفحهٔ ${fa(page+1)} از ${fa(pages)} · ${fa(rows.length)} رکورد ثبت‌شده</span><button class="btn" data-page-step="1"${page===pages-1?' disabled':''}>صفحهٔ بعد</button></nav>`:'');
+      $('sectionBody').querySelectorAll('[data-page-step]').forEach(button=>button.onclick=()=>{page+=Number(button.dataset.pageStep);draw();$('sectionTitle').focus({preventScroll:true});});
+      afterDraw();
+    }
+    draw();
+  }
+  function renderRecords(kind,rows,notice){
+    const index=new Map(rows.map(row=>[row.id,row]));
+    pageCards(rows,row=>recordCard(kind,row),()=>{
       if(kind==='exam_results')examChart(rows);
       if(kind==='monthly_scores')monthlyChart(rows);
       if(kind==='challenge_results')challengeBoard(rows);
-      $('sectionBody').querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>openForm(rows.find(r=>r.id===Number(b.dataset.edit))));
-      $('sectionBody').querySelectorAll('[data-delete]').forEach(b=>b.onclick=async()=>{if(!confirm('این رکورد حذف شود؟'))return;try{await api(`/records/${kind}/${b.dataset.delete}`,'DELETE');await loadReferences();await show(kind);}catch(err){error(err);}});
-      $('sectionBody').querySelectorAll('[data-order]').forEach(b=>b.onclick=async()=>{try{await api(`/orders/${b.dataset.order}/status`,'POST',{status:b.dataset.status});await loadReferences();await show(kind);}catch(err){error(err);}});
-    }catch(err){if(request===version){$('sectionBody').innerHTML=empty('دریافت اطلاعات انجام نشد.');error(err);}}
-    finally{if(request===version)$('sectionBody').setAttribute('aria-busy','false');}
+      $('sectionBody').querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>openForm(index.get(Number(b.dataset.edit))));
+      $('sectionBody').querySelectorAll('[data-delete]').forEach(b=>b.onclick=async()=>{if(!confirm('این رکورد حذف شود؟'))return;try{await api(`/records/${kind}/${b.dataset.delete}`,'DELETE');invalidateReferences(kind);if(current===kind)await show(kind);}catch(err){error(err);}});
+      $('sectionBody').querySelectorAll('[data-order]').forEach(b=>b.onclick=async()=>{try{await api(`/orders/${b.dataset.order}/status`,'POST',{status:b.dataset.status});invalidateReferences(kind);if(current===kind)await show(kind);}catch(err){error(err);}});
+    },notice);
   }
   function recordCard(kind,row) {
     const def=config.schema[kind];
@@ -189,12 +230,13 @@
     const groups=(store.challenges||[]).map(c=>{const results=rows.filter(r=>r.data.challenge_id===c.id).sort((a,b)=>c.data.exercise==='دو'?a.data.value-b.data.value:b.data.value-a.data.value);let rank=0,last=null;return results.length?`<h3>${esc(c.data.title)} — رتبه‌بندی ${c.data.exercise==='دو'?'زمان کمتر':'تکرار بیشتر'}</h3><ol>${results.map((r,i)=>{if(last!==r.data.value)rank=i+1;last=r.data.value;return `<li>رتبه ${fa(rank)} · ${r.data.is_me?'شما':esc(r.data.participant||person(r.data.user_id)?.full_name||'ورزشکار')} · ${fa(r.data.value)} ${c.data.exercise==='دو'?'ثانیه':'تکرار'}</li>`;}).join('')}</ol>`:'';}).join('');$('challengeBoard').innerHTML=groups;
   }
   async function peopleView(){
-    const d=await api('/people');if(!['people','users'].includes(current))return;people=d.people;
+    await loadPeople();if(!['people','users'].includes(current))return;
     $('sectionTools').innerHTML='<label>جست‌وجوی نام، رشته، شماره تماس<input id="peopleSearch" type="search"></label><button id="exportPeople" class="btn">خروجی اطلاعات شاگردان برای مسابقات (CSV)</button>';
     function draw(){const q=$('peopleSearch').value.trim();const list=people.filter(p=>JSON.stringify(p).includes(q));
       const fields={full_name:'نام کامل',active:'حساب فعال است',username:'نام کاربری',role:'نقش',discipline:'رشته',phone:'تلفن',age:'سن',height_cm:'قد',weight_kg:'وزن',style:'سبک',experience:'سابقه',join_date:'تاریخ عضویت',gender:'جنسیت',birth_date:'تاریخ تولد',blood_group:'گروه خونی',belt:'کمربند',weight_kg:'وزن',height_cm:'قد',notes:'توضیحات ثبت‌شده'};
-      $('sectionBody').innerHTML=list.length?`<div class="academy-grid">${list.map(p=>`<article class="academy-record"><h3>${esc(p.full_name)}</h3><dl>${Object.entries(fields).map(([k,label])=>`<dt>${label}</dt><dd>${esc(p[k]??'ثبت نشده')}</dd>`).join('')}</dl>${config.role==='admin'?`<button class="btn" data-person-edit="${p.id}">ویرایش اطلاعات و وضعیت</button>`:''}</article>`).join('')}</div>`:empty();
-      document.querySelectorAll('[data-person-edit]').forEach(b=>b.onclick=()=>{const p=people.find(p=>p.id===Number(b.dataset.personEdit));openForm({id:p.id,data:p});});
+      pageCards(list,p=>`<article class="academy-record"><h3>${esc(p.full_name)}</h3><dl>${Object.entries(fields).map(([k,label])=>`<dt>${label}</dt><dd>${esc(p[k]??'ثبت نشده')}</dd>`).join('')}</dl>${config.role==='admin'?`<button class="btn" data-person-edit="${p.id}">ویرایش اطلاعات و وضعیت</button>`:''}</article>`,()=>{
+        document.querySelectorAll('[data-person-edit]').forEach(b=>b.onclick=()=>{const p=person(b.dataset.personEdit);openForm({id:p.id,data:p});});
+      });
     }
     $('exportPeople').onclick=()=>{
       const fields=['full_name','username','phone','discipline','gender','birth_date','blood_group','age','weight_kg','height_cm','belt'];
@@ -202,7 +244,8 @@
       const lines=[fields,...people.filter(p=>p.role==='member').map(p=>fields.map(k=>p[k]))].map(row=>row.map(cell).join(',')).join('\r\n');
       const url=URL.createObjectURL(new Blob(['\uFEFF'+lines],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='academy-students.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
     };
-    $('peopleSearch').oninput=draw;draw();
+    let searchFrame;
+    $('peopleSearch').oninput=()=>{cancelAnimationFrame(searchFrame);searchFrame=requestAnimationFrame(()=>{if(['people','users'].includes(current))draw();});};draw();
   }
   function leaderboard(){
     $('sectionTools').innerHTML=`<form id="rankForm" class="academy-tools"><label>رشته<select name="discipline">${config.sports.map(x=>`<option>${x}</option>`).join('')}</select></label><label>سال شمسی<input name="year" type="number" min="1300" max="1600" value="${config.jy}" required></label><label>ماه<input name="month" type="number" min="1" max="12" value="${config.jm}" required></label><button class="btn primary">نمایش</button></form>`;
@@ -212,11 +255,11 @@
   async function review(){
     const d=await api('/review');if(current!=='review')return;
     $('sectionBody').innerHTML='<p class="academy-notice">این داده‌ها منشأ قابل اعتماد ندارند و از آمار و فهرست‌های عمومی کنار گذاشته شده‌اند. فقط پس از تطبیق با اسناد واقعی، هر رکورد را جداگانه تأیید کنید. تأیید کاربر به معنی تأیید نمره‌ها یا افتخارات او نیست.</p>'+d.groups.map(g=>`<details><summary>${esc(g.table)} — ${fa(g.count)} مورد در انتظار بازبینی (حداکثر ۱۰۰ مورد در هر بار)</summary>${g.rows.map(r=>`<article class="academy-record"><pre dir="auto" style="white-space:pre-wrap">${esc(JSON.stringify(r,null,2))}</pre><button class="btn" data-verify="${g.table}/${r.id}">با سند واقعی تطبیق دادم؛ تأیید</button></article>`).join('')}</details>`).join('');
-    document.querySelectorAll('[data-verify]').forEach(b=>b.onclick=async()=>{if(!confirm('واقعی‌بودن تمام محتوای این رکورد را بررسی کرده‌اید؟'))return;try{await api('/review/'+b.dataset.verify,'POST',{});await review();people=(await api('/people')).people;}catch(err){error(err);}});
+    document.querySelectorAll('[data-verify]').forEach(b=>b.onclick=async()=>{if(!confirm('واقعی‌بودن تمام محتوای این رکورد را بررسی کرده‌اید؟'))return;try{await api('/review/'+b.dataset.verify,'POST',{});await review();await loadPeople(true);}catch(err){error(err);}});
   }
   async function start(){
     try{
-      config=await api('/config');people=(await api('/people')).people;await loadReferences();
+      const [configuration]=await Promise.all([api('/config'),loadPeople(true)]);config=configuration;
       $('adminLogin').hidden=true;$('academySession').hidden=false;$('sessionExit').hidden=!admin;
       $('academyTitle').textContent=admin?'مدیریت آکادمی':'خدمات آکادمی';$('welcome').textContent=`${config.user.full_name} · ${ {member:'پنل شاگرد',coach:'پنل مربی',admin:'پنل مدیریت'}[config.role] }`;
       $('backLink').href=admin?prefix+'/':prefix+(config.role==='member'?'/panel':'/dashboard');if(admin)$('backLink').textContent='صفحهٔ اصلی';

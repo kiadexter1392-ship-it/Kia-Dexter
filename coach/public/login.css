@@ -1,0 +1,62 @@
+/* Same gold/glass tokens as the member panel, with an explicitly white login page. */
+body.coach-login {
+  color-scheme: light;
+  background: #fff;
+  color: var(--text);
+  min-height: 100vh;
+}
+.coach-login-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 20px clamp(20px, 5vw, 80px);
+  background: rgba(255,255,255,0.94);
+  border-bottom: 1px solid var(--amber-glass-border);
+}
+.coach-login-nav .nav-brand small { display: block; font-size: 12px; color: var(--muted); }
+.coach-login-main {
+  width: 100%;
+  max-width: 1200px;
+  margin: auto;
+  padding: clamp(32px, 6vw, 80px) 24px;
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  align-items: center;
+  gap: clamp(28px, 5vw, 72px);
+  /* Keep the form visible on a tablet without the old full-height dark hero. */
+  min-height: calc(100vh - 160px);
+}
+.coach-intro { min-width: 0; }
+.coach-intro h1 { font-size: clamp(32px, 4vw, 52px); line-height: 1.5; margin-bottom: 16px; }
+.coach-intro h1 em { font-style: normal; color: var(--gold); }
+.coach-intro > p { color: var(--text-light); line-height: 2; margin-bottom: 24px; }
+.coach-intro .hero-badge { margin-bottom: 16px; }
+.coach-features { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.coach-features h2 { font-size: 15px; margin-bottom: 10px; }
+.coach-features ul { padding-inline-start: 18px; color: var(--text-light); font-size: 13px; line-height: 2.2; }
+.coach-members-link { display: inline-block; margin-top: 20px; color: var(--text-light); }
+.coach-login-card {
+  width: 100%;
+  background: rgba(255,255,255,0.92);
+  border-color: var(--amber-glass-border);
+  box-shadow: 0 16px 56px rgba(122,91,37,0.10);
+}
+.coach-login-card h2 { font-size: 24px; margin-bottom: 28px; text-align: center; }
+.coach-login-mark { display: block; text-align: center; color: var(--gold); font-size: 38px; margin-bottom: 12px; }
+.coach-login-card form { display: grid; gap: 18px; }
+.coach-login-card input { background: #fff; min-height: 48px; width: 100%; }
+.coach-login-card .btn { min-height: 46px; text-align: center; }
+.coach-login :focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+.coach-login-error { padding: 12px; border-radius: 10px; background: var(--red-soft); color: #a32620; margin-bottom: 20px; }
+.coach-login-footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px; border-top: 1px solid var(--line); }
+@media (max-width: 768px) {
+  .coach-login-main { grid-template-columns: 1fr; max-width: 560px; padding: 32px 18px; }
+  .coach-login-card { grid-row: 1; padding: 26px; }
+  .coach-intro h1 { font-size: 30px; }
+  .coach-login-nav { padding: 16px 18px; }
+}
+@media (max-width: 380px) {
+  .coach-features { grid-template-columns: 1fr; }
+  .coach-login-nav .btn { font-size: 12px; padding: 8px 10px; }
+}
