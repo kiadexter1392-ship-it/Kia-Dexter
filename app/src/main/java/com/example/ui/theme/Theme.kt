@@ -1,6 +1,7 @@
 package com.example.ui.theme
 
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.lightColorScheme
@@ -49,8 +50,12 @@ fun ArslanDojoTheme(content: @Composable () -> Unit) {
         MaterialTheme(
             colorScheme = DojoLightColorScheme,
             typography = DojoTypography,
-            shapes = DojoShapes,
-            content = content
-        )
+            shapes = DojoShapes
+        ) {
+            CompositionLocalProvider(
+                LocalTextStyle provides DojoTypography.bodyMedium.copy(color = DojoInk),
+                content = content
+            )
+        }
     }
 }

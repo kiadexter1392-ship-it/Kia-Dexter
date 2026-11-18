@@ -17,6 +17,17 @@ val DojoGlassSubtle = Color(0x88FFFFFF)
 val DojoGlassBorder = Color(0x33D4A853)
 val DojoLineSoft = Color(0x12000000)
 
+// Rich royal purple ambient light & frosted glass tokens
+val DojoGlassCanvasTop = Color(0xFFFCFAFF)
+val DojoGlassCanvasMid = Color(0xFFF6F3FA)
+val DojoGlassCanvasBot = Color(0xFFFAF8FD)
+val DojoPurpleRoyal = Color(0xFF6D28D9)
+val DojoPurpleImperial = Color(0xFF4C1D95)
+val DojoPurpleOrchid = Color(0xFF9333EA)
+val DojoPurpleGlowSoft = Color(0xFFC084FC)
+val DojoGlassCardFrost = Color(0xCCFFFFFF)
+val DojoPurpleBorderGlow = Color(0x407C3AED)
+
 val DojoInk = Color(0xFF1A1A2E)
 val DojoTextLight = Color(0xFF444444)
 val DojoMuted = Color(0xFF777777)

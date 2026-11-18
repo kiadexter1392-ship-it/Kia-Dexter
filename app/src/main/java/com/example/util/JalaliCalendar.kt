@@ -106,6 +106,94 @@ object JalaliCalendar {
         return d2j(g2d(cal.get(Calendar.YEAR), cal.get(Calendar.MONTH) + 1, cal.get(Calendar.DAY_OF_MONTH)))
     }
 
+    fun gregorianToJalali(gy: Int, gm: Int, gd: Int): JalaliDate {
+        require(gy in 622..3177 && gm in 1..12 && gd in 1..31) {
+            "تاریخ میلادی نامعتبر است"
+        }
+        val cal = Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
+            isLenient = false
+            set(gy, gm - 1, gd, 12, 0, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        // Triggers strict calendar validation (e.g. rejects Feb 30 or Apr 31)
+        cal.timeInMillis
+        return d2j(g2d(gy, gm, gd))
+    }
+
+    fun jalaliToGregorian(jy: Int, jm: Int, jd: Int): Triple<Int, Int, Int> {
+        require(jm in 1..12) { "ماه شمسی باید بین ۱ تا ۱۲ باشد" }
+        val maxDay = jalaliMonthLength(jy, jm)
+        require(jd in 1..maxDay) { "روز شمسی در این ماه باید بین ۱ تا ${faNum(maxDay)} باشد" }
+        val g = d2g(j2d(jy, jm, jd))
+        return Triple(g.gy, g.gm, g.gd)
+    }
+
+    fun parseJalaliInput(input: String?): JalaliDate? {
+        val raw = enNum(input?.trim()).trim()
+        val match = Regex("""^(\d{4})[/-](\d{1,2})[/-](\d{1,2})$""").matchEntire(raw) ?: return null
+        val jy = match.groupValues[1].toIntOrNull() ?: return null
+        val jm = match.groupValues[2].toIntOrNull() ?: return null
+        val jd = match.groupValues[3].toIntOrNull() ?: return null
+        if (jy !in 1..3177 || jm !in 1..12) return null
+        val maxDay = jalaliMonthLength(jy, jm)
+        if (jd !in 1..maxDay) return null
+        return JalaliDate(jy, jm, jd)
+    }
+
+    fun parseGregorianInput(input: String?): Triple<Int, Int, Int>? {
+        val raw = enNum(input?.trim()).trim()
+        val match = Regex("""^(\d{4})[/-](\d{1,2})[/-](\d{1,2})$""").matchEntire(raw) ?: return null
+        val gy = match.groupValues[1].toIntOrNull() ?: return null
+        val gm = match.groupValues[2].toIntOrNull() ?: return null
+        val gd = match.groupValues[3].toIntOrNull() ?: return null
+        return try {
+            gregorianToJalali(gy, gm, gd)
+            Triple(gy, gm, gd)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    fun jalaliWeekday(jy: Int, jm: Int, jd: Int): String {
+        val (gy, gm, gd) = jalaliToGregorian(jy, jm, jd)
+        val cal = Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
+            set(gy, gm - 1, gd, 12, 0, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        return WEEKDAYS[cal.get(Calendar.DAY_OF_WEEK) % 7]
+    }
+
+    fun shamsiSeason(jm: Int): String = when (jm) {
+        in 1..3 -> "بهار"
+        in 4..6 -> "تابستان"
+        in 7..9 -> "پاییز"
+        else -> "زمستان"
+    }
+
+    fun shamsiDayOfYear(j: JalaliDate): Int {
+        var total = 0
+        for (m in 1 until j.jm) {
+            total += jalaliMonthLength(j.jy, m)
+        }
+        return total + j.jd
+    }
+
+    fun shamsiYearDays(jy: Int): Int = if (isJalaliLeap(jy)) 366 else 365
+
+    fun shamsiYearProgress(j: JalaliDate = todayJalali()): Float {
+        return (shamsiDayOfYear(j).toFloat() / shamsiYearDays(j.jy).toFloat()).coerceIn(0f, 1f)
+    }
+
+    fun formatJalaliDate(j: JalaliDate): String = faNum("%d/%02d/%02d".format(j.jy, j.jm, j.jd))
+
+    fun formatJalaliNamed(j: JalaliDate): String = "${faNum(j.jd)} ${MONTHS[j.jm - 1]} ${faNum(j.jy)}"
+
+    fun formatJalaliWithWeekday(millis: Long = System.currentTimeMillis()): String {
+        val j = toJalali(millis)
+        val wd = jalaliWeekday(j.jy, j.jm, j.jd)
+        return "$wd ${formatJalaliNamed(j)}"
+    }
+
     fun toJalaliFromIso(iso: String?): JalaliDate? {
         if (iso.isNullOrBlank()) return null
         val millis = parseIsoMillis(iso) ?: return null

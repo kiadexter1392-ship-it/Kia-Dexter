@@ -1,10 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Arslan Dojo</string>
+    <string name="app_name">arsalan dojo</string>
     <string name="app_subtitle">باشگاه آنلاین ارسلان دوجو</string>
     <string name="coach_panel_label">پنل مربی</string>
     <string name="member_panel_label">پنل شاگرد</string>
     <string name="login_label">ورود</string>
     <string name="register_label">ثبت‌نام</string>
     <string name="logout_label">خروج از حساب</string>
+    <string name="error_network_disconnected">اتصال اینترنت قطع شد. لطفاً شبکه خود را بررسی کنید.</string>
+    <string name="error_network_restored">اتصال اینترنت دوباره برقرار شد.</string>
+    <string name="error_server_connection">امکان برقراری ارتباط با سرور وجود ندارد. لطفاً اینترنت خود را بررسی کنید.</string>
+    <string name="error_gemini_offline">برای ارتباط با هوش مصنوعی باید به اینترنت متصل باشید.</string>
+    <string name="error_gemini_timeout">زمان پاسخ‌گویی هوش مصنوعی به پایان رسید. لطفاً دوباره تلاش کنید.</string>
+    <string name="error_gemini_unavailable">سرویس هوش مصنوعی موقتاً در دسترس نیست. لطفاً کمی بعد دوباره امتحان کنید.</string>
+    <string name="error_gemini_quota">محدودیت درخواست‌های هوش مصنوعی پر شده است. لطفاً کمی صبر کنید.</string>
+    <string name="error_gemini_generic">خطا در دریافت پاسخ از هوش مصنوعی. لطفاً دوباره تلاش کنید.</string>
+    <string name="action_retry">تلاش مجدد</string>
 </resources>
