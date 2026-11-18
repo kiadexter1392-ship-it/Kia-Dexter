@@ -104,7 +104,17 @@ async function freePort(){const s=net.createServer().listen(0,'127.0.0.1');await
    await post('attendance',{class_id:cl.id,user_id:m.id,event_date:'2026-11-12',status:'حاضر'},'admin');
    await post('attendance',{class_id:cl.id,user_id:c.id,event_date:'2026-11-12',status:'حاضر'},'admin');
    await post('attendance',{class_id:cl.id,user_id:m2.id,event_date:'2026-11-12',status:'حاضر'},'admin',400);
-   assert.equal((await req(member,'/api/academy/records/attendance','GET',undefined,cookieM)).data.records.length,1);
+   for(const kind of ['attendance','meetings','discounts']){
+     await req(member,'/api/academy/records/'+kind,'GET',undefined,cookieM,403);
+     await req(coach,'/api/academy/records/'+kind,'GET',undefined,cookieC,403);
+     await req(member,'/api/academy/records/'+kind,'POST',{},cookieM,403);
+     await req(coach,'/api/academy/records/'+kind,'POST',{},cookieC,403);
+     assert.ok(Array.isArray((await req(coach,'/admin/api/records/'+kind,'GET',undefined,cookieA)).data.records));
+   }
+   for(const [base,cookie]of [[member,cookieM],[coach,cookieC]]){
+     const restricted=(await req(base,'/api/academy/config','GET',undefined,cookie)).data.schema;
+     for(const kind of ['attendance','meetings','discounts'])assert.equal(restricted[kind],undefined);
+   }
    await post('meetings',{title:'جلسه مدیر',event_date:'2026-11-13',starts_at:'18:00'},'admin');
    const invoice=(await post('invoices',{user_id:m.id,title:'شهریه واقعی',amount:1000000,discount_percent:10,due_on:'2026-12-01',status:'پرداخت‌نشده',payable:1},'admin')).data.record;
    assert.equal(invoice.data.payable,900000);

@@ -7,7 +7,9 @@ const schema = require('./academy-schema');
 const { todayJalali, enNum } = require('./jalali');
 const { rateLimit } = require('./server');
 const SPORTS = ['کاراته','کراسفیت','بوکس','ژیمناستیک','موی تای'];
-const PUBLIC = new Set(['sports','coaches','honours','competitions','classes','challenges','challenge_results','exams','discounts','products','meetings']);
+// Administrative operations never appear in student/coach services, even read-only.
+const ADMIN_ONLY = new Set(['attendance','meetings','discounts']);
+const PUBLIC = new Set(['sports','coaches','honours','competitions','classes','challenges','challenge_results','exams','products']);
 const REF = { challenge_id: 'challenges', exam_id: 'exams', class_id: 'classes', product_id: 'products' };
 const ADMIN_COOKIE = 'dojo_admin_session';
 function fail(message, status = 400) { throw Object.assign(new Error(message), { status }); }
@@ -39,10 +41,16 @@ function record(id, kind) {
   if (!row || (kind && row.kind !== kind)) fail('رکورد مرجع پیدا نشد', 404);
   return { ...row, data: JSON.parse(row.data) };
 }
-function records(kind) { return db.all('SELECT * FROM academy_records WHERE kind=? ORDER BY id DESC', kind).map(r => ({ ...r, data: JSON.parse(r.data) })); }
+function records(kind, userId) {
+  const rows=userId===undefined?db.all('SELECT * FROM academy_records WHERE kind=? ORDER BY id DESC',kind):db.all('SELECT * FROM academy_records WHERE kind=? AND user_id=? ORDER BY id DESC',kind,userId);
+  return rows.map(r => ({ ...r, data: JSON.parse(r.data) }));
+}
 function staff(role) { return role === 'coach' || role === 'admin'; }
 function canRead(kind, role) {
-  return role === 'admin' || (role === 'coach' && !['nutrition','orders','invoices'].includes(kind)) || role === 'member';
+  if (!schema[kind]) return false;
+  if (role === 'admin') return true;
+  if (ADMIN_ONLY.has(kind)) return false;
+  return (role === 'coach' && !['nutrition','orders','invoices'].includes(kind)) || role === 'member';
 }
 function visible(kind, actor, role) {
   if (!schema[kind] || !canRead(kind, role)) fail('دسترسی مجاز نیست', 403);
@@ -57,11 +65,15 @@ function visible(kind, actor, role) {
     // No individual reviews or names are revealed to the evaluated coach.
     return [...groups.values()].map(g => ({ period: g.period, count: g.count, average: g.total / g.count }));
   }
-  let rows = kind === 'monthly_scores' ? db.all('SELECT * FROM progress WHERE verified=1 ORDER BY year DESC,month DESC').map(r => ({ id:r.id, user_id:r.user_id, data:{...r, overall:db.computeOverall(r)}, created_at:r.updated_at, updated_at:r.updated_at })) : records(kind);
-  if (role === 'member' && !PUBLIC.has(kind)) rows = rows.filter(r => r.user_id === actor.id);
+  const own=role==='member' && !PUBLIC.has(kind);
+  let rows = kind === 'monthly_scores' ? (own?db.all('SELECT * FROM progress WHERE verified=1 AND user_id=? ORDER BY year DESC,month DESC',actor.id):db.all('SELECT * FROM progress WHERE verified=1 ORDER BY year DESC,month DESC')).map(r => ({ id:r.id, user_id:r.user_id, data:{...r, overall:db.computeOverall(r)}, created_at:r.updated_at, updated_at:r.updated_at })) : records(kind,own?actor.id:undefined);
+  const coachNames=new Map();
   return rows.map(r => {
     const output = { id: r.id, data: { ...r.data }, created_at: r.created_at, updated_at: r.updated_at };
-    if (r.data.coach_id) output.data.coach_name = db.findById(r.data.coach_id)?.full_name || 'ثبت نشده';
+    if (r.data.coach_id) {
+      if(!coachNames.has(r.data.coach_id))coachNames.set(r.data.coach_id,db.findById(r.data.coach_id)?.full_name || 'ثبت نشده');
+      output.data.coach_name=coachNames.get(r.data.coach_id);
+    }
     if (role === 'member' && kind === 'classes') delete output.data.member_ids;
     if (role === 'member' && kind === 'challenge_results') {
       delete output.data.user_id; delete output.data.note;
