@@ -59,7 +59,21 @@ async function freePort() {
     assert.equal(requests.filter(p=>p==='/admin/api/people').length,1,'load people only once on startup');
     assert.equal(requests.filter(p=>p.includes('/records/')).length,0,'no eager reference fetches when opening admin people view');
     assert.ok(await page.locator('#academyToday').getAttribute('datetime'));
-    const expectedKinds=[...Object.keys(require('../shared/academy-schema')),'leaderboard','people','users','review','audit'];
+    // Dashboard is the default view: real aggregates only, no fabricated figures.
+    assert.equal(await page.locator('[aria-current=page]').getAttribute('data-kind'),'dashboard');
+    assert.equal(await page.locator('.dash-metric').count(),4);
+    assert.equal(await page.locator('.dash-bars figure').count(),8,'eight real attendance weeks');
+    assert.ok(await page.locator('.dash-load-bar').isVisible());
+    assert.ok(await page.locator('.dash-table-card').isVisible());
+    assert.ok(await page.locator('.dash-perf-card').isVisible());
+    assert.ok(await page.locator('.dash-cap-card').isVisible());
+    assert.equal(await page.locator('#dashRange option').count(),2);
+    await page.locator('#dashRange').selectOption('months');await page.locator('.dash-bars figure').first().waitFor();
+    assert.equal(await page.locator('.dash-bars figure').count(),6,'six real attendance months');
+    await page.locator('#dashRange').selectOption('weeks');
+    for(const width of [320,390,1440]){await page.setViewportSize({width,height:1000});await noOverflow();}
+    await page.setViewportSize({width:1440,height:1000});
+    const expectedKinds=[...Object.keys(require('../shared/academy-schema')),'dashboard','leaderboard','people','users','review','audit'];
     // The schema remains the source of truth; no feature is removed by regrouping.
     assert.deepEqual((await page.locator('#academyNav button').evaluateAll(nodes=>nodes.map(n=>n.dataset.kind))).sort(),expectedKinds.sort());
     for(const width of [320,390,768,1024,1440]) {
@@ -114,7 +128,12 @@ async function freePort() {
       }
       assert.equal(requests.filter(p=>/\/records\/(classes|challenges|exams|products)$/.test(p)).length,0,'opening services must not download unrelated reference lists');
       await page.waitForFunction(()=>document.querySelector('#sectionBody')?.getAttribute('aria-busy')==='false');
-      assert.equal(await page.locator('[aria-current=page]').getAttribute('data-kind'),role==='coach'?'people':'sports','old attendance deep links cannot open management data');
+      assert.equal(await page.locator('[aria-current=page]').getAttribute('data-kind'),'dashboard','old attendance deep links cannot open management data');
+      assert.equal(await page.locator('.dash-metric').count(),4,'dashboard metrics render for every role');
+      assert.equal(await page.locator('.dash-area, .dash-chart-card .academy-empty').count(),1,'score chart or honest empty state, never attendance');
+      assert.equal(await page.locator('.dash-bars').count(),0,'no attendance bars in role services');
+      assert.equal(await page.locator('.dash-cap-card').count(),role==='coach'?1:0);
+      await page.locator('[data-kind=dashboard]').click();await page.locator('#sectionBody[aria-busy=false]').waitFor();await noOverflow();
       if(role==='member'){
         const before=requests.filter(p=>p.endsWith('/records/products')).length;
         await page.locator('[data-kind=orders]').click();await page.locator('#sectionBody[aria-busy=false]').waitFor();
