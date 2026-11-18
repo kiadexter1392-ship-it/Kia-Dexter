@@ -215,6 +215,16 @@ async function freePort(){const s=net.createServer().listen(0,'127.0.0.1');await
      await page.locator('.member-overview-heading h2').waitFor();
      assert.equal(await page.locator('.member-overview-heading h2').textContent(),'نمای کلی');
      assert.equal(await page.locator('.member-metrics .stat').count(),4);
+     assert.equal(await page.locator('.member-chart-col').count(),1,'one real score is visible, not an invented series');
+     assert.match(await page.locator('#homeChart').textContent(),/۸۰/);
+     await page.locator('#homeChartRange').selectOption('4');
+     assert.equal(await page.locator('.member-chart-col').count(),1);
+     assert.equal(await page.locator('.member-breakdown-total strong').textContent(),'۱');
+     assert.equal(await page.locator('.member-table thead th').count(),5);
+     if(process.env.OVERVIEW_SCREENSHOT) await page.screenshot({path:process.env.OVERVIEW_SCREENSHOT,fullPage:true});
+     await page.locator('.member-table-link').click();
+     assert.ok((await page.locator('.overlay').textContent()).includes('تمرین واقعی فیلتر'));
+     await page.locator('.overlay [data-close]').click();
      assert.equal(await page.locator('#homePlanRows [data-home-plan-status=todo]').count(),1);
      await page.locator('#homePlanFilter').selectOption('doing');
      assert.equal(await page.locator('#homePlanRows [data-home-plan-status]').count(),0);
