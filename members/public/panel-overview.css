@@ -1,0 +1,27 @@
+/* Member overview: white and muted gold, scoped to the home view.
+   44px controls remain usable on mobile; no global form styles are changed. */
+.member-overview-heading { display:flex; align-items:end; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+.member-overview-heading span { font-size:12px; color:#8c7a5c; }
+.member-overview-heading h2 { margin:4px 0; font-size:24px; color:#25262a; }
+.member-overview-heading p { margin:0; color:#77736b; font-size:12px; }
+.member-overview-heading a { color:#795f2f; font-size:12px; text-decoration:none; border:1px solid #e6ddca; background:#fff; border-radius:12px; padding:11px 14px; }
+.member-overview .card, .member-overview .stat { background:rgba(255,255,255,.94); border:1px solid #ebe7df; box-shadow:0 5px 24px rgba(60,48,27,.05); backdrop-filter:none; -webkit-backdrop-filter:none; border-radius:18px; }
+.member-overview .member-welcome { background:linear-gradient(110deg,#fff,#fbf7ef); }
+.member-overview .stat { min-height:138px; padding:20px; }
+.member-overview .stat::before { width:3px; opacity:.7; }
+.member-overview .stat .label { font-size:12px; color:#77736b; }
+.member-overview .stat .value { font-size:28px; margin:10px 0 4px; }
+.member-overview .card-head { border-bottom:1px solid #f0ede7; padding-bottom:14px; }
+.member-overview .card-title { font-size:15px; }
+.member-overview .list-item { border-color:#f0ede7; }
+.member-overview .mini-bar { gap:8px; border-bottom:1px solid #e9e3d8; }
+.member-overview .mini-bar i { background:linear-gradient(#d7ba7c,#b88d44); opacity:.9; border-radius:6px 6px 0 0; transform-origin:bottom; animation:member-bar-grow .6s ease-out both; }
+.member-overview .progress-bar i { transform-origin:right; animation:member-bar-grow-x .6s ease-out both; }
+.member-plan-controls { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.member-plan-controls label { font-size:11px; color:#77736b; }
+.member-plan-controls select { min-height:44px; max-width:100%; font:inherit; font-size:12px; color:#554a36; background:#fff; border:1px solid #e6ddca; border-radius:10px; padding:6px 8px; }
+.member-filter-empty { font-size:12px; color:#77736b; }
+@keyframes member-bar-grow { from { transform:scaleY(0); } }
+@keyframes member-bar-grow-x { from { transform:scaleX(0); } }
+@media (prefers-reduced-motion:reduce) { .member-overview .mini-bar i, .member-overview .progress-bar i { animation:none; } }
+@media (max-width:600px) { .member-overview-heading h2 { font-size:21px; } .member-overview .stat { min-height:110px; } .member-plan-controls { width:100%; } }

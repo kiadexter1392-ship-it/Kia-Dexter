@@ -210,7 +210,19 @@ async function freePort(){const s=net.createServer().listen(0,'127.0.0.1');await
      await page.goto(member+'/academy#monthly_scores');await page.locator('#monthlyChart figure').waitFor();assert.equal(await page.locator('#monthlyChart figure').count(),1);
      await page.locator('[data-kind="exam_results"]').click();await page.locator('#actualChart figure').waitFor();assert.equal(await page.locator('#actualChart figure').count(),1);
      await page.locator('[data-kind="nutrition"]').click();await page.locator('#addRecord').click();await page.locator('#recordDialog').waitFor({state:'visible'});assert.equal(await page.locator('#field-consent').count(),1);await page.locator('#closeDialog').click();
-     await page.goto(member+'/panel');await page.locator('.csw-card[data-front]').waitFor();await page.locator('.csw-card[data-front]').focus();await page.keyboard.press('Enter');await page.locator('#sportAcademyDetails').waitFor();assert.ok(await page.locator('.overlay').textContent().then(t=>t.includes('چهره‌های شناخته‌شده')));await page.locator('[data-close]').click();
+     const samplePlan=db.createPlan({author_id:c.id,title:'تمرین واقعی فیلتر',targets:[m.id]});
+     await page.goto(member+'/panel');
+     await page.locator('.member-overview-heading h2').waitFor();
+     assert.equal(await page.locator('.member-overview-heading h2').textContent(),'نمای کلی');
+     assert.equal(await page.locator('.member-metrics .stat').count(),4);
+     assert.equal(await page.locator('#homePlanRows [data-home-plan-status=todo]').count(),1);
+     await page.locator('#homePlanFilter').selectOption('doing');
+     assert.equal(await page.locator('#homePlanRows [data-home-plan-status]').count(),0);
+     assert.equal(await page.locator('#homePlanEmpty').isVisible(),true);
+     await page.locator('#homePlanFilter').selectOption('todo');
+     assert.equal(await page.locator('#homePlanRows [data-home-plan-status]').count(),1);
+     for(const width of [320,390,768,1568]){await page.setViewportSize({width,height:900});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'member overview must not overflow');}
+     await page.locator('.csw-card[data-front]').waitFor();await page.locator('.csw-card[data-front]').focus();await page.keyboard.press('Enter');await page.locator('#sportAcademyDetails').waitFor();assert.ok(await page.locator('.overlay').textContent().then(t=>t.includes('چهره‌های شناخته‌شده')));await page.locator('[data-close]').click();
      await page.locator('.stb').waitFor();
      await page.setViewportSize({width:320,height:900});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'member panel must not overflow');
      assert.equal(await page.locator('.stb-seg-ctl:visible').count(),0,'synthetic daily/weekly modes must not be shown');
