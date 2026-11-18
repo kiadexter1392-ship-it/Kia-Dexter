@@ -55,7 +55,7 @@ const request = (base, route, options = {}) => fetch(base + route, { redirect: '
         assert.match(html, /src="ui\/MagnifyingDock.js"/);
       }
       else {
-        assert.match(html, /src="\/member\/panel.js"/);
+        assert.match(html, /src="\/member\/panel\.js(?:\?[^"]*)?"/);
         assert.match(html, /src="\/member\/ui\/MagnifyingDock.js"/);
         assert.match(html, /id="view-profile"/);
         assert.equal(page.headers.get('x-content-type-options'), 'nosniff');

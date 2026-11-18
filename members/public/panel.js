@@ -110,11 +110,14 @@
     const last = lastMonth ? progress.progress[lastMonth] : null;
     const unreadNews = ann.announcements.filter((a) => !a.read).length;
 
-    const series = progress.history.filter((h) => h.overall !== null).slice(-8);
+    const series = progress.history.filter((h) => Number.isFinite(h.overall)).slice(-8);
+    const statusCounts = ['todo', 'doing', 'done'].map(key => ({ key, count: plans.plans.filter(p => p.status === key).length }));
+    const totalPlans = plans.plans.length;
+    const tableRows = rows => rows.slice(0, 6).map(p => `<tr data-home-plan-status="${esc(p.status)}"><td><button type="button" class="member-table-link" data-plan-open="${p.id}">${esc(p.title)}</button></td><td>${esc(p.category || 'ثبت نشده')} · ${esc(p.difficulty || 'ثبت نشده')}${p.duration ? ' · ' + esc(p.duration) : ''}</td><td>${p.due_on ? esc(J.formatShort(p.due_on)) : 'ثبت نشده'}</td><td><span class="member-status status-${esc(p.status)}">${esc(STATUS[p.status]?.label || 'ثبت نشده')}</span></td><td>${p.status !== 'done' ? `<button type="button" class="btn sm" data-quick-done="${p.id}">انجام شد</button>` : '—'}</td></tr>`).join('');
 
     box.innerHTML = `
       <div class="stack member-overview">
-        <div class="member-overview-heading"><div><span>پنل شاگرد</span><h2>نمای کلی</h2><p>خلاصهٔ تمرین‌ها و پیشرفت شما</p></div><a href="/academy">خدمات آکادمی ←</a></div>
+        <div class="member-overview-heading"><div><span>پنل شاگرد</span><h2>نمای کلی</h2><p>خلاصهٔ تمرین‌ها و پیشرفت شما</p></div><a href="${esc(UI.PATH_PREFIX)}/academy">خدمات آکادمی ←</a></div>
         <div class="card pad-lg member-welcome">
           <div class="row between wrap" style="gap:16px">
             <div class="row" style="gap:14px">
@@ -143,58 +146,42 @@
           ${stat('اطلاعیه خوانده‌نشده', fa(unreadNews), 'از سمت باشگاه', 'var(--blue)')}
         </div>
 
-        <div class="split member-overview-grid">
-          <div class="stack">
-            <div class="card">
-              <div class="card-head">
-                <div class="card-title"><span class="dot"></span> تمرین‌های پیش رو</div>
-                <div class="member-plan-controls"><label for="homePlanFilter">وضعیت</label><select id="homePlanFilter"><option value="all">همهٔ تمرین‌های باز</option><option value="todo">شروع نشده</option><option value="doing">در حال انجام</option></select><button class="btn sm ghost" data-goto="plans">همه ←</button></div>
-              </div>
-              <div id="homePlanRows">${open.length ? open.slice(0, 4).map((p) => `<div data-home-plan-status="${esc(p.status)}">${planRow(p)}</div>`).join('') : emptyHTML('تمرین بازی ثبت نشده است', '⚑')}</div><p class="member-filter-empty" id="homePlanEmpty" hidden>تمرینی با این وضعیت ثبت نشده است.</p>
-            </div>
-
-            <div class="card">
-              <div class="card-head"><div class="card-title"><span class="dot" style="background:var(--gold);box-shadow:0 0 10px var(--gold)"></span> روند نمره کل</div></div>
-              ${series.length > 1 ? `
-                <div class="mini-bar" style="height:120px">
-                  ${series.map((s) => `<i title="${esc(J.MONTHS[s.month - 1])} ${fa(s.year)}: ${fa(s.overall)}" style="height:${s.overall}%"></i>`).join('')}
-                </div>
-                <div class="row between tiny" style="margin-top:8px">
-                  ${series.map((s) => `<span>${esc(J.MONTHS[s.month - 1].slice(0, 4))}</span>`).join('')}
-                </div>
-                <div class="hint mt-s">آخرین نمره: <b>${fa(series[series.length - 1].overall)}</b> از ۱۰۰</div>`
-                : emptyHTML('هنوز نمره‌ای توسط مربی ثبت نشده است', '📊')}
-            </div>
-          </div>
-
-          <div class="stack">
-            <div class="card">
-              <div class="card-head">
-                <div class="card-title"><span class="dot" style="background:var(--green);box-shadow:0 0 10px var(--green)"></span> اطلاعیه‌های باشگاه</div>
-                <button class="btn sm ghost" data-goto="news">همه ←</button>
-              </div>
-              ${ann.announcements.slice(0, 4).map((a) => `
-                <div class="list-item" style="cursor:pointer" data-open-ann="${a.id}">
-                  <div class="grow">
-                    <div class="title">${a.pinned ? '📌 ' : ''}${esc(a.title)} ${a.read ? '' : '<span class="badge red">جدید</span>'}</div>
-                    <div class="tiny">${esc(a.category)} · ${J.timeAgo(a.created_at)}</div>
-                  </div>
-                </div>`).join('') || emptyHTML('اطلاعیه‌ای نیست', '✦')}
-            </div>
-
-            <div class="card">
-              <div class="card-head"><div class="card-title"><span class="dot" style="background:var(--blue);box-shadow:0 0 10px var(--blue)"></span> آخرین ثبت پیشرفت</div></div>
-              ${last ? metricBars(last) : emptyHTML('مربی هنوز جدولی برای تو پر نکرده است', '▦')}
-            </div>
-          </div>
+        <div class="member-dashboard-grid">
+          <section class="card member-chart-card">
+            <div class="card-head"><div><div class="member-eyebrow">پیشرفت شما</div><div class="card-title">روند نمره کل</div></div><button class="btn sm ghost" data-goto="progress">مشاهده جدول ←</button></div>
+            <div class="member-chart-summary"><div><strong>${series.length ? fa(series[series.length - 1].overall) : '—'}</strong><span>آخرین نمره از ۱۰۰</span></div><div><strong>${fa(series.length)}</strong><span>ماه ثبت‌شده در نمودار</span></div><label>بازه <select id="homeChartRange"><option value="8">۸ ثبت اخیر</option><option value="4">۴ ثبت اخیر</option></select></label></div>
+            <div id="homeChart"></div>
+          </section>
+          <section class="card member-breakdown-card">
+            <div class="card-head"><div><div class="member-eyebrow">برنامهٔ تمرینی</div><div class="card-title">وضعیت تمرین‌ها</div></div><button class="btn sm ghost" data-goto="plans">جزئیات ←</button></div>
+            <div class="member-breakdown-total"><span>کل تمرین‌ها</span><strong>${fa(totalPlans)}</strong></div>
+            <div class="member-segments" aria-label="تفکیک وضعیت تمرین‌ها">${statusCounts.map(x => `<i class="status-${x.key}" style="width:${totalPlans ? x.count / totalPlans * 100 : 0}%"></i>`).join('')}</div>
+            <div class="member-breakdown-list">${statusCounts.map(x => `<div><span><i class="status-${x.key}"></i>${esc(STATUS[x.key].label)}</span><b>${fa(x.count)}</b></div>`).join('')}</div>
+          </section>
+          <section class="card member-table-card">
+            <div class="card-head"><div><div class="member-eyebrow">برنامهٔ شما</div><div class="card-title">تمرین‌های پیش رو</div></div><div class="member-plan-controls"><label for="homePlanFilter">وضعیت</label><select id="homePlanFilter"><option value="all">همهٔ تمرین‌های باز</option><option value="todo">شروع نشده</option><option value="doing">در حال انجام</option><option value="done">تکمیل شده</option></select><button class="btn sm ghost" data-goto="plans">همه ←</button></div></div>
+            <div class="member-table-scroll"><table class="member-table"><thead><tr><th>تمرین</th><th>دسته</th><th>مهلت</th><th>وضعیت</th><th>عملیات</th></tr></thead><tbody id="homePlanRows">${tableRows(open)}</tbody></table></div><p class="member-filter-empty" id="homePlanEmpty" ${open.length ? 'hidden' : ''}>تمرینی با این وضعیت ثبت نشده است.</p>
+          </section>
+          <section class="card member-news-card">
+            <div class="card-head"><div><div class="member-eyebrow">اخبار باشگاه</div><div class="card-title">اطلاعیه‌های باشگاه</div></div><button class="btn sm ghost" data-goto="news">همه ←</button></div>
+            ${ann.announcements.slice(0, 4).map((a) => `<div class="list-item" style="cursor:pointer" data-open-ann="${a.id}"><div class="grow"><div class="title">${a.pinned ? '📌 ' : ''}${esc(a.title)} ${a.read ? '' : '<span class="badge red">جدید</span>'}</div><div class="tiny">${esc(a.category)} · ${J.timeAgo(a.created_at)}</div></div></div>`).join('') || emptyHTML('اطلاعیه‌ای نیست', '✦')}
+          </section>
+          <section class="card member-progress-card"><div class="card-head"><div><div class="member-eyebrow">عملکرد فردی</div><div class="card-title">آخرین ثبت پیشرفت</div></div><button class="btn sm ghost" data-goto="progress">جدول پیشرفت ←</button></div>${last ? metricBars(last) : emptyHTML('مربی هنوز جدولی برای تو پر نکرده است', '▦')}</section>
         </div>
       </div>`;
 
     wireGoto(box);
+    const chart = box.querySelector('#homeChart');
+    function drawChart() {
+      const points = series.slice(-Number(box.querySelector('#homeChartRange').value));
+      chart.innerHTML = points.length ? `<div class="member-chart-plot" role="img" aria-label="نمره‌های ثبت‌شده: ${points.map(p => `${esc(J.MONTHS[p.month-1])} ${fa(p.year)}: ${fa(p.overall)}`).join('، ')}">${points.map(p => `<div class="member-chart-col"><span>${fa(p.overall)}</span><div class="member-chart-track"><i style="height:${Math.max(0, Math.min(100, p.overall))}%"></i></div><small>${esc(J.MONTHS[p.month-1])}<br>${fa(p.year)}</small></div>`).join('')}</div>` : emptyHTML('هنوز نمره‌ای توسط مربی ثبت نشده است', '📊');
+    }
+    box.querySelector('#homeChartRange').addEventListener('change', drawChart);
+    drawChart();
     const planFilter = box.querySelector('#homePlanFilter');
     planFilter.addEventListener('change', () => {
-      const rows = open.filter(p => planFilter.value === 'all' || p.status === planFilter.value).slice(0, 4);
-      box.querySelector('#homePlanRows').innerHTML = rows.map(p => `<div data-home-plan-status="${esc(p.status)}">${planRow(p)}</div>`).join('');
+      const rows = planFilter.value === 'all' ? open : plans.plans.filter(p => p.status === planFilter.value);
+      box.querySelector('#homePlanRows').innerHTML = tableRows(rows);
       box.querySelector('#homePlanEmpty').hidden = rows.length > 0;
       bindHomePlans();
     });
