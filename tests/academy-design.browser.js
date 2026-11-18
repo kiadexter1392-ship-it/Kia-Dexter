@@ -19,6 +19,8 @@ async function freePort() {
   const make=(username,role)=>db.createUser({username,full_name:'آزمایش طراحی '+username,password,discipline:'کاراته'},role);
   const admin=make('design-admin','coach'), coach=make('design-coach','coach'),member=make('design-member','member');
   db.run('INSERT INTO academy_admins(user_id) VALUES (?)',admin.id);
+  const seededClass=academy.save('classes',{title:'کلاس فیلتر',discipline:'کاراته',coach_id:coach.id,group:'آزمایش',weekdays:'شنبه',starts_at:'09:00',ends_at:'10:00',member_ids:[member.id],location:'سالن'},coach,'coach');
+  for (const [user,status] of [[member,'حاضر'],[coach,'غایب']]) academy.save('attendance',{class_id:seededClass.id,user_id:user.id,event_date:new Date().toISOString().slice(0,10),status},admin,'admin');
   const child=spawn(process.execPath,['start.js'],{env:process.env,cwd:path.join(__dirname,'..'),stdio:['ignore','pipe','pipe']});
   const origin='http://127.0.0.1:'+process.env.PORT;
   let browser, logs='';child.stdout.on('data',d=>logs+=d);child.stderr.on('data',d=>logs+=d);
@@ -71,11 +73,29 @@ async function freePort() {
     await page.locator('#dashRange').selectOption('months');await page.locator('.dash-bars figure').first().waitFor();
     assert.equal(await page.locator('.dash-bars figure').count(),6,'six real attendance months');
     await page.locator('#dashRange').selectOption('weeks');
+    // Collapsible sidebar groups (medesk registry design).
+    const firstToggle=page.locator('.academy-nav-toggle').first();
+    assert.equal(await firstToggle.getAttribute('aria-expanded'),'true');
+    await firstToggle.click();
+    assert.equal(await firstToggle.getAttribute('aria-expanded'),'false');
+    assert.equal(await page.locator('.academy-nav-group.collapsed .academy-nav-body').isHidden(),true);
+    await firstToggle.click();
+    assert.equal(await firstToggle.getAttribute('aria-expanded'),'true');
+    // Table status filter only appears for the admin attendance table.
+    assert.equal(await page.locator('#dashStatusFilter').count(),1);
+    await page.locator('#dashStatusFilter').selectOption('حاضر');
+    assert.equal(await page.locator('#dashTableBody tr:visible').count(),1);
+    assert.equal(await page.locator('#dashTableBody tr:visible').first().getAttribute('data-status'),'حاضر');
+    await page.locator('#dashStatusFilter').selectOption('موجه');
+    assert.equal(await page.locator('#dashTableBody tr:visible').count(),0);
+    assert.equal(await page.locator('#dashFilterEmpty').isVisible(),true);
+    await page.locator('#dashStatusFilter').selectOption('');
+    assert.equal(await page.locator('#dashTableBody tr:visible').count(),2);
     for(const width of [320,390,1440]){await page.setViewportSize({width,height:1000});await noOverflow();}
     await page.setViewportSize({width:1440,height:1000});
     const expectedKinds=[...Object.keys(require('../shared/academy-schema')),'dashboard','leaderboard','people','users','review','audit'];
     // The schema remains the source of truth; no feature is removed by regrouping.
-    assert.deepEqual((await page.locator('#academyNav button').evaluateAll(nodes=>nodes.map(n=>n.dataset.kind))).sort(),expectedKinds.sort());
+    assert.deepEqual((await page.locator('#academyNav button[data-kind]').evaluateAll(nodes=>nodes.map(n=>n.dataset.kind))).sort(),expectedKinds.sort());
     for(const width of [320,390,768,1024,1440]) {
       await page.setViewportSize({width,height:1000});await noOverflow();
       await page.locator('[data-kind=meetings]').click();await page.locator('#sectionBody[aria-busy=false]').waitFor();
@@ -89,10 +109,10 @@ async function freePort() {
     await page.locator('#recordDialog').waitFor({state:'hidden'});await page.getByRole('heading',{name:'جلسهٔ بررسی برنامهٔ کلاس‌ها'}).waitFor();
     const rows=academy.records('meetings');assert.equal(rows.length,1);assert.equal(rows[0].data.title,'جلسهٔ بررسی برنامهٔ کلاس‌ها');
     // Search supports Arabic/Persian letter variants and never removes features.
-    await page.locator('#navSearch').fill('شهريه');assert.equal(await page.locator('#academyNav button:visible').count(),1);
+    await page.locator('#navSearch').fill('شهريه');assert.equal(await page.locator('#academyNav button[data-kind]:visible').count(),1);
     await page.locator('[data-kind=invoices]').click();await page.locator('#sectionBody[aria-busy=false]').waitFor();
     await page.locator('#navSearch').fill('ناموجود-آزمایش');await page.locator('#navEmpty').waitFor({state:'visible'});
-    await page.locator('#navSearch').fill('');assert.equal(await page.locator('#academyNav button:visible').count(),expectedKinds.length);
+    await page.locator('#navSearch').fill('');assert.equal(await page.locator('#academyNav button[data-kind]:visible').count(),expectedKinds.length);
     await page.locator('[data-kind=meetings]').click();await page.locator('#sectionBody[aria-busy=false]').waitFor();
     for(const width of [1440,390]) {
       await page.setViewportSize({width,height:1000});await page.evaluate(()=>scrollTo(0,0));await noOverflow();
@@ -112,6 +132,26 @@ async function freePort() {
     await page.locator('[data-page-step="1"]').click();assert.equal(await page.locator('.academy-record').count(),13);
     await page.getByRole('heading',{name:'جلسهٔ بررسی برنامهٔ کلاس‌ها'}).waitFor();await noOverflow();
     assert.equal(academy.records('meetings').length,61,'pagination never truncates persisted data');
+    // Person dialog tabs: overview / skills / activity with real data.
+    const dashClass=academy.save('classes',{title:'کلاس تست داشبورد',discipline:'کاراته',coach_id:coach.id,group:'آزمایش',weekdays:'شنبه',starts_at:'09:00',ends_at:'10:00',member_ids:[member.id],location:'سالن'},coach,'coach');
+    const jNow=require('../shared/jalali').todayJalali();
+    academy.save('evaluations',{coach_id:coach.id,year:jNow.jy,month:jNow.jm,score:5,comment:'عالی'},member,'member');
+    db.saveProgress({user_id:member.id,year:jNow.jy,month:jNow.jm,overall:88,sessions:9,endurance:86,strength:90,technique:88,flexibility:84,discipline:92},coach.id);
+    await page.locator('[data-kind=dashboard]').click();await page.locator('#sectionBody[aria-busy=false]').waitFor();
+    await page.locator('.dash-perf-row').first().click();
+    await page.locator('#personDialog').waitFor({state:'visible'});
+    await page.locator('.dash-tab').first().waitFor();
+    assert.equal(await page.locator('.dash-tab').count(),3);
+    assert.equal(await page.locator('[data-panel=overview]').isVisible(),true);
+    await page.locator('[data-tab=skills]').click();
+    assert.equal(await page.locator('[data-panel=skills]').isVisible(),true);
+    assert.equal(await page.locator('[data-panel=overview]').isHidden(),true);
+    assert.ok(await page.locator('.dash-skill-list li').count()>=1,'coach classes listed in skills tab');
+    await page.locator('[data-tab=activity]').click();
+    assert.equal(await page.locator('[data-panel=activity]').isVisible(),true);
+    assert.ok(await page.locator('.dash-activity-list li').count()>=1,'real audit rows in activity tab');
+    await page.locator('#closePerson').click();
+    await page.locator('#personDialog').waitFor({state:'hidden'});
     await page.goto(origin+'/coach/admin');await page.locator('#academySession').waitFor({state:'visible'});await fontLoaded();await noOverflow();
     assert.equal(await page.locator('#backLink').getAttribute('href'),'/coach/');
     // Coach/member academy share the new design without being granted admin menus.

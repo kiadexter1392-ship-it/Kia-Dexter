@@ -311,8 +311,9 @@ function dashboardData(actor, role) {
     const classById = new Map(allClasses.map(c => [c.id, c.data]));
     data.table = {
       title: 'جلسات امروز',
+      filterable: 'status',
       columns: ['ساعت', 'کلاس', 'شاگرد', 'وضعیت'],
-      rows: todayAtt.slice(0, 12).map(r => {
+      rows: todayAtt.map(r => {
         const c = classById.get(r.class_id) || {};
         return [c.starts_at || '—', c.title || 'ثبت نشده', nameOf(r.user_id), r.status];
       }),
@@ -439,13 +440,24 @@ function personDetail(actor, role, id) {
     ['تلفن', u.phone], ['تاریخ عضویت', u.join_date],
   ].filter(([, v]) => v !== null && v !== undefined && v !== '');
   const detail = { id: u.id, name: u.full_name, role: u.role, discipline: u.discipline || 'ثبت نشده', months, info };
+  // Skills tab: the member's current-month score components, or the coach's classes.
+  const currentRow = db.progressRow(id, j.jy, j.jm);
+  detail.components = currentRow && currentRow.verified ? [
+    ['استقامت', currentRow.endurance], ['قدرت', currentRow.strength], ['تکنیک', currentRow.technique],
+    ['انعطاف', currentRow.flexibility], ['انضباط', currentRow.discipline],
+  ].filter(([, v]) => v !== null && v !== undefined) : [];
+  detail.classesList = records('classes')
+    .filter(r => (role !== 'coach' || r.data.coach_id === actor.id) && (u.role === 'coach' ? r.data.coach_id === id : (r.data.member_ids || []).includes(id)))
+    .map(r => ({ title: r.data.title, discipline: r.data.discipline, starts_at: r.data.starts_at, enrolled: (r.data.member_ids || []).length }));
+  // Activity tab: the person's own recent audit trail (never other people's).
+  detail.activity = role === 'admin' ? db.all('SELECT action,kind,created_at FROM academy_audit WHERE actor_id=? ORDER BY id DESC LIMIT 10', id) : null;
   if (u.role === 'coach') {
     const evals = records('evaluations').filter(r => r.data.coach_id === id);
-    detail.classes = records('classes').filter(r => r.data.coach_id === id).length;
+    detail.classes = detail.classesList.length;
     detail.evalAvg = average(evals.map(r => r.data.score));
     detail.evalCount = evals.length;
   } else {
-    detail.classes = records('classes').filter(r => (r.data.member_ids || []).includes(id)).length;
+    detail.classes = detail.classesList.length;
   }
   return detail;
 }
