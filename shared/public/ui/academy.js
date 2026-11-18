@@ -35,9 +35,9 @@
   const normalizeSearch = value => value.replace(/ي/g,'ی').replace(/ك/g,'ک').replace(/[\u200c\u064b-\u065f]/g,'').trim();
   function filterNavigation() {
     const query=normalizeSearch($('navSearch').value);
-    document.querySelectorAll('#academyNav button').forEach(button=>{button.hidden=!normalizeSearch(button.textContent).includes(query);});
-    document.querySelectorAll('.academy-nav-group').forEach(group=>{group.hidden=![...group.querySelectorAll('button')].some(button=>!button.hidden);});
-    $('navEmpty').hidden=!!document.querySelector('#academyNav button:not([hidden])');
+    document.querySelectorAll('#academyNav button[data-kind]').forEach(button=>{button.hidden=!normalizeSearch(button.textContent).includes(query);});
+    document.querySelectorAll('.academy-nav-group').forEach(group=>{group.hidden=![...group.querySelectorAll('button[data-kind]')].some(button=>!button.hidden); if(query && !group.hidden) { group.classList.remove('collapsed'); group.querySelector('.academy-nav-toggle').setAttribute('aria-expanded','true'); }});
+    $('navEmpty').hidden=!!document.querySelector('#academyNav button[data-kind]:not([hidden])');
   }
   function renderNavigation(sections) {
     sectionList=sections;
@@ -45,10 +45,17 @@
     $('academyNav').innerHTML=groups.map((group,index)=>{
       const available=sections.filter(([kind])=>group.kinds.includes(kind));
       if(!available.length)return '';
-      return `<section class="academy-nav-group" aria-labelledby="navGroup${index}"><h2 id="navGroup${index}">${esc(group.label)}</h2>${available.map(([kind,label])=>`<button type="button" data-kind="${kind}">${icon(kind)}<span>${esc(label)}</span></button>`).join('')}</section>`;
+      return `<section class="academy-nav-group" aria-labelledby="navGroup${index}"><h2 id="navGroup${index}"><button type="button" class="academy-nav-toggle" aria-expanded="true" aria-controls="navGroupBody${index}"><span>${esc(group.label)}</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button></h2><div class="academy-nav-body" id="navGroupBody${index}">${available.map(([kind,label])=>`<button type="button" data-kind="${kind}">${icon(kind)}<span>${esc(label)}</span></button>`).join('')}</div></section>`;
     }).join('');
     $('navSearch').value='';filterNavigation();
-    document.querySelectorAll('#academyNav button').forEach(button=>button.onclick=()=>{
+    document.querySelectorAll('.academy-nav-toggle').forEach(toggle=>toggle.onclick=()=>{
+      const group=toggle.closest('.academy-nav-group');
+      const collapsed=group.classList.toggle('collapsed');
+      toggle.setAttribute('aria-expanded',String(!collapsed));
+    });
+    document.querySelectorAll('#academyNav button[data-kind]').forEach(button=>button.onclick=()=>{
+      button.closest('.academy-nav-group')?.classList.remove('collapsed');
+      button.closest('.academy-nav-group')?.querySelector('.academy-nav-toggle')?.setAttribute('aria-expanded','true');
       if(location.hash.slice(1)===button.dataset.kind)show(button.dataset.kind);
       else location.hash=button.dataset.kind;
     });
@@ -315,20 +322,20 @@
           </section>
           <section class="dash-card dash-load-card">
             <div class="dash-card-head"><h4>${esc(dash.loadTitle || 'شاگردان به تفکیک رشته')}</h4></div>
-            ${loadRows.length ? `<div class="dash-load-total"><span>مجموع</span><b>${fa(loadTotal)}</b></div><div class="dash-load-bar">${loadRows.map((r, i) => `<i style="width:${loadTotal ? (r.value || 0) / loadTotal * 100 : 0}%" class="dash-load-seg seg-${i % 5}"></i>`).join('')}</div><ul class="dash-load-list">${loadRows.map((r, i) => `<li><span class="dash-swatch seg-${i % 5}"></span><span class="dash-load-name">${esc(r.label)}</span><span class="dash-load-line"></span><b>${fa(r.value)}</b><span class="dash-load-pct">${fa(r.percent)}٪</span></li>`).join('')}</ul>` : empty('داده‌ای ثبت نشده است.')}
+            ${loadRows.length ? `<div class="dash-load-total"><span>مجموع</span><b>${fa(loadTotal)}</b></div><div class="dash-load-bar">${loadRows.map((r, i) => `<i style="--seg-width:${loadTotal ? (r.value || 0) / loadTotal * 100 : 0}%" class="dash-load-seg seg-${i % 5}"></i>`).join('')}</div><ul class="dash-load-list">${loadRows.map((r, i) => `<li><span class="dash-swatch seg-${i % 5}"></span><span class="dash-load-name">${esc(r.label)}</span><span class="dash-load-line"></span><b>${fa(r.value)}</b><span class="dash-load-pct">${fa(r.percent)}٪</span></li>`).join('')}</ul>` : empty('داده‌ای ثبت نشده است.')}
           </section>
         </div>
         <div class="dash-row">
           <section class="dash-card dash-table-card">
-            <div class="dash-card-head"><h4>${esc(dash.table.title)}</h4></div>
-            ${dash.table.rows.length ? `<div class="academy-scroll"><table><thead><tr>${dash.table.columns.map(c => `<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${dash.table.rows.map(r => `<tr>${r.map(c => `<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>` : empty('برای نمایش چیزی ثبت نشده است.')}
+            <div class="dash-card-head"><h4>${esc(dash.table.title)}</h4>${dash.table.filterable === 'status' ? `<label class="dash-filter">وضعیت<select id="dashStatusFilter"><option value="">همه</option><option>حاضر</option><option>غایب</option><option>موجه</option></select></label>` : ''}</div>
+            ${dash.table.rows.length ? `<div class="academy-scroll"><table><thead><tr>${dash.table.columns.map(c => `<th>${esc(c)}</th>`).join('')}</tr></thead><tbody id="dashTableBody">${dash.table.rows.map(r => `<tr data-status="${esc(r[r.length - 1])}">${r.map(c => `<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div><p class="dash-filter-empty" id="dashFilterEmpty" hidden>برای این وضعیت رکوردی نیست.</p>` : empty('برای نمایش چیزی ثبت نشده است.')}
           </section>
           <div class="dash-side">
             <section class="dash-card dash-perf-card">
               <div class="dash-card-head"><h4>${esc(dash.performance.title)}</h4></div>
               ${dash.performance.rows.length ? `<ul class="dash-perf-list">${dash.performance.rows.map(r => `<li>${r.id ? `<button type="button" class="dash-perf-row" data-person="${r.id}">` : '<span class="dash-perf-row">'}<span class="dash-avatar">${esc(r.name.trim().slice(0, 1))}</span><span class="dash-perf-info"><b>${esc(r.name)}</b><small>${esc(r.discipline)}</small></span><span class="dash-perf-stats"><b>${dashNum(r.avg)}</b><small>از ۵ · ${fa(r.count)} ارزیابی</small></span>${r.id ? '</button>' : '</span>'}</li>`).join('')}</ul>` : empty('ارزیابی ثبت‌شده‌ای وجود ندارد.')}
             </section>
-            ${capacity ? `<section class="dash-card dash-cap-card"><div class="dash-card-head"><h4>${esc(capacity.title)}</h4></div>${capacity.rows.length ? `<ul class="dash-cap-list">${capacity.rows.map(r => `<li><span class="dash-cap-name">${esc(r.label)}</span><span class="dash-cap-bar"><i style="width:${r.value / capacityMax * 100}%"></i></span><b>${fa(r.value)}</b></li>`).join('')}</ul>` : empty('کلاسی ثبت نشده است.')}</section>` : ''}
+            ${capacity ? `<section class="dash-card dash-cap-card"><div class="dash-card-head"><h4>${esc(capacity.title)}</h4></div>${capacity.rows.length ? `<ul class="dash-cap-list">${capacity.rows.map(r => `<li><span class="dash-cap-name">${esc(r.label)}</span><span class="dash-cap-bar"><i style="--cap-width:${r.value / capacityMax * 100}%"></i></span><b>${fa(r.value)}</b></li>`).join('')}</ul>` : empty('کلاسی ثبت نشده است.')}</section>` : ''}
           </div>
         </div>
       </div>
@@ -368,6 +375,17 @@
     };
     $('sectionBody').querySelectorAll('[data-person]').forEach(b => b.onclick = () => openPerson(Number(b.dataset.person)));
     $('closePerson').onclick = () => $('personDialog').close();
+    const statusFilter = $('dashStatusFilter');
+    if (statusFilter) statusFilter.onchange = () => {
+      const value = statusFilter.value;
+      let visible = 0;
+      document.querySelectorAll('#dashTableBody tr').forEach(row => {
+        const show = !value || row.dataset.status === value;
+        row.hidden = !show;
+        if (show) visible++;
+      });
+      if ($('dashFilterEmpty')) $('dashFilterEmpty').hidden = visible > 0;
+    };
   }
   async function openPerson(id) {
     const dialog = $('personDialog');
@@ -375,20 +393,42 @@
     if (!dialog.open) dialog.showModal();
     try {
       const d = await api('/dashboard/person/' + id);
+      if (!$('personBody')) return;
       const p = d.person;
       $('personTitle').textContent = p.name;
       const extra = p.role === 'coach'
         ? `<div class="dash-person-stats"><div><b>${fa(p.classes)}</b><span>کلاس فعال</span></div><div><b>${dashNum(p.evalAvg)}</b><span>میانگین ارزیابی از ۵</span></div><div><b>${fa(p.evalCount)}</b><span>تعداد ارزیابی</span></div></div>`
         : `<div class="dash-person-stats"><div><b>${fa(p.classes)}</b><span>کلاس فعال</span></div></div>`;
+      const skills = p.components && p.components.length
+        ? `<ul class="dash-skill-list">${p.components.map(([label, value]) => `<li><span class="dash-skill-name">${esc(label)}</span><span class="dash-skill-bar"><i style="--skill-width:${Math.min(100, value)}%"></i></span><b>${fa(value)}</b></li>`).join('')}</ul>`
+        : p.classesList && p.classesList.length
+          ? `<ul class="dash-skill-list">${p.classesList.map(c => `<li><span class="dash-skill-name">${esc(c.title)}</span><span class="dash-load-line"></span><span>${esc(c.discipline)} · ${esc(c.starts_at || '')}</span><b>${fa(c.enrolled)} شاگرد</b></li>`).join('')}</ul>`
+          : empty('برای این بازه داده‌ای ثبت نشده است.');
+      const activity = p.activity && p.activity.length
+        ? `<ul class="dash-activity-list">${p.activity.map(a => `<li><span>${esc(a.action)}</span><span class="dash-load-line"></span><span>${esc(a.kind)}</span><time>${esc(a.created_at)}</time></li>`).join('')}</ul>`
+        : empty(p.activity === null ? 'گزارش فعالیت فقط در دسترس مدیریت است.' : 'فعالیتی ثبت نشده است.');
       $('personBody').innerHTML = `
         <div class="dash-person-head"><span class="dash-avatar big">${esc(p.name.trim().slice(0, 1))}</span><div><h3>${esc(p.name)}</h3><p>${p.role === 'coach' ? 'مربی' : 'شاگرد'} · ${esc(p.discipline)}</p></div></div>
-        ${extra}
-        <h4 class="dash-person-h">عملکرد ماهانه</h4>
-        ${areaChart(p.months)}
-        <h4 class="dash-person-h">اطلاعات ثبت‌شده</h4>
-        ${p.info.length ? `<dl class="dash-person-info">${p.info.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>` : empty('اطلاعات تکمیلی ثبت نشده است.')}`;
+        <div class="dash-tabs" role="tablist" aria-label="بخش‌های جزئیات">
+          <button type="button" class="dash-tab" role="tab" aria-selected="true" id="person-tab-overview" aria-controls="person-panel-overview" data-tab="overview">نمای کلی</button>
+          <button type="button" class="dash-tab" role="tab" aria-selected="false" id="person-tab-skills" aria-controls="person-panel-skills" data-tab="skills">مهارت‌ها</button>
+          <button type="button" class="dash-tab" role="tab" aria-selected="false" id="person-tab-activity" aria-controls="person-panel-activity" data-tab="activity">فعالیت</button>
+        </div>
+        <div class="dash-tab-panel" role="tabpanel" id="person-panel-overview" aria-labelledby="person-tab-overview" data-panel="overview">
+          ${extra}
+          <h4 class="dash-person-h">عملکرد ماهانه</h4>
+          ${areaChart(p.months)}
+          <h4 class="dash-person-h">اطلاعات ثبت‌شده</h4>
+          ${p.info.length ? `<dl class="dash-person-info">${p.info.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>` : empty('اطلاعات تکمیلی ثبت نشده است.')}
+        </div>
+        <div class="dash-tab-panel" role="tabpanel" id="person-panel-skills" aria-labelledby="person-tab-skills" data-panel="skills" hidden>${skills}</div>
+        <div class="dash-tab-panel" role="tabpanel" id="person-panel-activity" aria-labelledby="person-tab-activity" data-panel="activity" hidden>${activity}</div>`;
+      $('personBody').querySelectorAll('.dash-tab').forEach(tab => tab.onclick = () => {
+        $('personBody').querySelectorAll('.dash-tab').forEach(t => t.setAttribute('aria-selected', String(t === tab)));
+        $('personBody').querySelectorAll('.dash-tab-panel').forEach(panel => { panel.hidden = panel.dataset.panel !== tab.dataset.tab; });
+      });
     } catch (err) {
-      $('personBody').innerHTML = empty(err.message);
+      if ($('personBody')) $('personBody').innerHTML = empty(err.message);
     }
   }
   function leaderboard(){

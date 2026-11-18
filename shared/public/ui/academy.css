@@ -312,3 +312,39 @@ button.dash-perf-row:hover { background: rgba(212,168,83,.08); }
   .dash-chart-stats { gap: 16px; flex-wrap: wrap; }
   .dash-person-info { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* 10 — Collapsible nav groups, table status filter, bar grow animations and
+   person-detail tabs (adapted from the medesk-dashboard registry design). */
+.academy-nav-group h2 { padding: 0; }
+.academy-nav-toggle { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-height: 44px; padding: 8px 12px; border: 0; border-radius: 12px; background: transparent; color: var(--academy-muted); font-size: 10px; font-weight: 500; cursor: pointer; }
+.academy-nav-toggle:hover { background: rgba(255,255,255,.8); }
+.academy-nav-toggle svg { width: 14px; height: 14px; transition: transform .2s; }
+.academy-nav-group.collapsed .academy-nav-toggle svg { transform: rotate(-90deg); }
+.academy-nav-group.collapsed .academy-nav-body { display: none; }
+.dash-filter { display: inline-flex; align-items: center; gap: 8px; font-size: 11px; color: var(--academy-muted); }
+.dash-filter select { min-height: 36px; padding: 6px 10px; border: 1px solid var(--academy-line); border-radius: 10px; background: rgba(255,255,255,.8); font-size: 12px; }
+.dash-filter-empty { margin: 12px 0 0; font-size: 12px; color: var(--academy-muted); }
+.dash-load-seg { width: var(--seg-width, 0); animation: dash-load-grow 700ms ease-out both; }
+.dash-cap-bar i { width: var(--cap-width, 0); animation: dash-load-grow 700ms ease-out both; }
+@keyframes dash-load-grow { from { width: 0; } }
+.dash-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--academy-line); margin-bottom: 16px; }
+.dash-tab { padding: 10px 14px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--academy-muted); font-size: 13px; cursor: pointer; }
+.dash-tab[aria-selected="true"] { color: var(--academy-ink); font-weight: 700; border-bottom-color: var(--academy-gold); }
+.dash-tab-panel[hidden] { display: none; }
+.dash-skill-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.dash-skill-list li { display: flex; align-items: center; gap: 10px; font-size: 12px; }
+.dash-skill-name { min-width: 70px; font-weight: 600; }
+.dash-skill-bar { flex: 1; height: 8px; border-radius: 6px; background: rgba(154,128,80,.12); overflow: hidden; }
+.dash-skill-bar i { display: block; height: 100%; background: linear-gradient(90deg, #d4b273, #c9a462); border-radius: 6px; width: var(--skill-width, 0); animation: dash-load-grow 700ms ease-out both; }
+.dash-activity-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.dash-activity-list li { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid var(--academy-line); font-size: 12px; }
+.dash-activity-list li:first-child { border-top: 0; }
+.dash-activity-list time { margin-inline-start: auto; color: var(--academy-muted); font-size: 10px; white-space: nowrap; }
+@media (max-width: 1000px) {
+  /* Mobile navigation is a horizontal strip; headings and collapse controls are hidden. */
+  .academy-nav-body, .academy-nav-group.collapsed .academy-nav-body { display: contents; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dash-load-seg, .dash-cap-bar i, .dash-skill-bar i { animation: none; }
+  .academy-nav-toggle svg { transition: none; }
+}

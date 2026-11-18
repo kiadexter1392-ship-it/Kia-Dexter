@@ -146,6 +146,12 @@ async function freePort(){const s=net.createServer().listen(0,'127.0.0.1');await
    await req(coach,'/api/academy/dashboard/person/'+c2.id,'GET',undefined,cookieC,403);
    const personCoach=(await req(coach,'/api/academy/dashboard/person/'+c.id,'GET',undefined,cookieC)).data.person;
    assert.equal(personCoach.evalCount,1);
+   assert.equal(personCoach.classesList.length,1,'coach skills tab lists real classes');
+   assert.equal(personCoach.activity,null,'audit remains admin-only');
+   assert.equal(personSelf.activity,null,'audit remains admin-only for members');
+   assert.deepEqual(personAdmin.components,[],'missing components are not fabricated');
+   assert.equal(personAdmin.classesList.length,1);
+   assert.ok(personAdmin.activity.length>=1);
    await post('meetings',{title:'جلسه مدیر',event_date:'2026-11-13',starts_at:'18:00'},'admin');
    const invoice=(await post('invoices',{user_id:m.id,title:'شهریه واقعی',amount:1000000,discount_percent:10,due_on:'2026-12-01',status:'پرداخت‌نشده',payable:1},'admin')).data.record;
    assert.equal(invoice.data.payable,900000);
