@@ -13,3 +13,6 @@ Thumbs.db
 .idea/
 .vscode/
 *.log
+
+# Generated standalone Gooey Input build
+shared/public/gooey-demo/

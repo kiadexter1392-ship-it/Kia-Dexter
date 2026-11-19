@@ -12,3 +12,5 @@ tests
 *.db-wal
 .env
 .env.*
+
+shared/public/gooey-demo
