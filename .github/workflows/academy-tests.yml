@@ -18,6 +18,7 @@ jobs:
       - run: npm ci
       - name: Install optional browser test tools
         run: npm install --no-save --package-lock=false playwright-core@1.65.1 @sparticuz/chromium@153.0.0
+      - run: npm run check:gooey && npm run build:gooey && node tests/gooey-input.browser.js
       - run: node tests/academy-migration.js && node tests/api-coalescing.js && node tests/account-provisioning.js
       - name: Remembered login after real browser close and server restart
         env:

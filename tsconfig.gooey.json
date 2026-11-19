@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "target": "ES2022", "module": "ESNext", "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM"], "jsx": "react-jsx", "strict": true,
+    "noEmit": true, "skipLibCheck": true,
+    "paths": { "@/*": ["./*"] }
+  },
+  "include": ["components/**/*.tsx", "lib/**/*.ts", "gooey-demo/**/*.tsx", "gooey-demo/**/*.d.ts"]
+}
