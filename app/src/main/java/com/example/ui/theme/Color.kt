@@ -18,15 +18,15 @@ val DojoGlassBorder = Color(0x33D4A853)
 val DojoLineSoft = Color(0x12000000)
 
 // Rich royal purple ambient light & frosted glass tokens
-val DojoGlassCanvasTop = Color(0xFFFCFAFF)
-val DojoGlassCanvasMid = Color(0xFFF6F3FA)
-val DojoGlassCanvasBot = Color(0xFFFAF8FD)
+val DojoGlassCanvasTop = Color(0xFFF3EBFF)
+val DojoGlassCanvasMid = Color(0xFFE9D8FD)
+val DojoGlassCanvasBot = Color(0xFFF1E6FF)
 val DojoPurpleRoyal = Color(0xFF6D28D9)
 val DojoPurpleImperial = Color(0xFF4C1D95)
-val DojoPurpleOrchid = Color(0xFF9333EA)
+val DojoPurpleOrchid = Color(0xFFA855F7)
 val DojoPurpleGlowSoft = Color(0xFFC084FC)
-val DojoGlassCardFrost = Color(0xCCFFFFFF)
-val DojoPurpleBorderGlow = Color(0x407C3AED)
+val DojoGlassCardFrost = Color(0xB8FFFFFF)
+val DojoPurpleBorderGlow = Color(0x4D7C3AED)
 
 val DojoInk = Color(0xFF1A1A2E)
 val DojoTextLight = Color(0xFF444444)
@@ -47,6 +47,14 @@ val ChartStrength = Color(0xFFE74C3C)
 val ChartTechnique = Color(0xFFD4A853)
 val ChartFlexibility = Color(0xFF27AE60)
 val ChartSessions = Color(0xFF8E7CC3)
+
+// Macro-nutrient chart colors
+val MacroProteinColor = Color(0xFF6D28D9)
+val MacroProteinGlow = Color(0xFFA855F7)
+val MacroCarbsColor = Color(0xFFD97706)
+val MacroCarbsGlow = Color(0xFFF59E0B)
+val MacroFatColor = Color(0xFF0284C7)
+val MacroFatGlow = Color(0xFF38BDF8)
 
 fun parseHexColor(hex: String?, fallback: Color = DojoGold): Color {
     if (hex.isNullOrBlank()) return fallback

@@ -8,10 +8,14 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
+import android.print.PrintAttributes
+import android.print.PrintManager
+import android.util.Base64
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.CookieManager
 import android.webkit.JavascriptInterface
+import android.webkit.URLUtil
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
@@ -23,17 +27,25 @@ import android.webkit.WebViewClient
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -46,6 +58,8 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ShowChart
+import androidx.compose.material.icons.filled.RestaurantMenu
 import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -66,18 +80,24 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.FileProvider
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.R
+import com.example.ui.theme.DojoCreamBot
 import com.example.ui.theme.DojoGlassCanvasBot
 import com.example.ui.theme.DojoGlassCanvasMid
 import com.example.ui.theme.DojoGlassCanvasTop
@@ -103,15 +123,24 @@ import kotlin.math.min
 
 private const val SITE_BASE_URL = "https://arsalan.up.railway.app/"
 
+private fun isLoginRouteUrl(url: String?): Boolean {
+    val lower = url?.lowercase() ?: return false
+    return Regex("""(/(login|signin|auth|register)(/|$|\?|#)|#(login|signin|auth))""").containsMatchIn(lower)
+}
+
 private val GLASS_THEME_AND_VIEWPORT_JS = """
 (function(){
   if(!document.getElementById('dojo-viewport-fix')){
     var s=document.createElement('style');
     s.id='dojo-viewport-fix';
     s.textContent=
-      'html,body{overflow-x:clip!important;max-width:100%!important;background:transparent!important;background-color:transparent!important;background-image:none!important;}' +
-      'main,section,.section{overflow-x:clip!important;background:transparent!important;background-color:transparent!important;background-image:none!important;}' +
-      'header,nav,.navbar,.topbar{background:rgba(255,255,255,0.72)!important;backdrop-filter:blur(16px) saturate(140%)!important;-webkit-backdrop-filter:blur(16px) saturate(140%)!important;border-bottom:1px solid rgba(109,40,217,0.14)!important;}' +
+      'html,body{overflow-x:clip!important;max-width:100%!important;}' +
+      'html:not(.dojo-login-active),html:not(.dojo-login-active) body{background:transparent!important;background-color:transparent!important;background-image:none!important;}' +
+      'html:not(.dojo-login-active) main,html:not(.dojo-login-active) section:not([data-dojo-login-box="1"]),html:not(.dojo-login-active) .section:not([data-dojo-login-box="1"]),html:not(.dojo-login-active) .page,html:not(.dojo-login-active) .view,html:not(.dojo-login-active) .tab-pane,html:not(.dojo-login-active) .dashboard,html:not(.dojo-login-active) #app,html:not(.dojo-login-active) #root,html:not(.dojo-login-active) #main,html:not(.dojo-login-active) .panel-shell,html:not(.dojo-login-active) .panel-wrap,html:not(.dojo-login-active) .panel-page{overflow-x:clip!important;background:transparent!important;background-color:transparent!important;background-image:none!important;}' +
+      'html:not(.dojo-login-active) header,html:not(.dojo-login-active) nav,html:not(.dojo-login-active) .navbar,html:not(.dojo-login-active) .topbar{background:rgba(248,242,255,0.62)!important;backdrop-filter:blur(18px) saturate(155%)!important;-webkit-backdrop-filter:blur(18px) saturate(155%)!important;border-bottom:1px solid rgba(109,40,217,0.22)!important;box-shadow:0 8px 26px rgba(76,29,149,0.10)!important;}' +
+      'html:not(.dojo-login-active) .panel:not([data-dojo-login-box="1"]),html:not(.dojo-login-active) .glass:not([data-dojo-login-box="1"]),html:not(.dojo-login-active) .info-card:not([data-dojo-login-box="1"]),html:not(.dojo-login-active) .plan-card:not([data-dojo-login-box="1"]),html:not(.dojo-login-active) .contact-card:not([data-dojo-login-box="1"]){background:rgba(255,255,255,0.44)!important;backdrop-filter:blur(16px) saturate(150%)!important;-webkit-backdrop-filter:blur(16px) saturate(150%)!important;border:1px solid rgba(255,255,255,0.68)!important;box-shadow:0 12px 30px rgba(76,29,149,0.12)!important;}' +
+      '[data-dojo-login-box="1"]{background:#F0EDE6!important;background-color:#F0EDE6!important;background-image:none!important;}' +
+      'html.dojo-login-active,html.dojo-login-active body{background:#F0EDE6!important;background-color:#F0EDE6!important;}' +
       '@media (max-width:768px){.bank-card-wrap{width:min(310px,100%)!important;height:204px!important;}}' +
       '.bank-face.bank-back{padding:14px 16px!important;justify-content:space-between!important;}' +
       '.bank-back .stripe{height:30px!important;}' +
@@ -120,7 +149,209 @@ private val GLASS_THEME_AND_VIEWPORT_JS = """
       '.bank-copy{position:relative!important;z-index:2!important;flex-shrink:0!important;min-height:38px!important;padding:8px 12px!important;}';
     (document.head||document.documentElement).appendChild(s);
   }
+  function isVisible(el){
+    if(!el)return false;
+    var st=window.getComputedStyle(el);
+    if(!st || st.display==='none' || st.visibility==='hidden' || parseFloat(st.opacity)===0)return false;
+    var r=el.getBoundingClientRect();
+    return r.width>0 && r.height>0;
+  }
+  function syncLoginAndPanelState(){
+    var href=(location.pathname+location.search+location.hash).toLowerCase();
+    var isLoginUrl=/\/(login|signin|auth|register)(\/|$|\?|#)|#(login|signin|auth)/.test(href);
+    var oldBoxes=document.querySelectorAll('[data-dojo-login-box="1"]');
+    for(var k=0;k<oldBoxes.length;k++) oldBoxes[k].removeAttribute('data-dojo-login-box');
+
+    var vw=window.innerWidth||360, vh=window.innerHeight||640;
+    var loginBoxes=[];
+    var loginInputs=document.querySelectorAll('.otc-input, input[type="password"], input[autocomplete="current-password"], input[name*="pass" i], input[placeholder*="رمز"]');
+    for(var i=0;i<loginInputs.length;i++){
+      var inp=loginInputs[i];
+      if(!isVisible(inp)) continue;
+      var box=inp.closest('form, .login-box, .login-card, .auth-card, .auth-box, .modal-card, .modal-content, section, .section') || inp.parentElement;
+      if(!box || box===document.body || box===document.documentElement || box.id==='app' || box.id==='root') continue;
+      if(box.querySelector('table, .bank-card-wrap, header, nav')) continue;
+      if(loginBoxes.indexOf(box)===-1){
+        loginBoxes.push(box);
+      }
+    }
+
+    var namedLoginBoxes=document.querySelectorAll('.login-box, .login-card, .auth-card, .auth-box, #loginSection, #loginBox, #loginModal');
+    for(var n=0;n<namedLoginBoxes.length;n++){
+      var nb=namedLoginBoxes[n];
+      if(!isVisible(nb)) continue;
+      if(nb.querySelector('input, .otc-input') && !nb.querySelector('table, .bank-card-wrap, header, nav')){
+        if(loginBoxes.indexOf(nb)===-1) loginBoxes.push(nb);
+      }
+    }
+
+    for(var j=0;j<loginBoxes.length;j++){
+      loginBoxes[j].setAttribute('data-dojo-login-box','1');
+    }
+
+    var hasOtherVisibleSections=false;
+    var nonLoginBlocks=document.querySelectorAll('section, .section, .bank-card-wrap, .panel, .dashboard, table, .tab-pane, .plan-card');
+    for(var b=0;b<nonLoginBlocks.length;b++){
+      var blk=nonLoginBlocks[b];
+      if(!isVisible(blk)) continue;
+      if(blk.getAttribute('data-dojo-login-box')==='1' || blk.closest('[data-dojo-login-box="1"]') || blk.querySelector('[data-dojo-login-box="1"]')) continue;
+      var br=blk.getBoundingClientRect();
+      if(br.height>=70 && br.width>=120){
+        hasOtherVisibleSections=true;
+        break;
+      }
+    }
+
+    var hasFullLogin=isLoginUrl;
+    if(!hasFullLogin && loginBoxes.length>0 && !hasOtherVisibleSections){
+      hasFullLogin=true;
+    }
+
+    document.documentElement.classList.toggle('dojo-login-active', !!hasFullLogin);
+    if(window.AndroidDojoBridge && typeof window.AndroidDojoBridge.setLoginScreenActive==='function'){
+      window.AndroidDojoBridge.setLoginScreenActive(!!hasFullLogin);
+    }
+
+    var isPanelUrl=/\/(panel|dashboard|coach|member|student|admin|profile)(\/|$|\?|#)|#(panel|dashboard|coach|member|student)/.test(href);
+    var hasLogoutControl=false;
+    var logoutCandidates=document.querySelectorAll('[id*="logout" i], [class*="logout" i], a[href*="logout" i], button, a');
+    for(var lc=0;lc<logoutCandidates.length;lc++){
+      var lEl=logoutCandidates[lc];
+      if(!isVisible(lEl)) continue;
+      if(lEl.matches('[id*="logout" i], [class*="logout" i], a[href*="logout" i]')){
+        hasLogoutControl=true;
+        break;
+      }
+      var lTxt=(lEl.textContent||'').replace(/\s+/g,' ').trim();
+      if(lTxt.length>0 && lTxt.length<=28 && (lTxt.indexOf('خروج')!==-1 || /logout|sign\s*out/i.test(lTxt))){
+        hasLogoutControl=true;
+        break;
+      }
+    }
+
+    var hasVisibleLoginTrigger=false;
+    var loginTriggers=document.querySelectorAll('button, a');
+    for(var lt=0;lt<loginTriggers.length;lt++){
+      var tEl=loginTriggers[lt];
+      if(!isVisible(tEl)) continue;
+      var tTxt=(tEl.textContent||'').replace(/\s+/g,' ').trim();
+      if(tTxt==='ورود' || tTxt==='ورود به پنل' || tTxt==='ورود / ثبت‌نام' || tTxt==='ثبت نام' || tTxt==='ثبت‌نام'){
+        hasVisibleLoginTrigger=true;
+        break;
+      }
+    }
+
+    var isAuthenticated=false;
+    if(!hasFullLogin && !isLoginUrl){
+      if(hasLogoutControl){
+        isAuthenticated=true;
+      }else if(isPanelUrl && loginBoxes.length===0){
+        isAuthenticated=true;
+      }else if(loginBoxes.length===0 && !hasVisibleLoginTrigger){
+        var panelEls=document.querySelectorAll('.dashboard, .panel-shell, .panel-wrap, .coach-panel, .member-panel, [id*="panel" i], [class*="panel" i]');
+        for(var pe=0;pe<panelEls.length;pe++){
+          if(isVisible(panelEls[pe])){
+            isAuthenticated=true;
+            break;
+          }
+        }
+      }
+    }
+
+    if(window.AndroidDojoBridge && typeof window.AndroidDojoBridge.setAuthenticatedState==='function'){
+      window.AndroidDojoBridge.setAuthenticatedState(!!isAuthenticated);
+    }
+
+    if(hasFullLogin && document.body){
+      var prevWrappers=document.querySelectorAll('[data-dojo-panel-bg="1"]');
+      for(var pw=0;pw<prevWrappers.length;pw++){
+        prevWrappers[pw].style.removeProperty('background');
+        prevWrappers[pw].style.removeProperty('background-image');
+        prevWrappers[pw].removeAttribute('data-dojo-panel-bg');
+      }
+    }
+
+    if(!hasFullLogin && document.body){
+      var wrappers=document.querySelectorAll('body > div, body > main, main > div, #app > div, #root > div, .page, .panel-shell, .panel-wrap, .dashboard, .tab-content');
+      for(var w=0;w<wrappers.length;w++){
+        var wr=wrappers[w];
+        if(!wr || wr.getAttribute('data-dojo-login-box')==='1' || wr.closest('[data-dojo-login-box="1"]')) continue;
+        if(wr.matches('header, nav, .navbar, .topbar, .bank-card-wrap, .bank-card, .bank-face')) continue;
+        var rect=wr.getBoundingClientRect();
+        if(rect.width>=vw*0.80 && rect.height>=vh*0.30){
+          var wcs=window.getComputedStyle(wr);
+          if(wcs.backgroundColor && wcs.backgroundColor!=='rgba(0, 0, 0, 0)' && wcs.backgroundColor!=='transparent'){
+            wr.setAttribute('data-dojo-panel-bg','1');
+            wr.style.setProperty('background','transparent','important');
+            wr.style.setProperty('background-image','none','important');
+          }
+        }
+      }
+    }
+  }
+  syncLoginAndPanelState();
+  if(!window.__dojoLoginObserver){
+    window.__dojoLoginObserver=true;
+    var scheduled=false;
+    var triggerSync=function(){
+      if(scheduled)return;
+      scheduled=true;
+      requestAnimationFrame(function(){
+        scheduled=false;
+        syncLoginAndPanelState();
+      });
+    };
+    window.addEventListener('hashchange', triggerSync);
+    window.addEventListener('popstate', triggerSync);
+    if(history.pushState){
+      var origPush=history.pushState;
+      history.pushState=function(){
+        var r=origPush.apply(this,arguments);
+        triggerSync();
+        return r;
+      };
+    }
+    if(history.replaceState){
+      var origReplace=history.replaceState;
+      history.replaceState=function(){
+        var r=origReplace.apply(this,arguments);
+        triggerSync();
+        return r;
+      };
+    }
+    if(typeof MutationObserver==='function' && document.body){
+      var obs=new MutationObserver(triggerSync);
+      obs.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class','style','hidden']});
+    }
+  }
   if(window.scrollX!==0){window.scrollTo(0,window.scrollY);}
+  if(!window.__dojoClipboardPatched && window.AndroidDojoBridge){
+    window.__dojoClipboardPatched=true;
+    try{
+      if(!navigator.clipboard){
+        navigator.clipboard={
+          writeText:function(t){
+            return window.AndroidDojoBridge.copyText(String(t||''))
+              ? Promise.resolve()
+              : Promise.reject(new Error('Clipboard unavailable'));
+          }
+        };
+      }else if(typeof navigator.clipboard.writeText==='function'){
+        var origWrite=navigator.clipboard.writeText.bind(navigator.clipboard);
+        navigator.clipboard.writeText=function(t){
+          return origWrite(t).catch(function(){
+            if(window.AndroidDojoBridge.copyText(String(t||''))) return Promise.resolve();
+            return Promise.reject(new Error('Clipboard failed'));
+          });
+        };
+      }
+    }catch(_){}
+    if(typeof window.print==='function'){
+      window.print=function(){
+        window.AndroidDojoBridge.printPage();
+      };
+    }
+  }
   if(!window.__dojoCopyPatched && window.AndroidDojoBridge && typeof window.doCopy==='function'){
     window.__dojoCopyPatched=true;
     var origCopy=window.doCopy;
@@ -145,13 +376,69 @@ private val GLASS_THEME_AND_VIEWPORT_JS = """
 })();
 """.trimIndent()
 
-private class AndroidDojoBridge(private val context: Context) {
+private class AndroidDojoBridge(
+    private val context: Context,
+    private val webViewProvider: () -> WebView?,
+    private val onLoginScreenChanged: (Boolean) -> Unit,
+    private val onAuthenticatedChanged: (Boolean) -> Unit,
+    private val onError: (String) -> Unit
+) {
+    @JavascriptInterface
+    fun setLoginScreenActive(active: Boolean) {
+        val wv = webViewProvider()
+        if (wv != null) {
+            wv.post { onLoginScreenChanged(active) }
+        } else {
+            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                onLoginScreenChanged(active)
+            }
+        }
+    }
+
+    @JavascriptInterface
+    fun setAuthenticatedState(authenticated: Boolean) {
+        val wv = webViewProvider()
+        if (wv != null) {
+            wv.post { onAuthenticatedChanged(authenticated) }
+        } else {
+            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                onAuthenticatedChanged(authenticated)
+            }
+        }
+    }
+
     @JavascriptInterface
     fun copyText(text: String?): Boolean {
         if (text.isNullOrEmpty()) return false
         val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager ?: return false
         cm.setPrimaryClip(ClipData.newPlainText("arslan_dojo", text))
         return true
+    }
+
+    @JavascriptInterface
+    fun saveDataUrlFile(dataUrl: String?, fileName: String?, mimeType: String?) {
+        if (dataUrl.isNullOrBlank()) {
+            onError("خطا در دریافت فایل خروجی")
+            return
+        }
+        val ok = saveDataUriAndShare(context, dataUrl, fileName, mimeType)
+        if (!ok) {
+            onError("خطا در دریافت فایل خروجی")
+        }
+    }
+
+    @JavascriptInterface
+    fun printPage() {
+        val wv = webViewProvider() ?: return
+        wv.post {
+            runCatching {
+                val pm = context.getSystemService(Context.PRINT_SERVICE) as? PrintManager ?: return@post
+                val adapter = wv.createPrintDocumentAdapter("arsalan-dojo")
+                pm.print("arsalan-dojo", adapter, PrintAttributes.Builder().build())
+            }.onFailure {
+                onError("امکان چاپ در این دستگاه وجود ندارد")
+            }
+        }
     }
 }
 
@@ -555,6 +842,8 @@ private val SMOOTH_ONE_TIME_CODE_JS = """
 @Composable
 fun DojoPortalScreen(
     reloadSignal: Int = 0,
+    onOpenMealPlan: () -> Unit = {},
+    onOpenProgressDashboard: () -> Unit = {},
     onToast: (String) -> Unit
 ) {
     val scope = rememberCoroutineScope()
@@ -562,8 +851,16 @@ fun DojoPortalScreen(
     var loadProgress by remember { mutableIntStateOf(0) }
     var canGoBack by remember { mutableStateOf(false) }
     var hasLoadError by remember { mutableStateOf(false) }
+    var isLoginView by remember { mutableStateOf(false) }
+    var isAuthenticated by remember { mutableStateOf(false) }
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
     var filePathCallback by remember { mutableStateOf<ValueCallback<Array<Uri>>?>(null) }
+
+    val purpleBackdropAlpha by animateFloatAsState(
+        targetValue = if (isLoginView) 0f else 1f,
+        animationSpec = tween(durationMillis = 250),
+        label = "purple_backdrop_alpha"
+    )
 
     LaunchedEffect(reloadSignal) {
         if (reloadSignal > 0) {
@@ -576,7 +873,13 @@ fun DojoPortalScreen(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
         val uris = if (result.resultCode == Activity.RESULT_OK) {
-            WebChromeClient.FileChooserParams.parseResult(result.resultCode, result.data)
+            val data = result.data
+            val clipData = data?.clipData
+            if (clipData != null && clipData.itemCount > 0) {
+                Array(clipData.itemCount) { index -> clipData.getItemAt(index).uri }
+            } else {
+                WebChromeClient.FileChooserParams.parseResult(result.resultCode, data)
+            }
         } else null
         filePathCallback?.onReceiveValue(uris)
         filePathCallback = null
@@ -586,15 +889,33 @@ fun DojoPortalScreen(
         webViewRef?.goBack()
     }
 
-    DisposableEffect(Unit) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_PAUSE || event == Lifecycle.Event.ON_STOP) {
+                runCatching { CookieManager.getInstance().flush() }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
             runCatching { CookieManager.getInstance().flush() }
             webViewRef?.destroy()
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        LuxuryPurpleAmbientBackdrop(modifier = Modifier.fillMaxSize())
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(DojoCreamBot)
+    ) {
+        if (purpleBackdropAlpha > 0.01f) {
+            LuxuryPurpleAmbientBackdrop(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .alpha(purpleBackdropAlpha)
+            )
+        }
 
         Box(
             modifier = Modifier
@@ -612,11 +933,21 @@ fun DojoPortalScreen(
                             )
                             setBackgroundColor(android.graphics.Color.TRANSPARENT)
                             setLayerType(View.LAYER_TYPE_HARDWARE, null)
+                            clearCache(true)
                             overScrollMode = View.OVER_SCROLL_NEVER
                             isVerticalScrollBarEnabled = true
                             isHorizontalScrollBarEnabled = false
                             val webView = this
-                            addJavascriptInterface(AndroidDojoBridge(ctx), "AndroidDojoBridge")
+                            addJavascriptInterface(
+                                AndroidDojoBridge(
+                                    context = ctx,
+                                    webViewProvider = { webViewRef },
+                                    onLoginScreenChanged = { active -> isLoginView = active },
+                                    onAuthenticatedChanged = { authed -> isAuthenticated = authed },
+                                    onError = { msg -> scope.launch { onToast(msg) } }
+                                ),
+                                "AndroidDojoBridge"
+                            )
                             CookieManager.getInstance().apply {
                                 setAcceptCookie(true)
                                 setAcceptThirdPartyCookies(webView, true)
@@ -624,6 +955,7 @@ fun DojoPortalScreen(
                         settings.apply {
                             javaScriptEnabled = true
                             domStorageEnabled = true
+                            allowContentAccess = true
                             cacheMode = WebSettings.LOAD_DEFAULT
                             loadsImagesAutomatically = true
                             useWideViewPort = false
@@ -632,7 +964,7 @@ fun DojoPortalScreen(
                             builtInZoomControls = false
                             displayZoomControls = false
                             textZoom = 100
-                            mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
+                            mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
                         }
 
                         webChromeClient = object : WebChromeClient() {
@@ -685,9 +1017,11 @@ fun DojoPortalScreen(
                             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                                 hasLoadError = false
                                 canGoBack = view?.canGoBack() == true
+                                isLoginView = isLoginRouteUrl(url)
                             }
 
                             override fun onPageCommitVisible(view: WebView?, url: String?) {
+                                isLoginView = isLoginRouteUrl(url)
                                 view?.evaluateJavascript(GLASS_THEME_AND_VIEWPORT_JS, null)
                             }
 
@@ -707,6 +1041,15 @@ fun DojoPortalScreen(
                                 val scheme = uri.scheme?.lowercase() ?: ""
                                 if (scheme == "about" || scheme == "javascript" || scheme == "data" || scheme == "blob") {
                                     return false
+                                }
+                                if (scheme == "intent") {
+                                    runCatching {
+                                        val intent = Intent.parseUri(uri.toString(), Intent.URI_INTENT_SCHEME)
+                                        ctx.startActivity(intent)
+                                    }.onFailure {
+                                        onToast("برنامه‌ای برای باز کردن این لینک یافت نشد")
+                                    }
+                                    return true
                                 }
                                 if (scheme == "tel" || scheme == "mailto" || scheme == "sms") {
                                     val action = if (scheme == "tel") Intent.ACTION_DIAL else Intent.ACTION_VIEW
@@ -742,15 +1085,58 @@ fun DojoPortalScreen(
                         }
 
                         setDownloadListener { downloadUrl, _, contentDisposition, mimeType, _ ->
-                            scope.launch {
-                                val shared = downloadAndShareFile(
-                                    context = ctx,
-                                    url = downloadUrl,
-                                    contentDisposition = contentDisposition,
-                                    mimeType = mimeType
-                                )
-                                if (!shared) {
-                                    onToast("خطا در دریافت فایل خروجی")
+                            val guessedName = URLUtil.guessFileName(downloadUrl, contentDisposition, mimeType)
+                            when {
+                                downloadUrl.startsWith("blob:", ignoreCase = true) -> {
+                                    val escapedUrl = org.json.JSONObject.quote(downloadUrl)
+                                    val escapedName = org.json.JSONObject.quote(guessedName)
+                                    val escapedMime = org.json.JSONObject.quote(mimeType ?: "")
+                                    webView.evaluateJavascript(
+                                        """
+                                        (function(){
+                                          fetch($escapedUrl)
+                                            .then(function(r){ return r.blob(); })
+                                            .then(function(b){
+                                              var reader=new FileReader();
+                                              reader.onloadend=function(){
+                                                if(window.AndroidDojoBridge){
+                                                  window.AndroidDojoBridge.saveDataUrlFile(reader.result, $escapedName, b.type || $escapedMime);
+                                                }
+                                              };
+                                              reader.readAsDataURL(b);
+                                            })
+                                            .catch(function(){
+                                              if(window.AndroidDojoBridge){
+                                                window.AndroidDojoBridge.saveDataUrlFile('', $escapedName, $escapedMime);
+                                              }
+                                            });
+                                        })();
+                                        """.trimIndent(),
+                                        null
+                                    )
+                                }
+                                downloadUrl.startsWith("data:", ignoreCase = true) -> {
+                                    scope.launch(Dispatchers.IO) {
+                                        val shared = saveDataUriAndShare(ctx, downloadUrl, guessedName, mimeType)
+                                        if (!shared) {
+                                            withContext(Dispatchers.Main) {
+                                                onToast("خطا در دریافت فایل خروجی")
+                                            }
+                                        }
+                                    }
+                                }
+                                else -> {
+                                    scope.launch {
+                                        val shared = downloadAndShareFile(
+                                            context = ctx,
+                                            url = downloadUrl,
+                                            contentDisposition = contentDisposition,
+                                            mimeType = mimeType
+                                        )
+                                        if (!shared) {
+                                            onToast("خطا در دریافت فایل خروجی")
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -831,12 +1217,84 @@ fun DojoPortalScreen(
                 }
             }
         }
+
+        AnimatedVisibility(
+            visible = isAuthenticated && !hasLoadError,
+            enter = fadeIn(tween(220)) + scaleIn(initialScale = 0.92f, animationSpec = tween(220)),
+            exit = fadeOut(tween(180)) + scaleOut(targetScale = 0.92f, animationSpec = tween(180)),
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
+        ) {
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        onClick = onOpenMealPlan,
+                        modifier = Modifier
+                            .height(48.dp)
+                            .testTag("open_meal_plan_btn"),
+                        shape = RoundedCornerShape(24.dp),
+                        color = DojoPurpleRoyal,
+                        contentColor = Color.White,
+                        shadowElevation = 8.dp,
+                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.35f))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.RestaurantMenu,
+                                contentDescription = stringResource(R.string.meal_plan_fab_label),
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Text(
+                                text = stringResource(R.string.meal_plan_fab_label),
+                                style = MaterialTheme.typography.labelLarge
+                            )
+                        }
+                    }
+
+                    Surface(
+                        onClick = onOpenProgressDashboard,
+                        modifier = Modifier
+                            .height(48.dp)
+                            .testTag("open_progress_dashboard_btn"),
+                        shape = RoundedCornerShape(24.dp),
+                        color = DojoGlassCardFrost,
+                        contentColor = DojoPurpleImperial,
+                        shadowElevation = 8.dp,
+                        border = BorderStroke(1.dp, DojoPurpleBorderGlow)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ShowChart,
+                                contentDescription = stringResource(R.string.progress_fab_label),
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Text(
+                                text = stringResource(R.string.progress_fab_label),
+                                style = MaterialTheme.typography.labelLarge
+                            )
+                        }
+                    }
+                }
+            }
+        }
         }
     }
 }
 
 @Composable
-private fun LuxuryPurpleAmbientBackdrop(modifier: Modifier = Modifier) {
+internal fun LuxuryPurpleAmbientBackdrop(modifier: Modifier = Modifier) {
     val transition = rememberInfiniteTransition(label = "royal_purple_glow")
     val driftPrimary by transition.animateFloat(
         initialValue = -0.04f,
@@ -867,72 +1325,72 @@ private fun LuxuryPurpleAmbientBackdrop(modifier: Modifier = Modifier) {
         val maxDim = max(size.width, size.height)
         val minDim = min(size.width, size.height)
 
-        // Focused rich royal-purple light glow radiating from upper-left
+        // Upper-left rich imperial royal-purple luminous glow
         val topLeftLight = Offset(
-            x = size.width * (0.08f + driftPrimary * 0.6f),
-            y = size.height * (0.22f - driftSecondary * 0.5f)
+            x = size.width * (0.14f + driftPrimary * 0.8f),
+            y = size.height * (0.18f - driftSecondary * 0.6f)
         )
         drawCircle(
             brush = Brush.radialGradient(
                 colors = listOf(
-                    DojoPurpleImperial.copy(alpha = 0.42f),
-                    DojoPurpleRoyal.copy(alpha = 0.28f),
-                    DojoPurpleOrchid.copy(alpha = 0.12f),
+                    DojoPurpleImperial.copy(alpha = 0.54f),
+                    DojoPurpleRoyal.copy(alpha = 0.36f),
+                    DojoPurpleOrchid.copy(alpha = 0.16f),
                     Color.Transparent
                 ),
                 center = topLeftLight,
-                radius = minDim * 0.85f
+                radius = maxDim * 0.56f
             ),
-            radius = minDim * 0.85f,
+            radius = maxDim * 0.56f,
             center = topLeftLight
         )
 
-        // Focused luminous amethyst light orb along lower-right edge
+        // Lower-right radiant royal-amethyst ambient light
         val bottomRightLight = Offset(
-            x = size.width * (0.94f + driftSecondary * 0.6f),
-            y = size.height * (0.74f + driftPrimary * 0.5f)
+            x = size.width * (0.86f + driftSecondary * 0.8f),
+            y = size.height * (0.76f + driftPrimary * 0.6f)
         )
         drawCircle(
             brush = Brush.radialGradient(
                 colors = listOf(
-                    DojoPurpleRoyal.copy(alpha = 0.40f),
-                    DojoPurpleOrchid.copy(alpha = 0.22f),
-                    DojoPurpleGlowSoft.copy(alpha = 0.08f),
+                    DojoPurpleRoyal.copy(alpha = 0.52f),
+                    DojoPurpleOrchid.copy(alpha = 0.32f),
+                    DojoPurpleGlowSoft.copy(alpha = 0.14f),
                     Color.Transparent
                 ),
                 center = bottomRightLight,
-                radius = maxDim * 0.50f
+                radius = maxDim * 0.58f
             ),
-            radius = maxDim * 0.50f,
+            radius = maxDim * 0.58f,
             center = bottomRightLight
         )
 
-        // Subtle mid-left velvet violet edge halo
-        val midAccentLight = Offset(
-            x = size.width * (0.14f - driftPrimary * 0.4f),
-            y = size.height * (0.88f + driftSecondary * 0.4f)
+        // Center orchid-violet ambient light bloom behind glass panels
+        val midCenter = Offset(
+            x = size.width * (0.48f - driftPrimary * 0.5f),
+            y = size.height * (0.48f + driftSecondary * 0.5f)
         )
         drawCircle(
             brush = Brush.radialGradient(
                 colors = listOf(
-                    DojoPurpleGlowSoft.copy(alpha = 0.28f),
-                    DojoPurpleOrchid.copy(alpha = 0.12f),
+                    DojoPurpleOrchid.copy(alpha = 0.28f),
+                    DojoPurpleGlowSoft.copy(alpha = 0.16f),
                     Color.Transparent
                 ),
-                center = midAccentLight,
-                radius = minDim * 0.65f
+                center = midCenter,
+                radius = minDim * 0.92f
             ),
-            radius = minDim * 0.65f,
-            center = midAccentLight
+            radius = minDim * 0.92f,
+            center = midCenter
         )
 
-        // Frosted glass sheen layer over the light sources
+        // Subtle glass specular highlight without washing out the purple glow
         drawRect(
             brush = Brush.linearGradient(
                 colors = listOf(
-                    Color.White.copy(alpha = 0.34f),
-                    Color.White.copy(alpha = 0.14f),
-                    Color.White.copy(alpha = 0.28f)
+                    Color.White.copy(alpha = 0.12f),
+                    Color.Transparent,
+                    Color.White.copy(alpha = 0.08f)
                 )
             )
         )
@@ -972,15 +1430,58 @@ private suspend fun downloadAndShareFile(
         }
         conn.disconnect()
 
-        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", target)
-        withContext(Dispatchers.Main) {
-            val share = Intent(Intent.ACTION_SEND).apply {
-                type = mimeType ?: "text/csv"
-                putExtra(Intent.EXTRA_STREAM, uri)
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            }
-            context.startActivity(Intent.createChooser(share, rawName))
-        }
+        shareExportedFile(context, target, mimeType ?: "text/csv", rawName)
         true
     }.getOrDefault(false)
+}
+
+private fun saveDataUriAndShare(
+    context: Context,
+    dataUrl: String,
+    fileName: String?,
+    mimeType: String?
+): Boolean {
+    return runCatching {
+        val commaIndex = dataUrl.indexOf(',')
+        if (commaIndex == -1) return false
+        val header = dataUrl.substring(5, commaIndex)
+        val payload = dataUrl.substring(commaIndex + 1)
+        val resolvedMime = mimeType?.takeIf { it.isNotBlank() }
+            ?: header.substringBefore(';').takeIf { it.contains('/') }
+            ?: "application/octet-stream"
+        val bytes = if (header.contains(";base64", ignoreCase = true)) {
+            Base64.decode(payload, Base64.DEFAULT)
+        } else {
+            Uri.decode(payload).toByteArray(Charsets.UTF_8)
+        }
+        val safeName = (fileName ?: "arslan-dojo-export")
+            .replace(Regex("[^a-zA-Z0-9._-]"), "_")
+            .ifBlank { "arslan-dojo-export" }
+        val dir = File(context.cacheDir, "exports").apply { mkdirs() }
+        val target = File(dir, safeName)
+        target.writeBytes(bytes)
+        shareExportedFile(context, target, resolvedMime, safeName)
+        true
+    }.getOrDefault(false)
+}
+
+private fun shareExportedFile(
+    context: Context,
+    target: File,
+    mimeType: String,
+    displayName: String
+) {
+    val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", target)
+    android.os.Handler(android.os.Looper.getMainLooper()).post {
+        val share = Intent(Intent.ACTION_SEND).apply {
+            type = mimeType
+            putExtra(Intent.EXTRA_STREAM, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(
+            Intent.createChooser(share, displayName).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+        )
+    }
 }

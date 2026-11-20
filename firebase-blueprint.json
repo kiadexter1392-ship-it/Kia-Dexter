@@ -1,0 +1,226 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authenticated user identity and persisted nutrition/dojo preferences stored permanently per user across devices.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the owner."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "User display name from Google account."
+        },
+        "email": {
+          "type": "string",
+          "description": "User email address from Google account."
+        },
+        "photoUrl": {
+          "type": "string",
+          "description": "Optional profile avatar URL."
+        },
+        "goal": {
+          "type": "string",
+          "description": "Saved primary nutrition goal."
+        },
+        "mealCount": {
+          "type": "integer",
+          "description": "Saved preferred daily meal count."
+        },
+        "bodyStats": {
+          "type": "string",
+          "description": "Saved body metrics and training schedule."
+        },
+        "preferredFoods": {
+          "type": "string",
+          "description": "Saved preferred or available foods."
+        },
+        "restrictions": {
+          "type": "string",
+          "description": "Saved food restrictions or allergies."
+        },
+        "extraNotes": {
+          "type": "string",
+          "description": "Saved extra nutrition notes."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when profile was created (FieldValue.serverTimestamp())."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when profile was last updated (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": [
+        "userId",
+        "displayName",
+        "email",
+        "goal",
+        "mealCount",
+        "bodyStats",
+        "preferredFoods",
+        "restrictions",
+        "extraNotes",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "SavedMealItem": {
+      "title": "SavedMealItem",
+      "description": "Individual meal item inside a saved AI meal plan.",
+      "type": "object",
+      "properties": {
+        "mealTitle": { "type": "string" },
+        "timeRange": { "type": "string" },
+        "foods": { "type": "array" },
+        "calories": { "type": "integer" },
+        "proteinGrams": { "type": "integer" },
+        "carbsGrams": { "type": "integer" },
+        "fatGrams": { "type": "integer" },
+        "notes": { "type": "string" }
+      },
+      "required": [
+        "mealTitle",
+        "timeRange",
+        "foods",
+        "calories",
+        "proteinGrams",
+        "carbsGrams",
+        "fatGrams",
+        "notes"
+      ]
+    },
+    "SavedMealPlan": {
+      "title": "SavedMealPlan",
+      "description": "Immutable AI-generated personalized meal plan saved permanently on the server.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the owner."
+        },
+        "goal": { "type": "string" },
+        "mealCount": { "type": "integer" },
+        "planTitle": { "type": "string" },
+        "summary": { "type": "string" },
+        "dailyCalories": { "type": "integer" },
+        "proteinTarget": { "type": "string" },
+        "carbsTarget": { "type": "string" },
+        "fatTarget": { "type": "string" },
+        "hydrationTip": { "type": "string" },
+        "coachTip": { "type": "string" },
+        "meals": {
+          "type": "array",
+          "description": "Bounded list (1..10) of SavedMealItem objects."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when plan was saved (FieldValue.serverTimestamp())."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp matching creation (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": [
+        "userId",
+        "goal",
+        "mealCount",
+        "planTitle",
+        "summary",
+        "dailyCalories",
+        "proteinTarget",
+        "carbsTarget",
+        "fatTarget",
+        "hydrationTip",
+        "coachTip",
+        "meals",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "WorkoutProgressLog": {
+      "title": "WorkoutProgressLog",
+      "description": "Immutable student workout session and fitness milestone record saved permanently per user.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the owner."
+        },
+        "category": {
+          "type": "string",
+          "enum": ["WORKOUT", "MILESTONE"],
+          "description": "Entry type: workout session or fitness milestone."
+        },
+        "title": {
+          "type": "string",
+          "description": "Workout name or milestone label."
+        },
+        "durationMinutes": {
+          "type": "integer",
+          "description": "Session duration in minutes (0..600)."
+        },
+        "readinessScore": {
+          "type": "integer",
+          "description": "Student performance/fitness readiness score (1..100)."
+        },
+        "weightTenthsKg": {
+          "type": "integer",
+          "description": "Optional body weight in tenths of a kilogram (0 means omitted, 200..3000 means 20.0..300.0 kg)."
+        },
+        "sessionDateIso": {
+          "type": "string",
+          "description": "ISO date string (YYYY-MM-DD) when the workout or milestone occurred."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional coach or student notes."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when record was created (FieldValue.serverTimestamp())."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp matching creation (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": [
+        "userId",
+        "category",
+        "title",
+        "durationMinutes",
+        "readinessScore",
+        "weightTenthsKg",
+        "sessionDateIso",
+        "notes",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Owner-only user profile and cross-device dietary preferences (deletions forbidden)."
+    },
+    "/users/{userId}/mealPlans/{planId}": {
+      "schema": { "$ref": "#/entities/SavedMealPlan" },
+      "description": "Append-only permanent AI meal plan history per user (updates and deletions forbidden)."
+    },
+    "/users/{userId}/progressLogs/{logId}": {
+      "schema": { "$ref": "#/entities/WorkoutProgressLog" },
+      "description": "Append-only permanent workout frequency and fitness milestone logs per user (updates and deletions forbidden)."
+    }
+  }
+}

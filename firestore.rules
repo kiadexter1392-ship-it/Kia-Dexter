@@ -1,0 +1,167 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidUserProfile(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             data.displayName is string && data.displayName.size() <= 120 &&
+             data.email is string && data.email.size() <= 200 &&
+             (!('photoUrl' in data) || data.photoUrl == null || (data.photoUrl is string && data.photoUrl.size() <= 500)) &&
+             data.goal is string && data.goal.size() >= 1 && data.goal.size() <= 120 &&
+             data.mealCount is int && data.mealCount >= 1 && data.mealCount <= 10 &&
+             data.bodyStats is string && data.bodyStats.size() <= 400 &&
+             data.preferredFoods is string && data.preferredFoods.size() <= 500 &&
+             data.restrictions is string && data.restrictions.size() <= 400 &&
+             data.extraNotes is string && data.extraNotes.size() <= 500;
+    }
+
+    function isValidMealPlan(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             data.goal is string && data.goal.size() >= 1 && data.goal.size() <= 120 &&
+             data.mealCount is int && data.mealCount >= 1 && data.mealCount <= 10 &&
+             data.planTitle is string && data.planTitle.size() >= 1 && data.planTitle.size() <= 200 &&
+             data.summary is string && data.summary.size() <= 1000 &&
+             data.dailyCalories is int && data.dailyCalories >= 0 && data.dailyCalories <= 15000 &&
+             data.proteinTarget is string && data.proteinTarget.size() <= 80 &&
+             data.carbsTarget is string && data.carbsTarget.size() <= 80 &&
+             data.fatTarget is string && data.fatTarget.size() <= 80 &&
+             data.hydrationTip is string && data.hydrationTip.size() <= 1000 &&
+             data.coachTip is string && data.coachTip.size() <= 1000 &&
+             data.meals is list && data.meals.size() >= 1 && data.meals.size() <= 10 && data.meals[0] is map;
+    }
+
+    function isValidProgressLog(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             data.category is string && data.category in ['WORKOUT', 'MILESTONE'] &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 120 &&
+             data.durationMinutes is int && data.durationMinutes >= 0 && data.durationMinutes <= 600 &&
+             data.readinessScore is int && data.readinessScore >= 1 && data.readinessScore <= 100 &&
+             data.weightTenthsKg is int && (data.weightTenthsKg == 0 || (data.weightTenthsKg >= 200 && data.weightTenthsKg <= 3000)) &&
+             data.sessionDateIso is string && data.sessionDateIso.size() == 10 && data.sessionDateIso.matches('^\\d{4}-\\d{2}-\\d{2}$') &&
+             data.notes is string && data.notes.size() <= 500;
+    }
+
+    // User profile & persisted dietary preferences (strictly owner-isolated, never deleted)
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow list: if false;
+
+      allow create: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       incoming().keys().hasAll([
+                         'userId', 'displayName', 'email', 'goal', 'mealCount',
+                         'bodyStats', 'preferredFoods', 'restrictions', 'extraNotes',
+                         'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'displayName', 'email', 'photoUrl', 'goal', 'mealCount',
+                         'bodyStats', 'preferredFoods', 'restrictions', 'extraNotes',
+                         'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().createdAt is timestamp && incoming().createdAt <= request.time &&
+                       incoming().updatedAt is timestamp && incoming().updatedAt <= request.time &&
+                       isValidUserProfile(incoming(), userId);
+
+      allow update: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       isValidUserProfile(incoming(), userId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().updatedAt is timestamp && incoming().updatedAt <= request.time &&
+                       (
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'displayName', 'email', 'photoUrl', 'updatedAt'
+                         ]) ||
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'goal', 'mealCount', 'bodyStats', 'preferredFoods',
+                           'restrictions', 'extraNotes', 'updatedAt'
+                         ]) ||
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'displayName', 'email', 'photoUrl', 'goal', 'mealCount',
+                           'bodyStats', 'preferredFoods', 'restrictions', 'extraNotes', 'updatedAt'
+                         ])
+                       );
+
+      // Nothing can ever be deleted
+      allow delete: if false;
+
+      // Saved AI meal plans history (append-only, owner-isolated, never deleted)
+      match /mealPlans/{planId} {
+        allow get: if isOwner(userId) && isValidId(planId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(planId) &&
+                         incoming().keys().hasAll([
+                           'userId', 'goal', 'mealCount', 'planTitle', 'summary',
+                           'dailyCalories', 'proteinTarget', 'carbsTarget', 'fatTarget',
+                           'hydrationTip', 'coachTip', 'meals', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'goal', 'mealCount', 'planTitle', 'summary',
+                           'dailyCalories', 'proteinTarget', 'carbsTarget', 'fatTarget',
+                           'hydrationTip', 'coachTip', 'meals', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().createdAt is timestamp && incoming().createdAt <= request.time &&
+                         incoming().updatedAt is timestamp && incoming().updatedAt <= request.time &&
+                         isValidMealPlan(incoming(), userId);
+
+        // Immutable permanent meal plan history: nothing is ever overwritten or deleted
+        allow update: if false;
+        allow delete: if false;
+      }
+
+      // Saved workout & fitness milestone progress history (append-only, owner-isolated, never deleted)
+      match /progressLogs/{logId} {
+        allow get: if isOwner(userId) && isValidId(logId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(logId) &&
+                         incoming().keys().hasAll([
+                           'userId', 'category', 'title', 'durationMinutes',
+                           'readinessScore', 'weightTenthsKg', 'sessionDateIso',
+                           'notes', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'category', 'title', 'durationMinutes',
+                           'readinessScore', 'weightTenthsKg', 'sessionDateIso',
+                           'notes', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().createdAt is timestamp && incoming().createdAt <= request.time &&
+                         incoming().updatedAt is timestamp && incoming().updatedAt <= request.time &&
+                         isValidProgressLog(incoming(), userId);
+
+        // Immutable permanent progress history: nothing is ever overwritten or deleted
+        allow update: if false;
+        allow delete: if false;
+      }
+    }
+  }
+}

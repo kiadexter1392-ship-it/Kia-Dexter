@@ -3,6 +3,6 @@
     <item
         android:width="66dp"
         android:height="66dp"
-        android:drawable="@drawable/arslan_dojo_icon_1794835323107"
+        android:drawable="@drawable/ic_arsalan_dojo_logo"
         android:gravity="center" />
 </layer-list>
