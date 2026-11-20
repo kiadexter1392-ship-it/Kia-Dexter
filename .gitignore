@@ -23,4 +23,7 @@ shared/public/gooey-demo/
 build/
 app/build/
 *.hprof
+*.jks
+*.aab
+release-upload.keystore
 
