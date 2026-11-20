@@ -16,3 +16,11 @@ Thumbs.db
 
 # Generated standalone Gooey Input build
 shared/public/gooey-demo/
+
+# Android / Gradle local caches & build outputs
+.gradle/
+.kotlin/
+build/
+app/build/
+*.hprof
+
