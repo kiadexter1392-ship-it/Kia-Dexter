@@ -2,12 +2,14 @@ package com.example.auth
 
 import android.app.Activity
 import android.content.Context
+import android.content.ContextWrapper
 import android.util.Log
 import androidx.credentials.ClearCredentialStateRequest
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialCancellationException
+import androidx.credentials.exceptions.GetCredentialException
 import androidx.credentials.exceptions.NoCredentialException
 import com.example.R
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
@@ -27,6 +29,23 @@ import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 
 private const val TAG = "Auth"
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
+}
+
+private fun isConfigurationOrShaError(raw: String?): Boolean {
+    val msg = raw?.lowercase() ?: return false
+    return msg.contains("28444") ||
+        msg.contains("developer") ||
+        msg.contains("configured") ||
+        msg.contains("caller") ||
+        msg.contains("fingerprint") ||
+        msg.contains("sha") ||
+        msg.contains("10:")
+}
 
 internal fun FirebaseAuth.authStateFlow(): Flow<FirebaseUser?> = callbackFlow {
     val listener = FirebaseAuth.AuthStateListener { auth ->
@@ -64,7 +83,8 @@ fun attemptAutoSignIn(
 
     scope.launch {
         try {
-            val cred = credentialManager.getCredential(context, request).credential
+            val hostContext = context.findActivity() ?: context
+            val cred = credentialManager.getCredential(hostContext, request).credential
             if (cred is CustomCredential && cred.type == TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
                 val token = GoogleIdTokenCredential.createFrom(cred.data).idToken
                 FirebaseAuth.getInstance().signInWithCredential(GoogleAuthProvider.getCredential(token, null)).await()
@@ -103,8 +123,8 @@ fun onGoogleSignInClicked(
 
     scope.launch {
         try {
-            val activityContext = context as? Activity ?: context
-            val cred = credentialManager.getCredential(activityContext, request).credential
+            val hostContext = context.findActivity() ?: context
+            val cred = credentialManager.getCredential(hostContext, request).credential
             if (cred is CustomCredential && cred.type == TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
                 val token = GoogleIdTokenCredential.createFrom(cred.data).idToken
                 FirebaseAuth.getInstance().signInWithCredential(GoogleAuthProvider.getCredential(token, null)).await()
@@ -113,14 +133,32 @@ fun onGoogleSignInClicked(
                 onAuthError("نوع اعتبارسنجی دریافت‌شده معتبر نیست.")
             }
         } catch (e: GetCredentialCancellationException) {
-            Log.w(TAG, "Google Sign-In flow cancelled or dismissed: ${e.message}", e)
-            onAuthCancelled()
+            val detail = e.errorMessage?.toString() ?: e.message
+            Log.w(TAG, "Google Sign-In flow cancelled or dismissed: $detail", e)
+            if (isConfigurationOrShaError(detail)) {
+                onAuthError(context.getString(R.string.auth_error_sha1_mismatch))
+            } else {
+                onAuthCancelled()
+            }
         } catch (e: NoCredentialException) {
             Log.w(TAG, "No Google account/credential available on device: ${e.message}", e)
             onAuthError("حساب گوگل معتبری روی این دستگاه یافت نشد. لطفاً ابتدا حساب گوگل خود را روی دستگاه فعال کنید.")
+        } catch (e: GetCredentialException) {
+            val detail = e.errorMessage?.toString() ?: e.localizedMessage ?: e.message
+            Log.e(TAG, "Google Sign-In GetCredentialException (${e.type}): $detail", e)
+            if (isConfigurationOrShaError(detail)) {
+                onAuthError(context.getString(R.string.auth_error_sha1_mismatch))
+            } else {
+                onAuthError(detail ?: "خطا در ورود با حساب گوگل. لطفاً دوباره تلاش کنید.")
+            }
         } catch (e: Exception) {
-            Log.e(TAG, "Google Sign-In failed", e)
-            onAuthError(e.localizedMessage ?: "خطا در ورود با حساب گوگل. لطفاً دوباره تلاش کنید.")
+            val detail = e.localizedMessage ?: e.message
+            Log.e(TAG, "Google Sign-In failed: $detail", e)
+            if (isConfigurationOrShaError(detail)) {
+                onAuthError(context.getString(R.string.auth_error_sha1_mismatch))
+            } else {
+                onAuthError(detail ?: "خطا در ورود با حساب گوگل. لطفاً دوباره تلاش کنید.")
+            }
         }
     }
 }

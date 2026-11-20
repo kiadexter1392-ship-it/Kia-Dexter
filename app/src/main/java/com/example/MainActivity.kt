@@ -12,17 +12,19 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -35,6 +37,7 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
 import androidx.credentials.CredentialManager
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -49,9 +52,10 @@ import com.example.ai.GeminiUiViewModel
 import com.example.ai.configureAppCheck
 import com.example.auth.attemptAutoSignIn
 import com.example.auth.authStateFlow
+import com.example.auth.onGoogleSignInClicked
 import com.example.auth.signOut
 import com.example.data.DojoCloudRepository
-import com.example.ui.screens.AuthScreen
+import com.example.ui.screens.AuthCardContent
 import com.example.ui.screens.DojoPortalScreen
 import com.example.ui.screens.MealPlanScreen
 import com.example.ui.screens.ProgressDashboardScreen
@@ -74,6 +78,11 @@ object MealPlanRoute
 @Serializable
 object ProgressDashboardRoute
 
+private enum class PendingCloudRoute {
+    MEAL_PLAN,
+    PROGRESS
+}
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -90,6 +99,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AppNavigation() {
     val context = LocalContext.current
@@ -98,10 +108,23 @@ private fun AppNavigation() {
     val auth = remember { FirebaseAuth.getInstance() }
     val currentUser by auth.authStateFlow().collectAsStateWithLifecycle(initialValue = auth.currentUser)
 
-    var isCheckingAutoSignIn by remember { mutableStateOf(auth.currentUser == null) }
+    val navController = rememberNavController()
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    LaunchedEffect(currentUser) {
-        if (currentUser == null) {
+    val networkDisconnectedMsg = stringResource(R.string.error_network_disconnected)
+    val networkRestoredMsg = stringResource(R.string.error_network_restored)
+    val retryActionLabel = stringResource(R.string.action_retry)
+    val googleSuccessMsg = stringResource(R.string.auth_portal_google_success)
+
+    var isCheckingAutoSignIn by remember { mutableStateOf(auth.currentUser == null) }
+    var isGoogleSigningIn by remember { mutableStateOf(false) }
+    var googleAuthError by remember { mutableStateOf<String?>(null) }
+    var showAuthSheet by remember { mutableStateOf(false) }
+    var pendingCloudRoute by remember { mutableStateOf<PendingCloudRoute?>(null) }
+    var reloadSignal by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(Unit) {
+        if (auth.currentUser == null) {
             isCheckingAutoSignIn = true
             attemptAutoSignIn(
                 context = context,
@@ -116,70 +139,39 @@ private fun AppNavigation() {
     }
 
     val user = currentUser
-    if (user == null) {
-        AuthScreen(
-            isCheckingAutoSignIn = isCheckingAutoSignIn,
-            onAuthSuccess = { isCheckingAutoSignIn = false }
-        )
-    } else {
-        key(user.uid) {
-            AuthenticatedAppShell(
-                currentUserId = user.uid,
-                userDisplayName = user.displayName.orEmpty(),
-                userEmail = user.email.orEmpty(),
-                onSignOut = {
-                    signOut(
-                        credentialManager = credentialManager,
-                        scope = scope
+    val geminiViewModel: GeminiUiViewModel? = if (user != null) {
+        viewModel(
+            key = user.uid,
+            factory = viewModelFactory {
+                initializer {
+                    val app = checkNotNull(this[APPLICATION_KEY]) {
+                        "APPLICATION_KEY missing from CreationExtras"
+                    }
+                    val databaseId = app.getString(R.string.firestore_database_id)
+                    val db = FirebaseFirestore.getInstance(databaseId)
+                    GeminiUiViewModel(
+                        aiClient = GeminiAiClient(app),
+                        cloudRepository = DojoCloudRepository(db = db),
+                        currentUserId = user.uid,
+                        connectivityFlow = observeConnectivity(app),
+                        initialConnected = isCurrentlyConnected(app),
+                        savedSuccessMessage = app.getString(R.string.cloud_saved_success),
+                        saveWarningMessage = app.getString(R.string.cloud_save_warning),
+                        cloudLoadErrorMessage = app.getString(R.string.error_server_connection),
+                        progressSavedMessage = app.getString(R.string.progress_saved_success),
+                        progressSaveErrorMessage = app.getString(R.string.progress_save_error)
                     )
                 }
-            )
-        }
-    }
-}
-
-@Composable
-private fun AuthenticatedAppShell(
-    currentUserId: String,
-    userDisplayName: String,
-    userEmail: String,
-    onSignOut: () -> Unit
-) {
-    val navController = rememberNavController()
-    val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
-    val networkDisconnectedMsg = stringResource(R.string.error_network_disconnected)
-    val networkRestoredMsg = stringResource(R.string.error_network_restored)
-    val retryActionLabel = stringResource(R.string.action_retry)
-
-    val geminiViewModel: GeminiUiViewModel = viewModel(
-        key = currentUserId,
-        factory = viewModelFactory {
-            initializer {
-                val app = checkNotNull(this[APPLICATION_KEY]) {
-                    "APPLICATION_KEY missing from CreationExtras"
-                }
-                val databaseId = app.getString(R.string.firestore_database_id)
-                val db = FirebaseFirestore.getInstance(databaseId)
-                GeminiUiViewModel(
-                    aiClient = GeminiAiClient(app),
-                    cloudRepository = DojoCloudRepository(db = db),
-                    currentUserId = currentUserId,
-                    connectivityFlow = observeConnectivity(app),
-                    initialConnected = isCurrentlyConnected(app),
-                    savedSuccessMessage = app.getString(R.string.cloud_saved_success),
-                    saveWarningMessage = app.getString(R.string.cloud_save_warning),
-                    cloudLoadErrorMessage = app.getString(R.string.error_server_connection),
-                    progressSavedMessage = app.getString(R.string.progress_saved_success),
-                    progressSaveErrorMessage = app.getString(R.string.progress_save_error)
-                )
             }
-        }
+        )
+    } else {
+        null
+    }
+
+    val connectivityFlow = remember(context) { observeConnectivity(context.applicationContext) }
+    val isConnected by connectivityFlow.collectAsStateWithLifecycle(
+        initialValue = isCurrentlyConnected(context.applicationContext)
     )
-
-    val isConnected by geminiViewModel.isConnected.collectAsStateWithLifecycle()
-
-    var reloadSignal by remember { mutableIntStateOf(0) }
     var previousConnected by remember { mutableStateOf<Boolean?>(null) }
 
     LaunchedEffect(isConnected) {
@@ -205,8 +197,28 @@ private fun AuthenticatedAppShell(
         }
     }
 
+    LaunchedEffect(user?.uid) {
+        if (user != null) {
+            isCheckingAutoSignIn = false
+            googleAuthError = null
+            showAuthSheet = false
+            when (pendingCloudRoute) {
+                PendingCloudRoute.MEAL_PLAN -> {
+                    pendingCloudRoute = null
+                    navController.navigate(MealPlanRoute) { launchSingleTop = true }
+                }
+                PendingCloudRoute.PROGRESS -> {
+                    pendingCloudRoute = null
+                    navController.navigate(ProgressDashboardRoute) { launchSingleTop = true }
+                }
+                null -> Unit
+            }
+        }
+    }
+
     LaunchedEffect(geminiViewModel) {
-        geminiViewModel.errorEvents.collect { event ->
+        val vm = geminiViewModel ?: return@LaunchedEffect
+        vm.errorEvents.collect { event ->
             snackbarHostState.currentSnackbarData?.dismiss()
             val result = snackbarHostState.showSnackbar(
                 message = event.message,
@@ -214,19 +226,67 @@ private fun AuthenticatedAppShell(
                 duration = SnackbarDuration.Long
             )
             if (result == SnackbarResult.ActionPerformed && event.showRetry) {
-                geminiViewModel.retryLastRequest()
+                vm.retryLastRequest()
             }
         }
     }
 
     LaunchedEffect(geminiViewModel) {
-        geminiViewModel.infoEvents.collect { message ->
+        val vm = geminiViewModel ?: return@LaunchedEffect
+        vm.infoEvents.collect { message ->
             snackbarHostState.currentSnackbarData?.dismiss()
             snackbarHostState.showSnackbar(
                 message = message,
                 duration = SnackbarDuration.Short
             )
         }
+    }
+
+    fun triggerPortalGoogleSignIn() {
+        if (isGoogleSigningIn) return
+        googleAuthError = null
+        isGoogleSigningIn = true
+        onGoogleSignInClicked(
+            context = context,
+            credentialManager = credentialManager,
+            onAuthSuccess = {
+                isGoogleSigningIn = false
+                googleAuthError = null
+                scope.launch {
+                    snackbarHostState.currentSnackbarData?.dismiss()
+                    snackbarHostState.showSnackbar(
+                        message = googleSuccessMsg,
+                        duration = SnackbarDuration.Short
+                    )
+                }
+            },
+            onAuthError = { msg ->
+                isGoogleSigningIn = false
+                googleAuthError = msg
+                scope.launch {
+                    snackbarHostState.currentSnackbarData?.dismiss()
+                    snackbarHostState.showSnackbar(
+                        message = msg,
+                        duration = SnackbarDuration.Long
+                    )
+                }
+            },
+            scope = scope,
+            onAuthCancelled = {
+                isGoogleSigningIn = false
+            }
+        )
+    }
+
+    fun handleSignOut() {
+        pendingCloudRoute = null
+        signOut(
+            credentialManager = credentialManager,
+            scope = scope,
+            onSignOutComplete = {
+                navController.popBackStack(PortalRoute, inclusive = false)
+            }
+        )
     }
 
     Scaffold(
@@ -263,14 +323,29 @@ private fun AuthenticatedAppShell(
                 composable<PortalRoute> {
                     DojoPortalScreen(
                         reloadSignal = reloadSignal,
+                        isGoogleSignedIn = user != null,
+                        googleUserEmail = user?.email.orEmpty(),
+                        isGoogleSigningIn = isGoogleSigningIn,
+                        googleAuthError = googleAuthError,
+                        onGoogleSignInClick = { triggerPortalGoogleSignIn() },
                         onOpenMealPlan = {
-                            navController.navigate(MealPlanRoute) {
-                                launchSingleTop = true
+                            if (user != null) {
+                                navController.navigate(MealPlanRoute) {
+                                    launchSingleTop = true
+                                }
+                            } else {
+                                pendingCloudRoute = PendingCloudRoute.MEAL_PLAN
+                                showAuthSheet = true
                             }
                         },
                         onOpenProgressDashboard = {
-                            navController.navigate(ProgressDashboardRoute) {
-                                launchSingleTop = true
+                            if (user != null) {
+                                navController.navigate(ProgressDashboardRoute) {
+                                    launchSingleTop = true
+                                }
+                            } else {
+                                pendingCloudRoute = PendingCloudRoute.PROGRESS
+                                showAuthSheet = true
                             }
                         },
                         onToast = { message ->
@@ -285,32 +360,75 @@ private fun AuthenticatedAppShell(
                     )
                 }
                 composable<MealPlanRoute> {
-                    MealPlanScreen(
-                        viewModel = geminiViewModel,
-                        userDisplayName = userDisplayName,
-                        userEmail = userEmail,
-                        onSignOut = onSignOut,
-                        onBack = { navController.popBackStack() },
-                        onShowMessage = { message ->
-                            scope.launch {
-                                snackbarHostState.currentSnackbarData?.dismiss()
-                                snackbarHostState.showSnackbar(
-                                    message = message,
-                                    duration = SnackbarDuration.Short
-                                )
+                    val vm = geminiViewModel
+                    val activeUser = user
+                    if (vm != null && activeUser != null) {
+                        MealPlanScreen(
+                            viewModel = vm,
+                            userDisplayName = activeUser.displayName.orEmpty(),
+                            userEmail = activeUser.email.orEmpty(),
+                            onSignOut = { handleSignOut() },
+                            onBack = { navController.popBackStack() },
+                            onShowMessage = { message ->
+                                scope.launch {
+                                    snackbarHostState.currentSnackbarData?.dismiss()
+                                    snackbarHostState.showSnackbar(
+                                        message = message,
+                                        duration = SnackbarDuration.Short
+                                    )
+                                }
                             }
+                        )
+                    } else {
+                        LaunchedEffect(Unit) {
+                            navController.popBackStack(PortalRoute, inclusive = false)
                         }
-                    )
+                    }
                 }
                 composable<ProgressDashboardRoute> {
-                    ProgressDashboardScreen(
-                        viewModel = geminiViewModel,
-                        userDisplayName = userDisplayName,
-                        userEmail = userEmail,
-                        onSignOut = onSignOut,
-                        onBack = { navController.popBackStack() }
-                    )
+                    val vm = geminiViewModel
+                    val activeUser = user
+                    if (vm != null && activeUser != null) {
+                        ProgressDashboardScreen(
+                            viewModel = vm,
+                            userDisplayName = activeUser.displayName.orEmpty(),
+                            userEmail = activeUser.email.orEmpty(),
+                            onSignOut = { handleSignOut() },
+                            onBack = { navController.popBackStack() }
+                        )
+                    } else {
+                        LaunchedEffect(Unit) {
+                            navController.popBackStack(PortalRoute, inclusive = false)
+                        }
+                    }
                 }
+            }
+        }
+    }
+
+    if (showAuthSheet && user == null) {
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ModalBottomSheet(
+            onDismissRequest = {
+                showAuthSheet = false
+                pendingCloudRoute = null
+            },
+            sheetState = sheetState,
+            containerColor = Color(0xFFF4F4F5)
+        ) {
+            Box(
+                modifier = Modifier
+                    .navigationBarsPadding()
+                    .padding(horizontal = 20.dp, vertical = 12.dp)
+            ) {
+                AuthCardContent(
+                    isCheckingAutoSignIn = isCheckingAutoSignIn,
+                    subtitle = stringResource(R.string.auth_portal_sheet_subtitle),
+                    externalErrorMessage = googleAuthError,
+                    onAuthSuccess = {
+                        showAuthSheet = false
+                    }
+                )
             }
         }
     }

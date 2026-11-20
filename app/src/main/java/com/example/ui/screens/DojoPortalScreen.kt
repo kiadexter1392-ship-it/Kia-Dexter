@@ -66,6 +66,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -288,7 +289,76 @@ private val GLASS_THEME_AND_VIEWPORT_JS = """
         }
       }
     }
+    syncGoogleAuthWidget();
   }
+  window.__dojoGoogleState = window.__dojoGoogleState || { signedIn: false, signingIn: false, email: '', error: '' };
+  function syncGoogleAuthWidget(){
+    var host = document.querySelector('#auth .auth-box, .auth-section .auth-box, #auth, .auth-box');
+    if(!host) return;
+    var wrap = document.getElementById('dojo-google-auth-wrap');
+    if(!wrap){
+      wrap = document.createElement('div');
+      wrap.id = 'dojo-google-auth-wrap';
+      wrap.style.cssText = 'margin-top:16px;padding-top:14px;border-top:1px solid rgba(109,40,217,0.16);direction:rtl;text-align:center;';
+      wrap.innerHTML =
+        '<div style="font-size:12px;color:#6b7280;margin-bottom:10px;">یا ورود سریع با حساب گوگل</div>' +
+        '<button type="button" id="dojo-google-auth-btn" style="width:100%;min-height:48px;display:flex;align-items:center;justify-content:center;gap:10px;padding:10px 16px;border-radius:10px;border:1px solid #d4d4d8;background:#ffffff;color:#18181b;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.06);">' +
+          '<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">' +
+            '<path fill="#EA4335" d="M12 5.04c1.64 0 3.12.56 4.28 1.66l3.2-3.2C17.54 1.68 14.98.64 12 .64 7.56.64 3.72 3.18 1.86 6.88l3.73 2.9C6.46 7.06 9.01 5.04 12 5.04z"/>' +
+            '<path fill="#4285F4" d="M23.04 12.27c0-.79-.07-1.55-.2-2.27H12v4.3h6.2c-.27 1.44-1.08 2.66-2.3 3.48l3.56 2.76c2.08-1.92 3.58-4.74 3.58-8.27z"/>' +
+            '<path fill="#FBBC05" d="M5.59 14.22A7.2 7.2 0 0 1 5.21 12c0-.77.14-1.52.38-2.22l-3.73-2.9A11.36 11.36 0 0 0 .64 12c0 1.84.44 3.58 1.22 5.12l3.73-2.9z"/>' +
+            '<path fill="#34A853" d="M12 23.36c3.14 0 5.77-1.04 7.7-2.82l-3.56-2.76c-1.04.7-2.38 1.12-4.14 1.12-2.99 0-5.54-2.02-6.41-4.74l-3.73 2.9C3.72 20.82 7.56 23.36 12 23.36z"/>' +
+          '</svg>' +
+          '<span id="dojo-google-auth-label">ادامه با گوگل</span>' +
+        '</button>' +
+        '<div id="dojo-google-auth-status" style="display:none;margin-top:8px;padding:10px 12px;border-radius:10px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.32);color:#065f46;font-size:13px;font-weight:600;"></div>' +
+        '<div id="dojo-google-auth-error" style="display:none;margin-top:8px;padding:10px 12px;border-radius:10px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.32);color:#b91c1c;font-size:12px;"></div>';
+      host.appendChild(wrap);
+      var btn = document.getElementById('dojo-google-auth-btn');
+      if(btn){
+        btn.addEventListener('click', function(){
+          if(window.__dojoGoogleState && window.__dojoGoogleState.signingIn) return;
+          if(window.AndroidDojoBridge && typeof window.AndroidDojoBridge.requestGoogleSignIn === 'function'){
+            window.AndroidDojoBridge.requestGoogleSignIn();
+          }
+        });
+      }
+    }
+    var st = window.__dojoGoogleState || {};
+    var btnEl = document.getElementById('dojo-google-auth-btn');
+    var lblEl = document.getElementById('dojo-google-auth-label');
+    var okEl = document.getElementById('dojo-google-auth-status');
+    var errEl = document.getElementById('dojo-google-auth-error');
+    if(btnEl && lblEl && okEl && errEl){
+      if(st.signedIn){
+        btnEl.style.display = 'none';
+        okEl.style.display = 'block';
+        okEl.textContent = st.email ? ('متصل به حساب گوگل: ' + st.email) : 'متصل به حساب گوگل';
+        errEl.style.display = 'none';
+      }else{
+        btnEl.style.display = 'flex';
+        btnEl.disabled = !!st.signingIn;
+        btnEl.style.opacity = st.signingIn ? '0.65' : '1';
+        lblEl.textContent = st.signingIn ? 'در حال اتصال به گوگل...' : 'ادامه با گوگل';
+        okEl.style.display = 'none';
+        if(st.error){
+          errEl.style.display = 'block';
+          errEl.textContent = st.error;
+        }else{
+          errEl.style.display = 'none';
+        }
+      }
+    }
+  }
+  window.__dojoSetGoogleState = function(signedIn, signingIn, email, errorMsg){
+    window.__dojoGoogleState = {
+      signedIn: !!signedIn,
+      signingIn: !!signingIn,
+      email: String(email || ''),
+      error: String(errorMsg || '')
+    };
+    syncGoogleAuthWidget();
+  };
   syncLoginAndPanelState();
   if(!window.__dojoLoginObserver){
     window.__dojoLoginObserver=true;
@@ -381,6 +451,7 @@ private class AndroidDojoBridge(
     private val webViewProvider: () -> WebView?,
     private val onLoginScreenChanged: (Boolean) -> Unit,
     private val onAuthenticatedChanged: (Boolean) -> Unit,
+    private val onGoogleSignInRequested: () -> Unit,
     private val onError: (String) -> Unit
 ) {
     @JavascriptInterface
@@ -403,6 +474,18 @@ private class AndroidDojoBridge(
         } else {
             android.os.Handler(android.os.Looper.getMainLooper()).post {
                 onAuthenticatedChanged(authenticated)
+            }
+        }
+    }
+
+    @JavascriptInterface
+    fun requestGoogleSignIn() {
+        val wv = webViewProvider()
+        if (wv != null) {
+            wv.post { onGoogleSignInRequested() }
+        } else {
+            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                onGoogleSignInRequested()
             }
         }
     }
@@ -842,6 +925,11 @@ private val SMOOTH_ONE_TIME_CODE_JS = """
 @Composable
 fun DojoPortalScreen(
     reloadSignal: Int = 0,
+    isGoogleSignedIn: Boolean = false,
+    googleUserEmail: String = "",
+    isGoogleSigningIn: Boolean = false,
+    googleAuthError: String? = null,
+    onGoogleSignInClick: () -> Unit = {},
     onOpenMealPlan: () -> Unit = {},
     onOpenProgressDashboard: () -> Unit = {},
     onToast: (String) -> Unit
@@ -853,6 +941,7 @@ fun DojoPortalScreen(
     var hasLoadError by remember { mutableStateOf(false) }
     var isLoginView by remember { mutableStateOf(false) }
     var isAuthenticated by remember { mutableStateOf(false) }
+    var pageFinishTick by remember { mutableIntStateOf(0) }
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
     var filePathCallback by remember { mutableStateOf<ValueCallback<Array<Uri>>?>(null) }
 
@@ -867,6 +956,16 @@ fun DojoPortalScreen(
             hasLoadError = false
             webViewRef?.reload()
         }
+    }
+
+    LaunchedEffect(isGoogleSignedIn, isGoogleSigningIn, googleUserEmail, googleAuthError, pageFinishTick) {
+        val wv = webViewRef ?: return@LaunchedEffect
+        val emailLiteral = org.json.JSONObject.quote(googleUserEmail)
+        val errLiteral = org.json.JSONObject.quote(googleAuthError.orEmpty())
+        wv.evaluateJavascript(
+            "if(window.__dojoSetGoogleState){window.__dojoSetGoogleState($isGoogleSignedIn,$isGoogleSigningIn,$emailLiteral,$errLiteral);}",
+            null
+        )
     }
 
     val filePickerLauncher = rememberLauncherForActivityResult(
@@ -944,6 +1043,7 @@ fun DojoPortalScreen(
                                     webViewProvider = { webViewRef },
                                     onLoginScreenChanged = { active -> isLoginView = active },
                                     onAuthenticatedChanged = { authed -> isAuthenticated = authed },
+                                    onGoogleSignInRequested = onGoogleSignInClick,
                                     onError = { msg -> scope.launch { onToast(msg) } }
                                 ),
                                 "AndroidDojoBridge"
@@ -1023,11 +1123,13 @@ fun DojoPortalScreen(
                             override fun onPageCommitVisible(view: WebView?, url: String?) {
                                 isLoginView = isLoginRouteUrl(url)
                                 view?.evaluateJavascript(GLASS_THEME_AND_VIEWPORT_JS, null)
+                                pageFinishTick++
                             }
 
                             override fun onPageFinished(view: WebView?, url: String?) {
                                 canGoBack = view?.canGoBack() == true
                                 view?.evaluateJavascript(GLASS_THEME_AND_VIEWPORT_JS, null)
+                                pageFinishTick++
                                 scope.launch(Dispatchers.IO) {
                                     runCatching { CookieManager.getInstance().flush() }
                                 }
@@ -1213,13 +1315,30 @@ fun DojoPortalScreen(
                         ) {
                             Text("تلاش مجدد", style = MaterialTheme.typography.labelLarge)
                         }
+                        if (!isGoogleSignedIn) {
+                            OutlinedButton(
+                                onClick = onGoogleSignInClick,
+                                enabled = !isGoogleSigningIn,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp)
+                                    .testTag("google_sign_in_btn"),
+                                border = BorderStroke(1.dp, DojoPurpleBorderGlow)
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.auth_google_btn),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = DojoInk
+                                )
+                            }
+                        }
                     }
                 }
             }
         }
 
         AnimatedVisibility(
-            visible = isAuthenticated && !hasLoadError,
+            visible = (isAuthenticated || isGoogleSignedIn) && !hasLoadError,
             enter = fadeIn(tween(220)) + scaleIn(initialScale = 0.92f, animationSpec = tween(220)),
             exit = fadeOut(tween(180)) + scaleOut(targetScale = 0.92f, animationSpec = tween(180)),
             modifier = Modifier

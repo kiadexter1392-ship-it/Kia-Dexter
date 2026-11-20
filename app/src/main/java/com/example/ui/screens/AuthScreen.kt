@@ -64,13 +64,6 @@ fun AuthScreen(
     isCheckingAutoSignIn: Boolean,
     onAuthSuccess: () -> Unit
 ) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val credentialManager = remember(context) { CredentialManager.create(context) }
-
-    var isSigningIn by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
-
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Box(
             modifier = Modifier
@@ -80,142 +73,166 @@ fun AuthScreen(
                 .padding(horizontal = 20.dp),
             contentAlignment = Alignment.Center
         ) {
-            Surface(
+            AuthCardContent(
+                isCheckingAutoSignIn = isCheckingAutoSignIn,
+                onAuthSuccess = onAuthSuccess
+            )
+        }
+    }
+}
+
+@Composable
+fun AuthCardContent(
+    isCheckingAutoSignIn: Boolean = false,
+    subtitle: String? = null,
+    externalErrorMessage: String? = null,
+    onAuthSuccess: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val credentialManager = remember(context) { CredentialManager.create(context) }
+
+    var isSigningIn by remember { mutableStateOf(false) }
+    var localErrorMessage by remember { mutableStateOf<String?>(null) }
+    val activeError = externalErrorMessage ?: localErrorMessage
+
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+        Surface(
+            modifier = modifier
+                .widthIn(max = 384.dp)
+                .fillMaxWidth()
+                .testTag("auth_login_card"),
+            shape = RoundedCornerShape(12.dp),
+            color = Color.White,
+            shadowElevation = 6.dp,
+            border = BorderStroke(1.dp, Color(0xFFE4E4E7))
+        ) {
+            Column(
                 modifier = Modifier
-                    .widthIn(max = 384.dp)
                     .fillMaxWidth()
-                    .testTag("auth_login_card"),
-                shape = RoundedCornerShape(12.dp),
-                color = Color.White,
-                shadowElevation = 6.dp,
-                border = BorderStroke(1.dp, Color(0xFFE4E4E7))
+                    .padding(horizontal = 24.dp, vertical = 32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
                 Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = Color.White,
+                        border = BorderStroke(1.dp, Color(0xFFE4E4E7))
+                    ) {
+                        Image(
+                            painter = painterResource(R.drawable.ic_arsalan_dojo_logo),
+                            contentDescription = stringResource(R.string.app_name),
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(64.dp)
+                                .clip(CircleShape)
+                        )
+                    }
+
+                    Text(
+                        text = stringResource(R.string.auth_title),
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = DojoInk,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Text(
+                        text = subtitle ?: stringResource(R.string.app_name),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = DojoMuted,
+                        textAlign = TextAlign.Center
+                    )
+                }
+
+                if (activeError != null) {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp),
+                        color = DojoRedSoft,
+                        border = BorderStroke(1.dp, DojoRed.copy(alpha = 0.30f))
+                    ) {
+                        Text(
+                            text = activeError,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = DojoRed,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+
+                if (isCheckingAutoSignIn) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp,
+                            color = DojoInk
+                        )
+                        Text(
+                            text = stringResource(R.string.auth_checking_session),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = DojoMuted
+                        )
+                    }
+                }
+
+                OutlinedButton(
+                    onClick = {
+                        localErrorMessage = null
+                        isSigningIn = true
+                        onGoogleSignInClicked(
+                            context = context,
+                            credentialManager = credentialManager,
+                            onAuthSuccess = {
+                                isSigningIn = false
+                                onAuthSuccess()
+                            },
+                            onAuthError = { msg ->
+                                isSigningIn = false
+                                localErrorMessage = msg
+                            },
+                            scope = scope,
+                            onAuthCancelled = {
+                                isSigningIn = false
+                            }
+                        )
+                    },
+                    enabled = !isSigningIn,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 40.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(24.dp)
+                        .height(48.dp)
+                        .testTag("google_sign_in_btn"),
+                    shape = RoundedCornerShape(8.dp),
+                    border = BorderStroke(1.dp, Color(0xFFE4E4E7)),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = Color.White,
+                        contentColor = DojoInk
+                    )
                 ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Surface(
-                            shape = CircleShape,
-                            color = Color.White,
-                            border = BorderStroke(1.dp, Color(0xFFE4E4E7))
-                        ) {
-                            Image(
-                                painter = painterResource(R.drawable.ic_arsalan_dojo_logo),
-                                contentDescription = stringResource(R.string.app_name),
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier
-                                    .size(64.dp)
-                                    .clip(CircleShape)
-                            )
-                        }
-
-                        Text(
-                            text = stringResource(R.string.auth_title),
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.SemiBold,
+                    if (isSigningIn) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
                             color = DojoInk,
-                            textAlign = TextAlign.Center
+                            strokeWidth = 2.dp
                         )
-
+                    } else {
+                        GoogleGMark(modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.size(10.dp))
                         Text(
-                            text = stringResource(R.string.app_name),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = DojoMuted,
-                            textAlign = TextAlign.Center
+                            text = stringResource(R.string.auth_google_btn),
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Medium,
+                            color = DojoInk
                         )
-                    }
-
-                    if (errorMessage != null) {
-                        Surface(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(8.dp),
-                            color = DojoRedSoft,
-                            border = BorderStroke(1.dp, DojoRed.copy(alpha = 0.30f))
-                        ) {
-                            Text(
-                                text = errorMessage.orEmpty(),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = DojoRed,
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-                                textAlign = TextAlign.Center
-                            )
-                        }
-                    }
-
-                    if (isCheckingAutoSignIn) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(18.dp),
-                                strokeWidth = 2.dp,
-                                color = DojoInk
-                            )
-                            Text(
-                                text = stringResource(R.string.auth_checking_session),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = DojoMuted
-                            )
-                        }
-                    }
-
-                    OutlinedButton(
-                        onClick = {
-                            errorMessage = null
-                            isSigningIn = true
-                            onGoogleSignInClicked(
-                                context = context,
-                                credentialManager = credentialManager,
-                                onAuthSuccess = {
-                                    isSigningIn = false
-                                    onAuthSuccess()
-                                },
-                                onAuthError = { msg ->
-                                    isSigningIn = false
-                                    errorMessage = msg
-                                },
-                                scope = scope,
-                                onAuthCancelled = {
-                                    isSigningIn = false
-                                }
-                            )
-                        },
-                        enabled = !isSigningIn,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp)
-                            .testTag("google_sign_in_btn"),
-                        shape = RoundedCornerShape(8.dp),
-                        border = BorderStroke(1.dp, Color(0xFFE4E4E7)),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            containerColor = Color.White,
-                            contentColor = DojoInk
-                        )
-                    ) {
-                        if (isSigningIn) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                color = DojoInk,
-                                strokeWidth = 2.dp
-                            )
-                        } else {
-                            GoogleGMark(modifier = Modifier.size(20.dp))
-                            Spacer(modifier = Modifier.size(10.dp))
-                            Text(
-                                text = stringResource(R.string.auth_google_btn),
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.Medium,
-                                color = DojoInk
-                            )
-                        }
                     }
                 }
             }

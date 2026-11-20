@@ -53,6 +53,10 @@
     <string name="auth_checking_session">در حال بررسی...</string>
     <string name="auth_sign_out_btn">خروج از حساب ابری</string>
     <string name="auth_synced_badge">همگام‌سازی ابری فعال</string>
+    <string name="auth_portal_google_connected">متصل به حساب گوگل</string>
+    <string name="auth_portal_google_success">ورود با حساب گوگل با موفقیت انجام شد.</string>
+    <string name="auth_portal_sheet_subtitle">برای استفاده از برنامه غذایی هوشمند و ذخیره ابری پیشرفت، با حساب گوگل وارد شوید.</string>
+    <string name="auth_error_sha1_mismatch">تایید ورود گوگل انجام نشد. احتمالاً کلید امضای APK با تنظیمات فایربیس یکی نیست (ANDROID_KEYSTORE_BASE64).</string>
     <string name="cloud_history_title">برنامه‌های غذایی ذخیره‌شده روی سرور</string>
     <string name="cloud_history_subtitle">تاریخچه دائمی شما (قابل مشاهده در همه دستگاه‌ها)</string>
     <string name="cloud_history_loading">در حال دریافت اطلاعات از سرور...</string>

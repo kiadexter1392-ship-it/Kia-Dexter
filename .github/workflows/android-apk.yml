@@ -55,7 +55,7 @@ jobs:
         run: |
           if [ ! -f debug.keystore ]; then
             if [ -n "$ANDROID_KEYSTORE_BASE64" ]; then
-              printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 -d > debug.keystore
+              printf '%s' "$ANDROID_KEYSTORE_BASE64" | tr -d '\r\n ' | base64 -d > debug.keystore
             elif [ -f debug.keystore.base64 ]; then
               base64 -d debug.keystore.base64 > debug.keystore
             else
