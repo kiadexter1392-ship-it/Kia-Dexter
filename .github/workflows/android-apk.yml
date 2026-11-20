@@ -33,14 +33,36 @@ jobs:
             echo "sdkmanager not found under $SDK_ROOT"
             exit 1
           fi
-          echo "Using sdkmanager: $SDKMANAGER"
           (set +o pipefail; yes | "$SDKMANAGER" --sdk_root="$SDK_ROOT" --licenses >/dev/null 2>&1 || true)
           "$SDKMANAGER" --sdk_root="$SDK_ROOT" "platforms;android-36" "build-tools;36.0.0"
 
-      - name: Restore signing keystore
+      - name: Configure Firebase google-services.json
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
         run: |
-          if [ ! -f debug.keystore ] && [ -f debug.keystore.base64 ]; then
-            base64 -d debug.keystore.base64 > debug.keystore
+          if [ ! -f app/google-services.json ]; then
+            if [ -n "$GOOGLE_SERVICES_JSON" ]; then
+              printf '%s' "$GOOGLE_SERVICES_JSON" > app/google-services.json
+            else
+              echo "ERROR: app/google-services.json is missing. Add GitHub Actions secret GOOGLE_SERVICES_JSON with the contents of app/google-services.json."
+              exit 1
+            fi
+          fi
+
+      - name: Restore signing keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ ! -f debug.keystore ]; then
+            if [ -n "$ANDROID_KEYSTORE_BASE64" ]; then
+              printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 -d > debug.keystore
+            elif [ -f debug.keystore.base64 ]; then
+              base64 -d debug.keystore.base64 > debug.keystore
+            else
+              keytool -genkeypair -v -keystore debug.keystore -alias androiddebugkey \
+                -storepass android -keypass android -keyalg RSA -keysize 2048 \
+                -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+            fi
           fi
 
       - name: Set up Gradle
