@@ -46,6 +46,8 @@ function bad(ctx, msg, status = 400) {
   return null;
 }
 
+require('../shared/member-wellness').mount(app, needMember);
+
 /* ------------------------------ صفحه‌های HTML ----------------------------- */
 
 function serveMemberHtml(ctx, filename) {

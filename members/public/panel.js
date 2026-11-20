@@ -15,6 +15,7 @@
   const TITLES = {
     home: 'خانه',
     plans: 'تمرینات من',
+    meal: 'برنامه غذایی هوشمند',
     progress: 'جدول پیشرفت من',
     news: 'اطلاعیه‌ها و اعلان‌ها',
     payment: 'پرداخت شهریه',
@@ -84,6 +85,7 @@
     try {
       if (view === 'home') await renderHome(box);
       else if (view === 'plans') await renderPlans(box);
+      else if (view === 'meal') await renderMeal(box);
       else if (view === 'progress') await renderProgress(box);
       else if (view === 'news') await renderNews(box);
       else if (view === 'payment') await renderPayment(box);
@@ -333,10 +335,43 @@
     await setStatus(id, 'done');
   }
 
+  // Sensitive wellness routes require a direct session and an explicit same-origin request header.
+  async function wellness(path, body) {
+    const response = await fetch(UI.PATH_PREFIX + '/api/wellness/' + path, {
+      method: body === undefined ? 'GET' : 'POST', credentials: 'same-origin',
+      headers: body === undefined ? {} : { 'Content-Type': 'application/json', 'X-Wellness-Request': '1' },
+      body: body === undefined ? undefined : JSON.stringify(body)
+    });
+    const data = await response.json();
+    if (!response.ok || !data.ok) throw new Error(data.error || 'درخواست انجام نشد');
+    return data;
+  }
+
+  async function renderMeal(box) {
+    const data = await wellness('meals');
+    const renderPlan = (plan, id) => `<article class="card meal-plan-result"><h3>${esc(plan.title)}</h3><p>${esc(plan.summary)}</p><ul>${plan.meals.map(m=>`<li><b>${esc(m.title)}</b><p>${esc(m.foods)}</p></li>`).join('')}</ul>${id ? `<button type="button" class="btn sm ghost" data-delete-meal="${id}">حذف برنامه</button>` : ''}</article>`;
+    box.innerHTML = `<div class="stack"><div class="card"><h2>برنامه غذایی هوشمند</h2><p class="hint">پیشنهاد هوش مصنوعی جایگزین متخصص تغذیه نیست و برای درمان بیماری یا رژیم کودکان مناسب نیست. اطلاعاتی که وارد می‌کنید با رضایت شما به سرویس Google Gemini ارسال می‌شود و نتیجه در حساب سایت ذخیره می‌شود؛ با اپ اندروید همگام نیست.</p>
+      ${data.available ? `<form id="mealForm" class="stack"><label class="field">هدف<input name="goal" maxlength="300" required placeholder="مثلاً تغذیه متعادل"></label><label class="field">تعداد وعده<select name="meals"><option value="3">۳</option><option value="4">۴</option><option value="5">۵</option><option value="6">۶</option></select></label><label class="field">غذاهای دلخواه<textarea name="foods" maxlength="1000"></textarea></label><label class="field">محدودیت‌های غذایی<textarea name="restrictions" maxlength="1000"></textarea></label><label class="field">توضیحات<textarea name="notes" maxlength="1000"></textarea></label><label><input type="checkbox" name="adult" required> تأیید می‌کنم ۱۸ سال یا بیشتر دارم.</label><label><input type="checkbox" name="consent" required> با ارسال اطلاعات واردشده به Google Gemini برای ساخت پیشنهاد موافقم.</label><p class="hint">از وارد کردن نام، شماره تماس یا اطلاعات پزشکی غیرضروری خودداری کنید.</p><button class="btn primary" type="submit">ساخت برنامه غذایی</button><p id="mealError" role="alert"></p></form>` : `<p class="hint">سرویس ساخت برنامه هنوز در سرور تنظیم نشده است. برای ثبت درخواست از <a href="${esc(UI.PATH_PREFIX)}/academy#nutrition">فرم درخواست تغذیه</a> استفاده کنید.</p>`}</div>
+      <h3>برنامه‌های ذخیره‌شده</h3>${data.plans.length ? data.plans.map(p=>renderPlan(p.content,p.id)).join('') : emptyHTML('هنوز برنامه‌ای ذخیره نشده است.', '◌')}</div>`;
+    const form=box.querySelector('#mealForm');
+    if(form) form.addEventListener('submit',async event=>{
+      event.preventDefault(); if(!form.reportValidity())return;
+      const f=new FormData(form), submit=form.querySelector('button[type=submit]');
+      submit.disabled=true;
+      try { await wellness('meals',{goal:f.get('goal'),meals:Number(f.get('meals')),foods:f.get('foods'),restrictions:f.get('restrictions'),notes:f.get('notes'),adult:f.has('adult'),consent:f.has('consent')}); if(state.view==='meal') await renderMeal(box); }
+      catch(err) { if(form.isConnected) form.querySelector('#mealError').textContent=err.message; }
+      finally { submit.disabled=false; }
+    });
+    box.querySelectorAll('[data-delete-meal]').forEach(button=>button.addEventListener('click',async()=>{
+      if(!confirm('این برنامه حذف شود؟'))return;
+      try { await wellness('meals/'+Number(button.dataset.deleteMeal)+'/delete',{}); if(state.view==='meal')await renderMeal(box); } catch(err) {toast(err.message,'warn');}
+    }));
+  }
+
   /* =========================== جدول پیشرفت من =========================== */
 
   async function renderProgress(box) {
-    const d = await api('/api/progress?year=' + state.year);
+    const [d, personalLogs] = await Promise.all([api('/api/progress?year=' + state.year), wellness('progress').catch(() => null)]);
     const years = d.years.length ? d.years : [state.year];
     const p = d.progress;
 
@@ -399,6 +434,11 @@
           <p class="tiny" style="margin-top:10px">این جدول توسط مربی پر می‌شود. اگر فکر می‌کنی عددی درست نیست، با خودارزیابی به مربی اطلاع بده.</p>
         </div>
 
+        <div class="card">
+          <div class="card-head"><div class="card-title">سوابق تمرین و دستاوردهای شخصی</div></div>
+          <p class="tiny">این یادداشت‌ها فقط در حساب سایت شما ذخیره می‌شوند و از نمره‌های مربی جدا هستند.</p>
+          ${personalLogs ? `<form id="progressLogForm" class="stack"><label class="field">نوع ثبت<select name="category"><option value="workout">تمرین</option><option value="milestone">دستاورد</option></select></label><label class="field">عنوان<input name="title" maxlength="120" required></label><div class="grid-3"><label class="field">مدت (دقیقه، اختیاری)<input type="number" name="duration" min="0" max="1440"></label><label class="field">وزن (کیلوگرم، اختیاری)<input type="number" name="weight" min="10" max="400" step="0.1"></label><label class="field">آمادگی از ۱۰۰ (اختیاری)<input type="number" name="readiness" min="0" max="100"></label></div><label class="field">یادداشت<textarea name="note" maxlength="1000"></textarea></label><button class="btn primary" type="submit">ثبت سابقه</button><p id="progressLogError" role="alert"></p></form><div class="member-personal-logs">${personalLogs.logs.length ? personalLogs.logs.map(log=>`<div class="list-item"><div class="grow"><b>${esc(log.title)}</b><div class="tiny">${log.category==='workout'?'تمرین':'دستاورد'} · ${J.timeAgo(log.created_at)}${log.duration===null?'':' · '+fa(log.duration)+' دقیقه'}${log.weight===null?'':' · '+fa(log.weight)+' کیلوگرم'}${log.readiness===null?'':' · آمادگی '+fa(log.readiness)+'/۱۰۰'}</div>${log.note?`<p>${esc(log.note)}</p>`:''}</div><button type="button" class="btn sm ghost" data-delete-log="${log.id}">حذف</button></div>`).join('') : emptyHTML('هنوز سابقه‌ای ثبت نشده است.', '✎')}</div>` : '<p class="hint">برای مشاهده و ثبت سوابق شخصی ورود مستقیم لازم است.</p>'}
+        </div>
         <div class="split">
           <div class="card">
             <div class="card-head"><div class="card-title"><span class="dot" style="background:var(--gold);box-shadow:0 0 10px var(--gold)"></span> یادداشت‌های مربی</div></div>
@@ -421,6 +461,20 @@
         </div>
       </div>`;
 
+    const logForm = box.querySelector('#progressLogForm');
+    if (logForm) logForm.addEventListener('submit', async event => {
+      event.preventDefault(); if (!logForm.reportValidity()) return;
+      const values=Object.fromEntries(new FormData(logForm));
+      const submit=logForm.querySelector('button[type=submit]'); submit.disabled=true;
+      try { await wellness('progress',values); if(state.view==='progress') await renderProgress(box); }
+      catch(err) { if(logForm.isConnected) logForm.querySelector('#progressLogError').textContent=err.message; }
+      finally { submit.disabled=false; }
+    });
+    box.querySelectorAll('[data-delete-log]').forEach(button => button.addEventListener('click',async()=>{
+      if(!confirm('این سابقه حذف شود؟')) return;
+      try { await wellness('progress/'+Number(button.dataset.deleteLog)+'/delete',{}); if(state.view==='progress') await renderProgress(box); }
+      catch(err) { toast(err.message,'warn'); }
+    }));
     document.getElementById('yearSel').addEventListener('change', (e) => {
       state.year = Number(e.target.value);
       renderProgress(box);
