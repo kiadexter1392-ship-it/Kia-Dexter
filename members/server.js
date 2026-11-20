@@ -376,11 +376,15 @@ app.post('/api/self-report', (ctx) => {
   const u = needMember(ctx);
   if (!u) return;
   const b = ctx.body || {};
-  const year = Number(b.year) || todayJalali().jy;
-  const month = Number(b.month) || todayJalali().jm;
+  const year = b.year === undefined ? todayJalali().jy : Number(b.year);
+  const month = b.month === undefined ? todayJalali().jm : Number(b.month);
+  const sessions = b.sessions === '' || b.sessions === null || b.sessions === undefined ? NaN : Number(b.sessions);
+  if (!Number.isInteger(year) || year < 1200 || year > 1600 || !Number.isInteger(month) || month < 1 || month > 12 || !Number.isInteger(sessions) || sessions < 0 || sessions > 31) {
+    return bad(ctx, 'سال، ماه و تعداد جلسات معتبر را وارد کنید');
+  }
   const row = db.saveSelfReport({
     user_id: u.id, year, month,
-    sessions: b.sessions,
+    sessions,
     feeling: b.feeling,
     note: b.note
   });

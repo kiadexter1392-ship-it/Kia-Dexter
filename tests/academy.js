@@ -46,6 +46,13 @@ async function freePort(){const s=net.createServer().listen(0,'127.0.0.1');await
    await req(coach,'/api/login','POST',{username:admin.username,password},undefined,401);
    await req(coach,'/admin/api/login','POST',{username:c.username,password},undefined,401);
    await req(member,'/api/academy/records/nutrition','GET',undefined,undefined,401);
+   await req(member,'/api/self-report','POST',{year:j.jy,month:j.jm,sessions:''},cookieM,400);
+   await req(member,'/api/self-report','POST',{year:j.jy,month:j.jm,sessions:99},cookieM,400);
+   assert.equal(db.get('SELECT COUNT(*) c FROM self_reports WHERE user_id=?',m.id).c,0);
+   const selfReport=(await req(member,'/api/self-report','POST',{year:j.jy,month:j.jm,sessions:3,feeling:'خوب',note:'تمرین واقعی'},cookieM)).data.report;
+   assert.equal(selfReport.sessions,3);
+   assert.equal((await req(member,'/api/progress?year='+j.jy,'GET',undefined,cookieM)).data.selfReports.length,1);
+   assert.equal((await req(member,'/api/progress?year='+j.jy,'GET',undefined,cookieM2)).data.selfReports.length,0,'self-reports remain private');
    await req(coach,'/api/academy/records/nutrition','GET',undefined,cookieC,403);
    const cfg=(await req(member,'/api/academy/config','GET',undefined,cookieM)).data;
    assert.equal(cfg.paymentPortal,null);assert.equal(cfg.role,'member');
@@ -232,6 +239,16 @@ async function freePort(){const s=net.createServer().listen(0,'127.0.0.1');await
      await page.locator('#homePlanFilter').selectOption('todo');
      assert.equal(await page.locator('#homePlanRows [data-home-plan-status]').count(),1);
      for(const width of [320,390,768,1568]){await page.setViewportSize({width,height:900});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'member overview must not overflow');}
+     assert.equal(await page.locator('a[href="/member/academy#nutrition"]').count(),1,'existing private nutrition request is directly accessible');
+     await page.locator('.nav-item[data-view="progress"]').click();
+     await page.locator('.member-progress-dashboard').waitFor();
+     assert.equal(await page.locator('.member-progress-column').count(),1,'chart includes only the recorded month');
+     assert.match(await page.locator('.member-progress-column').textContent(),/۸۰/);
+     await page.locator('#selfBtn').click();
+     assert.equal(await page.locator('#selfForm input[name=sessions]').inputValue(),'','no manufactured default session count');
+     await page.locator('.overlay [data-close]').click();
+     await page.locator('.nav-item[data-view="home"]').click();
+     await page.locator('.member-overview-heading').waitFor();
      await page.locator('.csw-card[data-front]').waitFor();await page.locator('.csw-card[data-front]').focus();await page.keyboard.press('Enter');await page.locator('#sportAcademyDetails').waitFor();assert.ok(await page.locator('.overlay').textContent().then(t=>t.includes('چهره‌های شناخته‌شده')));await page.locator('[data-close]').click();
      await page.locator('.stb').waitFor();
      await page.setViewportSize({width:320,height:900});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'member panel must not overflow');

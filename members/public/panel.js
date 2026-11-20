@@ -354,6 +354,11 @@
           ${stat('ماه‌های ثبت‌شده', fa(filled.length), 'از ۱۲ ماه', 'var(--blue)')}
         </div>
 
+        <div class="card member-progress-dashboard">
+          <div class="card-head wrap"><div><div class="card-title">نمودار پیشرفت ماهانه</div><p class="tiny">فقط نمره‌های ثبت‌شده توسط مربی نمایش داده می‌شوند.</p></div></div>
+          ${filled.length ? `<div class="member-progress-chart" role="list" aria-label="نمره‌های واقعی ماهانه">${overallRow.map((score, i) => score === null || score === undefined ? '' : `<div class="member-progress-column" role="listitem" aria-label="${esc(J.MONTHS[i])}: ${fa(score)} از ۱۰۰"><span>${fa(score)}</span><div class="member-progress-track"><i style="height:${Math.max(0, Math.min(100, Number(score)))}%"></i></div><small>${esc(J.MONTHS[i])}</small></div>`).join('')}</div>` : emptyHTML('نمره‌ای برای این سال ثبت نشده است', '📊')}
+        </div>
+
         <div class="card">
           <div class="card-head wrap">
             <div class="card-title"><span class="dot"></span> جدول ماهانه پیشرفت</div>
@@ -435,7 +440,7 @@
               <select name="month">${J.MONTHS.map((m, i) => `<option value="${i + 1}" ${i + 1 === today.jm ? 'selected' : ''}>${esc(m)}</option>`).join('')}</select>
             </div>
             <div class="field"><label>تعداد جلساتی که تمرین کردی</label>
-              <input name="sessions" type="number" min="0" max="31" value="8"></div>
+              <input name="sessions" type="number" min="0" max="31" placeholder="تعداد جلسات" required></div>
           </div>
           <div class="field"><label>احساس کلی از این ماه</label>
             <select name="feeling">
@@ -450,6 +455,7 @@
         {
           label: 'ثبت و ارسال به مربی', class: 'primary', onClick: async (o) => {
             const f = o.querySelector('#selfForm');
+            if (!f.reportValidity()) return;
             const data = { year: state.year };
             new FormData(f).forEach((v, k) => { data[k] = v; });
             try {
