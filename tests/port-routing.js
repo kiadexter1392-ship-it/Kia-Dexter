@@ -59,6 +59,7 @@ async function freePort() {
     const cookie = form.headers.getSetCookie()[0].split(';')[0];
     const panel = await (await fetch(coach + '/member/panel', { headers: { cookie } })).text();
     assert.match(panel, /src="\/member\/panel\.js(?:\?[^"]*)?"/);
+    assert.match(panel, /href="\/member\/academy#nutrition"/);
     const wrongRole = await fetch(coach + '/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username: 'kia', password: '123456' }) });
     assert.equal(wrongRole.status, 401);
