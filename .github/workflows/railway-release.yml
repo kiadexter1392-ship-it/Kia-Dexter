@@ -1,0 +1,33 @@
+name: Verify Railway academy release
+on:
+  workflow_dispatch:
+    inputs:
+      coach_url:
+        description: Public coach origin (HTTPS, without trailing slash)
+        required: true
+        default: https://kia-dexter-production-cd4745b0.up.railway.app
+permissions:
+  contents: read
+jobs:
+  public-production-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Wait for the exact new Railway commit and verify protected public routes
+        env:
+          COACH_URL: ${{ inputs.coach_url }}
+          EXPECTED_SHA: ${{ github.sha }}
+        run: node tests/railway-public.js
+      - name: Install optional browser tools
+        run: npm install --no-save --package-lock=false playwright-core@1.65.1 @sparticuz/chromium@153.0.0
+      - name: Check actual Railway pages in Chromium without creating any production data
+        env:
+          COACH_URL: ${{ inputs.coach_url }}
+          EXPECTED_SHA: ${{ github.sha }}
+          BROWSER: '1'
+          DEPLOY_WAIT_MS: '1000'
+        run: node tests/railway-public.js
