@@ -6,6 +6,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.Locale
 
 class JalaliCalendarTest {
 
@@ -70,5 +71,18 @@ class JalaliCalendarTest {
         assertNotNull(formatted)
         assertTrue(formatted.contains("فروردین"))
         assertTrue(formatted.contains("۱۴۰۵"))
+    }
+
+    @Test
+    fun isoDates_remainAsciiUnderPersianLocale() {
+        val original = Locale.getDefault()
+        try {
+            Locale.setDefault(Locale.forLanguageTag("fa-IR"))
+            val todayIso = JalaliCalendar.todayDateIso()
+            assertTrue("Expected ASCII yyyy-MM-dd but got: $todayIso", Regex("""^\d{4}-\d{2}-\d{2}$""").matches(todayIso))
+            assertEquals("2026-03-21", JalaliCalendar.toGregorianIso(1405, 1, 1))
+        } finally {
+            Locale.setDefault(original)
+        }
     }
 }

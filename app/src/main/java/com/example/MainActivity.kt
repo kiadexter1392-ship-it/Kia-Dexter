@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
@@ -29,6 +31,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -120,8 +123,8 @@ private fun AppNavigation() {
     var isCheckingAutoSignIn by remember { mutableStateOf(auth.currentUser == null) }
     var isGoogleSigningIn by remember { mutableStateOf(false) }
     var googleAuthError by remember { mutableStateOf<String?>(null) }
-    var showAuthSheet by remember { mutableStateOf(false) }
-    var pendingCloudRoute by remember { mutableStateOf<PendingCloudRoute?>(null) }
+    var showAuthSheet by rememberSaveable { mutableStateOf(false) }
+    var pendingCloudRouteName by rememberSaveable { mutableStateOf<String?>(null) }
     var reloadSignal by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(Unit) {
@@ -203,16 +206,16 @@ private fun AppNavigation() {
             isCheckingAutoSignIn = false
             googleAuthError = null
             showAuthSheet = false
-            when (pendingCloudRoute) {
-                PendingCloudRoute.MEAL_PLAN -> {
-                    pendingCloudRoute = null
+            when (pendingCloudRouteName) {
+                PendingCloudRoute.MEAL_PLAN.name -> {
+                    pendingCloudRouteName = null
                     navController.navigate(MealPlanRoute) { launchSingleTop = true }
                 }
-                PendingCloudRoute.PROGRESS -> {
-                    pendingCloudRoute = null
+                PendingCloudRoute.PROGRESS.name -> {
+                    pendingCloudRouteName = null
                     navController.navigate(ProgressDashboardRoute) { launchSingleTop = true }
                 }
-                null -> Unit
+                else -> pendingCloudRouteName = null
             }
         }
     }
@@ -288,7 +291,7 @@ private fun AppNavigation() {
     }
 
     fun handleSignOut() {
-        pendingCloudRoute = null
+        pendingCloudRouteName = null
         signOut(
             credentialManager = credentialManager,
             scope = scope,
@@ -343,7 +346,8 @@ private fun AppNavigation() {
                                     launchSingleTop = true
                                 }
                             } else {
-                                pendingCloudRoute = PendingCloudRoute.MEAL_PLAN
+                                googleAuthError = null
+                                pendingCloudRouteName = PendingCloudRoute.MEAL_PLAN.name
                                 showAuthSheet = true
                             }
                         },
@@ -353,7 +357,8 @@ private fun AppNavigation() {
                                     launchSingleTop = true
                                 }
                             } else {
-                                pendingCloudRoute = PendingCloudRoute.PROGRESS
+                                googleAuthError = null
+                                pendingCloudRouteName = PendingCloudRoute.PROGRESS.name
                                 showAuthSheet = true
                             }
                         },
@@ -420,13 +425,15 @@ private fun AppNavigation() {
         ModalBottomSheet(
             onDismissRequest = {
                 showAuthSheet = false
-                pendingCloudRoute = null
+                pendingCloudRouteName = null
+                googleAuthError = null
             },
             sheetState = sheetState,
             containerColor = Color(0xFFF4F4F5)
         ) {
             Box(
                 modifier = Modifier
+                    .verticalScroll(rememberScrollState())
                     .navigationBarsPadding()
                     .padding(horizontal = 20.dp, vertical = 12.dp)
             ) {

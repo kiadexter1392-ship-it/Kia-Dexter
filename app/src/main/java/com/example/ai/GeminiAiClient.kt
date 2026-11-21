@@ -112,52 +112,59 @@ class GeminiAiClient(
 
     private fun buildMealPlanPrompt(request: MealPlanRequest): String = buildString {
         appendLine("تو یک متخصص تغذیه ورزشی و مربی حرفه‌ای باشگاه ارسلان دوجو هستی.")
-        appendLine("یک برنامه غذایی روزانه دقیق، عملی، خوش‌خوراک و کاملاً فارسی بر اساس درخواست زیر طراحی کن.")
+        appendLine("کاربر از تو می‌خواهد خودت به صورت کامل و حرفه‌ای غذاها را انتخاب کنی و یک برنامه غذایی روزانه دقیق، عملی، خوش‌خوراک و کاملاً فارسی بر اساس هدف و مشخصات زیر برایش بچینی.")
         appendLine("قوانین مهم:")
         appendLine("1. دقیقاً ${request.mealCount} وعده غذایی طراحی کن.")
-        appendLine("2. اندازه‌ها را با واحدهای واقعی و ملموس (گرم، قاشق، لیوان، عدد، کف دست) بنویس.")
-        appendLine("3. به غذاهای مورد علاقه و محدودیت‌های کاربر کاملاً پایبند باش.")
-        appendLine("4. اگر کاربر غذای در دسترس مشخص کرده، برنامه را با اولویت همان مواد غذایی بچین.")
+        appendLine("2. خودت بهترین و متنوع‌ترین غذاهای سالم، در دسترس و متناسب با سفره ایرانی و تغذیه ورزشی را برای هر وعده انتخاب کن (مثل ترکیب متعادل پروتئین، کربوهیدرات پیچیده، چربی مفید و فیبر).")
+        appendLine("3. اندازه‌ها را با واحدهای واقعی و ملموس (گرم، قاشق، لیوان، عدد، کف دست) بنویس.")
+        appendLine("4. اگر کاربر مشخصات بدنی یا سبک برنامه را وارد کرده، کالری و نوع غذاها را دقیقاً متناسب با آن تنظیم کن.")
         appendLine("5. مقادیر عددی proteinGrams، carbsGrams، fatGrams و calories را برای هر وعده دقیق و واقعی (بزرگ‌تر از صفر) محاسبه و پر کن تا مجموع آن‌ها با اهداف روزانه هم‌خوانی داشته باشد.")
         appendLine()
         appendLine("هدف کاربر: ${request.goal}")
         if (request.bodyStats.isNotBlank()) {
             appendLine("مشخصات بدنی و سطح فعالیت: ${request.bodyStats.trim()}")
         }
-        if (request.preferredFoods.isNotBlank()) {
-            appendLine("غذاهای دلخواه یا در دسترس: ${request.preferredFoods.trim()}")
-        }
-        if (request.restrictions.isNotBlank()) {
-            appendLine("محدودیت‌ها و غذاهایی که مصرف نمی‌شود: ${request.restrictions.trim()}")
-        }
         if (request.extraNotes.isNotBlank()) {
-            appendLine("توضیحات اضافی کاربر: ${request.extraNotes.trim()}")
+            appendLine("سبک و نکته تکمیلی برنامه: ${request.extraNotes.trim()}")
         }
     }
 
     private fun parseMealPlanJson(jsonString: String): MealPlanResult {
-        val json = JSONObject(jsonString)
-        val mealsJson = json.getJSONArray("meals")
-        val meals = (0 until mealsJson.length()).map { idx ->
-            val obj = mealsJson.getJSONObject(idx)
-            val foodsArray = obj.getJSONArray("foods")
-            val foods = (0 until foodsArray.length()).map { fIdx ->
-                foodsArray.getString(fIdx)
+        val cleanJson = jsonString.trim()
+            .removePrefix("```json")
+            .removePrefix("```")
+            .removeSuffix("```")
+            .trim()
+        val json = JSONObject(cleanJson)
+        val mealsJson = json.optJSONArray("meals")
+        val meals = if (mealsJson != null) {
+            (0 until mealsJson.length()).mapNotNull { idx ->
+                val obj = mealsJson.optJSONObject(idx) ?: return@mapNotNull null
+                val foodsArray = obj.optJSONArray("foods")
+                val foods = if (foodsArray != null) {
+                    (0 until foodsArray.length()).mapNotNull { fIdx ->
+                        foodsArray.optString(fIdx, "").takeIf { it.isNotBlank() }
+                    }
+                } else {
+                    emptyList()
+                }
+                MealItem(
+                    mealTitle = obj.optString("mealTitle", "").ifBlank { "وعده ${idx + 1}" },
+                    timeRange = obj.optString("timeRange", ""),
+                    foods = foods,
+                    calories = obj.optInt("calories", 0),
+                    proteinGrams = obj.optInt("proteinGrams", 0),
+                    carbsGrams = obj.optInt("carbsGrams", 0),
+                    fatGrams = obj.optInt("fatGrams", 0),
+                    notes = obj.optString("notes", "")
+                )
             }
-            MealItem(
-                mealTitle = obj.getString("mealTitle"),
-                timeRange = obj.optString("timeRange", ""),
-                foods = foods,
-                calories = obj.optInt("calories", 0),
-                proteinGrams = obj.optInt("proteinGrams", 0),
-                carbsGrams = obj.optInt("carbsGrams", 0),
-                fatGrams = obj.optInt("fatGrams", 0),
-                notes = obj.optString("notes", "")
-            )
+        } else {
+            emptyList()
         }
         return MealPlanResult(
-            planTitle = json.getString("planTitle"),
-            summary = json.getString("summary"),
+            planTitle = json.optString("planTitle", "").ifBlank { "برنامه غذایی هوشمند" },
+            summary = json.optString("summary", ""),
             dailyCalories = json.optInt("dailyCalories", 0),
             proteinTarget = json.optString("proteinTarget", ""),
             carbsTarget = json.optString("carbsTarget", ""),

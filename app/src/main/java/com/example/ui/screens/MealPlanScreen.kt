@@ -100,9 +100,9 @@ private val DIET_GOALS = listOf(
 
 private val QUICK_PRESETS = listOf(
     "اقتصادی و با غذاهای خانگی",
-    "پرپروتئین و کم‌چرب",
+    "پرپروتئین و ورزشی",
     "سریع‌الپخت و دانشجویی",
-    "بدون قند مصنوعی"
+    "متنوع و سفره ایرانی"
 )
 
 private val MEAL_COUNTS = listOf(3, 4, 5, 6)
@@ -125,8 +125,6 @@ fun MealPlanScreen(
     var selectedGoal by rememberSaveable { mutableStateOf(DIET_GOALS.first()) }
     var mealCount by rememberSaveable { mutableIntStateOf(4) }
     var bodyStats by rememberSaveable { mutableStateOf("") }
-    var preferredFoods by rememberSaveable { mutableStateOf("") }
-    var restrictions by rememberSaveable { mutableStateOf("") }
     var extraNotes by rememberSaveable { mutableStateOf("") }
     var profileHydrated by rememberSaveable { mutableStateOf(false) }
 
@@ -136,8 +134,6 @@ fun MealPlanScreen(
             if (loaded.goal.isNotBlank()) selectedGoal = loaded.goal
             if (loaded.mealCount in 3L..6L) mealCount = loaded.mealCount.toInt()
             if (bodyStats.isBlank() && loaded.bodyStats.isNotBlank()) bodyStats = loaded.bodyStats
-            if (preferredFoods.isBlank() && loaded.preferredFoods.isNotBlank()) preferredFoods = loaded.preferredFoods
-            if (restrictions.isBlank() && loaded.restrictions.isNotBlank()) restrictions = loaded.restrictions
             if (extraNotes.isBlank() && loaded.extraNotes.isNotBlank()) extraNotes = loaded.extraNotes
             profileHydrated = true
         }
@@ -149,8 +145,8 @@ fun MealPlanScreen(
                 goal = selectedGoal,
                 mealCount = mealCount,
                 bodyStats = bodyStats,
-                preferredFoods = preferredFoods,
-                restrictions = restrictions,
+                preferredFoods = "",
+                restrictions = "",
                 extraNotes = extraNotes
             )
         )
@@ -364,23 +360,6 @@ fun MealPlanScreen(
                                             )
 
                                             GlassInputField(
-                                                value = preferredFoods,
-                                                onValueChange = { preferredFoods = it },
-                                                label = stringResource(R.string.meal_plan_foods_label),
-                                                placeholder = stringResource(R.string.meal_plan_foods_hint),
-                                                minLines = 2,
-                                                testTag = "meal_foods_input"
-                                            )
-
-                                            GlassInputField(
-                                                value = restrictions,
-                                                onValueChange = { restrictions = it },
-                                                label = stringResource(R.string.meal_plan_restrictions_label),
-                                                placeholder = stringResource(R.string.meal_plan_restrictions_hint),
-                                                testTag = "meal_restrictions_input"
-                                            )
-
-                                            GlassInputField(
                                                 value = extraNotes,
                                                 onValueChange = { extraNotes = it },
                                                 label = stringResource(R.string.meal_plan_notes_label),
@@ -399,11 +378,15 @@ fun MealPlanScreen(
                                                         selected = added,
                                                         onClick = {
                                                             extraNotes = if (added) {
-                                                                extraNotes.replace(preset, "").trim(' ', '،', ',')
+                                                                extraNotes
+                                                                    .split('،', ',')
+                                                                    .map { it.trim() }
+                                                                    .filter { it.isNotEmpty() && it != preset }
+                                                                    .joinToString("، ")
                                                             } else if (extraNotes.isBlank()) {
                                                                 preset
                                                             } else {
-                                                                "${extraNotes.trim()}، $preset"
+                                                                "${extraNotes.trim().trimEnd('،', ',')}، $preset"
                                                             }
                                                         },
                                                         label = { Text(preset, style = MaterialTheme.typography.labelMedium) },

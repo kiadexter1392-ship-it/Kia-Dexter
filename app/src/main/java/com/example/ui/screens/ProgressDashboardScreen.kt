@@ -20,10 +20,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -95,6 +97,7 @@ import com.example.ui.theme.DojoPurpleRoyal
 import com.example.ui.theme.DojoRed
 import com.example.ui.theme.DojoTextLight
 import com.example.util.JalaliCalendar
+import java.util.Locale
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -303,10 +306,10 @@ fun ProgressDashboardScreen(
                                             )
                                         }
                                     }
-                                    items(
+                                    itemsIndexed(
                                         items = state.logs,
-                                        key = { it.id.ifBlank { "${it.sessionDateIso}_${it.title}" } }
-                                    ) { log ->
+                                        key = { index, it -> it.id.ifBlank { "${index}_${it.sessionDateIso}_${it.title}" } }
+                                    ) { _, log ->
                                         ProgressHistoryCard(log = log)
                                     }
                                 }
@@ -483,7 +486,7 @@ private fun ProgressHistoryCard(log: WorkoutProgressLogDoc) {
                 }
                 log.weightKgOrNull()?.let { kg ->
                     BadgeTag(
-                        text = "${JalaliCalendar.faNum("%.1f".format(kg))} kg",
+                        text = "${JalaliCalendar.faNum(String.format(Locale.US, "%.1f", kg))} kg",
                         color = DojoGoldDark
                     )
                 }
@@ -542,6 +545,7 @@ private fun AddProgressLogSheet(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
                     .navigationBarsPadding()
                     .imePadding()
                     .padding(horizontal = 20.dp, vertical = 8.dp),
@@ -634,7 +638,10 @@ private fun AddProgressLogSheet(
                     OutlinedTextField(
                         value = weightInput,
                         onValueChange = { raw ->
-                            val clean = JalaliCalendar.enNum(raw).filter { ch -> ch.isDigit() || ch == '.' }
+                            val clean = JalaliCalendar.enNum(raw)
+                                .replace('٫', '.')
+                                .replace(',', '.')
+                                .filter { ch -> ch.isDigit() || ch == '.' }
                             if (clean.count { it == '.' } <= 1) weightInput = clean.take(5)
                         },
                         label = { Text(stringResource(R.string.progress_weight_label)) },

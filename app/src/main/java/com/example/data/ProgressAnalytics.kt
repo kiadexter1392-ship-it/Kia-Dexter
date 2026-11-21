@@ -2,6 +2,7 @@ package com.example.data
 
 import com.example.util.JalaliCalendar
 import java.util.Calendar
+import java.util.Locale
 import java.util.TimeZone
 import kotlin.math.roundToInt
 
@@ -168,7 +169,9 @@ object ProgressAnalytics {
             val cal = Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
                 timeInMillis = tsMillis
             }
-            return "%04d-%02d-%02d".format(
+            return String.format(
+                Locale.US,
+                "%04d-%02d-%02d",
                 cal.get(Calendar.YEAR),
                 cal.get(Calendar.MONTH) + 1,
                 cal.get(Calendar.DAY_OF_MONTH)

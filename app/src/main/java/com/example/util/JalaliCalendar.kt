@@ -2,6 +2,7 @@ package com.example.util
 
 import java.util.Calendar
 import java.util.Date
+import java.util.Locale
 import java.util.TimeZone
 import kotlin.math.floor
 
@@ -184,7 +185,8 @@ object JalaliCalendar {
         return (shamsiDayOfYear(j).toFloat() / shamsiYearDays(j.jy).toFloat()).coerceIn(0f, 1f)
     }
 
-    fun formatJalaliDate(j: JalaliDate): String = faNum("%d/%02d/%02d".format(j.jy, j.jm, j.jd))
+    fun formatJalaliDate(j: JalaliDate): String =
+        faNum(String.format(Locale.US, "%d/%02d/%02d", j.jy, j.jm, j.jd))
 
     fun formatJalaliNamed(j: JalaliDate): String = "${faNum(j.jd)} ${MONTHS[j.jm - 1]} ${faNum(j.jy)}"
 
@@ -202,7 +204,7 @@ object JalaliCalendar {
 
     fun toGregorianIso(jy: Int, jm: Int, jd: Int): String {
         val g = d2g(j2d(jy, jm, jd))
-        return "%04d-%02d-%02d".format(g.gy, g.gm, g.gd)
+        return String.format(Locale.US, "%04d-%02d-%02d", g.gy, g.gm, g.gd)
     }
 
     fun isJalaliLeap(jy: Int): Boolean = jalCal(jy).leap == 0
@@ -246,14 +248,14 @@ object JalaliCalendar {
         val j = toJalali(millis)
         val base = "${faNum(j.jd)} ${MONTHS[j.jm - 1]} ${faNum(j.jy)}"
         if (!withTime) return base
-        val hh = "%02d".format(cal.get(Calendar.HOUR_OF_DAY))
-        val mm = "%02d".format(cal.get(Calendar.MINUTE))
+        val hh = String.format(Locale.US, "%02d", cal.get(Calendar.HOUR_OF_DAY))
+        val mm = String.format(Locale.US, "%02d", cal.get(Calendar.MINUTE))
         return "$base — ${faNum("$hh:$mm")}"
     }
 
     fun formatJalaliShort(millis: Long): String {
         val j = toJalali(millis)
-        return faNum("%d/%02d/%02d".format(j.jy, j.jm, j.jd))
+        return faNum(String.format(Locale.US, "%d/%02d/%02d", j.jy, j.jm, j.jd))
     }
 
     fun formatIsoShort(iso: String?): String {
@@ -285,7 +287,9 @@ object JalaliCalendar {
 
     fun nowIso(): String {
         val cal = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
-        return "%04d-%02d-%02dT%02d:%02d:%02d.%03dZ".format(
+        return String.format(
+            Locale.US,
+            "%04d-%02d-%02dT%02d:%02d:%02d.%03dZ",
             cal.get(Calendar.YEAR),
             cal.get(Calendar.MONTH) + 1,
             cal.get(Calendar.DAY_OF_MONTH),
@@ -298,7 +302,9 @@ object JalaliCalendar {
 
     fun todayDateIso(): String {
         val cal = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
-        return "%04d-%02d-%02d".format(
+        return String.format(
+            Locale.US,
+            "%04d-%02d-%02d",
             cal.get(Calendar.YEAR),
             cal.get(Calendar.MONTH) + 1,
             cal.get(Calendar.DAY_OF_MONTH)
@@ -363,7 +369,7 @@ object JalaliCalendar {
         } catch (_: Exception) {
             throw IllegalArgumentException("تاریخ تولد معتبر نیست")
         }
-        val iso = "%04d-%02d-%02d".format(year, month, day)
+        val iso = String.format(Locale.US, "%04d-%02d-%02d", year, month, day)
         if (iso > todayDateIso()) {
             throw IllegalArgumentException("تاریخ تولد نمی‌تواند در آینده باشد")
         }
@@ -372,11 +378,11 @@ object JalaliCalendar {
 
     fun birthDateToJalaliDisplay(iso: String?): String {
         val j = toJalaliFromIso(iso) ?: return ""
-        return "%d/%02d/%02d".format(j.jy, j.jm, j.jd)
+        return String.format(Locale.US, "%d/%02d/%02d", j.jy, j.jm, j.jd)
     }
 
     fun formatNumberComma(value: Int): String {
-        val raw = "%,d".format(value)
+        val raw = String.format(Locale.US, "%,d", value)
         return faNum(raw)
     }
 }

@@ -44,7 +44,10 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -148,8 +151,94 @@ private val GLASS_THEME_AND_VIEWPORT_JS = """
       '.bank-back .stripe{height:30px!important;}' +
       '.bank-back .label{margin-top:26px!important;}' +
       '.bank-back .number{direction:ltr!important;unicode-bidi:isolate!important;white-space:nowrap!important;font-size:clamp(14px,4.3vw,18px)!important;letter-spacing:1.5px!important;padding:4px 0!important;}' +
-      '.bank-copy{position:relative!important;z-index:2!important;flex-shrink:0!important;min-height:38px!important;padding:8px 12px!important;}';
+      '.bank-copy{position:relative!important;z-index:2!important;flex-shrink:0!important;min-height:38px!important;padding:8px 12px!important;}' +
+      'img[data-dojo-fallback="1"]{object-fit:cover!important;}' +
+      'html:not(.dojo-login-active) body{padding-bottom:72px!important;}';
     (document.head||document.documentElement).appendChild(s);
+  }
+  function buildDojoFallbackSvg(altText){
+    var a=(altText||'').replace(/\u200c/g,' ').replace(/\u0643/g,'\u06a9').replace(/\u064a/g,'\u06cc');
+    var c1='#4C1D95', c2='#7C3AED', c3='#D4A853', glyph='dojo';
+    if(a.indexOf('کاراته')!==-1){ c1='#4C1D95'; c2='#9333EA'; c3='#F59E0B'; glyph='karate'; }
+    else if(a.indexOf('ژیمناستیک')!==-1){ c1='#6D28D9'; c2='#DB2777'; c3='#FDE68A'; glyph='gym'; }
+    else if(a.indexOf('موی')!==-1 || a.indexOf('تای')!==-1){ c1='#3B0764'; c2='#BE123C'; c3='#FBBF24'; glyph='muay'; }
+    else if(a.indexOf('بوکس')!==-1){ c1='#1E1B4B'; c2='#6D28D9'; c3='#F59E0B'; glyph='boxing'; }
+    else if(a.indexOf('کراسفیت')!==-1){ c1='#312E81'; c2='#0F766E'; c3='#E8C878'; glyph='crossfit'; }
+    var emblem='';
+    if(glyph==='karate'){
+      emblem='<circle cx="200" cy="210" r="56" fill="none" stroke="'+c3+'" stroke-width="4" opacity="0.85"/><path d="M168 210h64M200 178v64" stroke="'+c3+'" stroke-width="3" stroke-linecap="round" opacity="0.65"/><circle cx="200" cy="210" r="18" fill="'+c3+'" opacity="0.88"/>';
+    }else if(glyph==='gym'){
+      emblem='<path d="M125 250 C165 150, 235 150, 275 250" fill="none" stroke="'+c3+'" stroke-width="5" stroke-linecap="round" opacity="0.85"/><path d="M145 215 C180 175, 220 245, 255 185" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" opacity="0.55"/><circle cx="200" cy="160" r="14" fill="'+c3+'" opacity="0.9"/>';
+    }else if(glyph==='muay'){
+      emblem='<polygon points="200,148 248,186 232,248 168,248 152,186" fill="none" stroke="'+c3+'" stroke-width="4" opacity="0.88"/><polygon points="200,174 224,200 200,228 176,200" fill="'+c3+'" opacity="0.75"/>';
+    }else if(glyph==='boxing'){
+      emblem='<rect x="154" y="164" width="92" height="92" rx="28" fill="none" stroke="'+c3+'" stroke-width="4" opacity="0.85"/><path d="M174 210h52M184 192h32M184 228h32" stroke="#FFFFFF" stroke-width="3.5" stroke-linecap="round" opacity="0.65"/>';
+    }else if(glyph==='crossfit'){
+      emblem='<path d="M150 210h100" stroke="'+c3+'" stroke-width="6" stroke-linecap="round" opacity="0.9"/><rect x="136" y="182" width="16" height="56" rx="6" fill="'+c3+'" opacity="0.85"/><rect x="248" y="182" width="16" height="56" rx="6" fill="'+c3+'" opacity="0.85"/><rect x="156" y="190" width="10" height="40" rx="4" fill="#FFFFFF" opacity="0.65"/><rect x="234" y="190" width="10" height="40" rx="4" fill="#FFFFFF" opacity="0.65"/>';
+    }else{
+      emblem='<circle cx="200" cy="210" r="50" fill="none" stroke="'+c3+'" stroke-width="4" opacity="0.85"/><circle cx="200" cy="210" r="20" fill="'+c3+'" opacity="0.8"/>';
+    }
+    var svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 440" preserveAspectRatio="xMidYMid slice">' +
+      '<defs>' +
+        '<linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">' +
+          '<stop offset="0%" stop-color="'+c1+'"/>' +
+          '<stop offset="55%" stop-color="'+c2+'"/>' +
+          '<stop offset="100%" stop-color="'+c3+'" stop-opacity="0.72"/>' +
+        '</linearGradient>' +
+        '<radialGradient id="gl" cx="30%" cy="25%" r="65%">' +
+          '<stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.32"/>' +
+          '<stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>' +
+        '</radialGradient>' +
+      '</defs>' +
+      '<rect width="400" height="440" fill="url(#g)"/>' +
+      '<rect width="400" height="440" fill="url(#gl)"/>' +
+      '<circle cx="330" cy="95" r="85" fill="#FFFFFF" opacity="0.08"/>' +
+      '<circle cx="75" cy="360" r="105" fill="#FFFFFF" opacity="0.07"/>' +
+      emblem +
+    '</svg>';
+    return 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+  }
+  function handleBrokenImage(img){
+    if(!img || img.nodeName!=='IMG') return;
+    var curSrc=img.getAttribute('src')||'';
+    if(curSrc.indexOf('data:image/svg+xml')===0 || img.getAttribute('data-dojo-fallback')==='1') return;
+    if(!img.getAttribute('data-dojo-img-retried') && curSrc && navigator.onLine!==false){
+      img.setAttribute('data-dojo-img-retried','1');
+      var sep=curSrc.indexOf('?')===-1?'?':'&';
+      img.src=curSrc+sep+'_dojo_r='+Date.now();
+      return;
+    }
+    var rect=img.getBoundingClientRect ? img.getBoundingClientRect() : {width:0,height:0};
+    var alt=(img.getAttribute('alt')||'').trim();
+    var isTiny=(rect.width>0 && rect.width<=34 && rect.height>0 && rect.height<=34) && !alt;
+    if(isTiny){
+      img.setAttribute('data-dojo-fallback','1');
+      img.style.setProperty('display','none','important');
+      return;
+    }
+    img.setAttribute('data-dojo-fallback','1');
+    img.src=buildDojoFallbackSvg(alt);
+  }
+  function syncBrokenImages(){
+    var imgs=document.images;
+    if(!imgs) return;
+    for(var ii=0;ii<imgs.length;ii++){
+      var im=imgs[ii];
+      if(!im) continue;
+      if(im.getAttribute('data-dojo-fallback')==='1') continue;
+      var s=im.getAttribute('src')||'';
+      if(!s || (im.complete && im.naturalWidth===0)){
+        handleBrokenImage(im);
+      }
+    }
+  }
+  if(!window.__dojoImgErrorBound){
+    window.__dojoImgErrorBound=true;
+    document.addEventListener('error', function(ev){
+      if(ev && ev.target && ev.target.nodeName==='IMG'){
+        handleBrokenImage(ev.target);
+      }
+    }, true);
   }
   function isVisible(el){
     if(!el)return false;
@@ -291,6 +380,7 @@ private val GLASS_THEME_AND_VIEWPORT_JS = """
       }
     }
     syncGoogleAuthWidget();
+    syncBrokenImages();
   }
   window.__dojoGoogleState = window.__dojoGoogleState || { signedIn: false, signingIn: false, email: '', error: '' };
   function syncGoogleAuthWidget(){
@@ -939,6 +1029,7 @@ private val SMOOTH_ONE_TIME_CODE_JS = """
 })();
 """.trimIndent()
 
+@OptIn(ExperimentalLayoutApi::class)
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun DojoPortalScreen(
@@ -1010,15 +1101,28 @@ fun DojoPortalScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_PAUSE || event == Lifecycle.Event.ON_STOP) {
-                runCatching { CookieManager.getInstance().flush() }
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> webViewRef?.onResume()
+                Lifecycle.Event.ON_PAUSE -> {
+                    webViewRef?.onPause()
+                    runCatching { CookieManager.getInstance().flush() }
+                }
+                Lifecycle.Event.ON_STOP -> {
+                    runCatching { CookieManager.getInstance().flush() }
+                }
+                else -> Unit
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
             runCatching { CookieManager.getInstance().flush() }
-            webViewRef?.destroy()
+            webViewRef?.let { wv ->
+                runCatching { wv.stopLoading() }
+                runCatching { (wv.parent as? ViewGroup)?.removeView(wv) }
+                runCatching { wv.destroy() }
+            }
+            webViewRef = null
         }
     }
 
@@ -1035,11 +1139,13 @@ fun DojoPortalScreen(
             )
         }
 
-        Box(
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
                 .windowInsetsPadding(WindowInsets.safeDrawing)
         ) {
+            val isWideLayout = maxWidth >= 600.dp
+
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
                 AndroidView(
                     modifier = Modifier.fillMaxSize(),
@@ -1051,7 +1157,6 @@ fun DojoPortalScreen(
                             )
                             setBackgroundColor(android.graphics.Color.TRANSPARENT)
                             setLayerType(View.LAYER_TYPE_HARDWARE, null)
-                            clearCache(true)
                             overScrollMode = View.OVER_SCROLL_NEVER
                             isVerticalScrollBarEnabled = true
                             isHorizontalScrollBarEnabled = false
@@ -1077,13 +1182,14 @@ fun DojoPortalScreen(
                             allowContentAccess = true
                             cacheMode = WebSettings.LOAD_DEFAULT
                             loadsImagesAutomatically = true
+                            blockNetworkImage = false
                             useWideViewPort = false
                             loadWithOverviewMode = false
                             setSupportZoom(false)
                             builtInZoomControls = false
                             displayZoomControls = false
                             textZoom = 100
-                            mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
+                            mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
                         }
 
                         webChromeClient = object : WebChromeClient() {
@@ -1361,13 +1467,13 @@ fun DojoPortalScreen(
             enter = fadeIn(tween(220)) + scaleIn(initialScale = 0.92f, animationSpec = tween(220)),
             exit = fadeOut(tween(180)) + scaleOut(targetScale = 0.92f, animationSpec = tween(180)),
             modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
+                .align(if (isWideLayout) Alignment.BottomEnd else Alignment.BottomStart)
+                .padding(start = 16.dp, end = 16.dp, bottom = 14.dp)
         ) {
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                Row(
+                FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Surface(
                         onClick = onOpenMealPlan,

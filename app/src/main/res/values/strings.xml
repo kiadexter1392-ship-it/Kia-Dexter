@@ -18,7 +18,7 @@
     <string name="action_retry">تلاش مجدد</string>
     <string name="meal_plan_fab_label">برنامه غذایی AI</string>
     <string name="meal_plan_title">برنامه غذایی هوشمند</string>
-    <string name="meal_plan_subtitle">طراحی رژیم اختصاصی بر اساس هدف و سلیقه شما</string>
+    <string name="meal_plan_subtitle">طراحی خودکار برنامه غذایی کامل بر اساس هدف و مشخصات بدنی شما</string>
     <string name="meal_plan_goal_label">هدف شما</string>
     <string name="meal_plan_meals_count_label">تعداد وعده‌ها</string>
     <string name="meal_plan_stats_label">مشخصات بدنی و تمرین (اختیاری)</string>
@@ -27,8 +27,8 @@
     <string name="meal_plan_foods_hint">مثال: تخم‌مرغ، سینه مرغ، برنج، جو دوسر، ماست یونانی، خرما</string>
     <string name="meal_plan_restrictions_label">محدودیت یا غذاهایی که نمی‌خورید</string>
     <string name="meal_plan_restrictions_hint">مثال: بدون قند مصنوعی، عدم مصرف ماهی یا لبنیات</string>
-    <string name="meal_plan_notes_label">توضیحات و درخواست‌های دیگر</string>
-    <string name="meal_plan_notes_hint">مثال: اقتصادی باشد، وعده‌های سریع‌الپخت، مناسب قبل تمرین</string>
+    <string name="meal_plan_notes_label">سبک برنامه یا نکته تکمیلی (اختیاری)</string>
+    <string name="meal_plan_notes_hint">مثال: اقتصادی باشد، مناسب قبل و بعد تمرین، غذاهای خانگی</string>
     <string name="meal_plan_generate_btn">ساخت برنامه غذایی اختصاصی</string>
     <string name="meal_plan_loading">در حال طراحی برنامه غذایی اختصاصی...</string>
     <string name="meal_plan_copy_btn">کپی برنامه</string>

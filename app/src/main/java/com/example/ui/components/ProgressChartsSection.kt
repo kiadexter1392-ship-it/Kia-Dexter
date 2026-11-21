@@ -78,6 +78,7 @@ import ir.ehsannarmani.compose_charts.models.LabelHelperProperties
 import ir.ehsannarmani.compose_charts.models.LabelProperties
 import ir.ehsannarmani.compose_charts.models.Line
 import ir.ehsannarmani.compose_charts.models.PopupProperties
+import java.util.Locale
 import kotlin.math.roundToInt
 
 private enum class FrequencyChartMode {
@@ -446,7 +447,7 @@ fun FitnessMilestonesLineChartCard(
                         border = BorderStroke(1.dp, DojoGold.copy(alpha = 0.45f))
                     ) {
                         Text(
-                            text = "${JalaliCalendar.faNum("%.1f".format(latestWeightKg))} kg",
+                            text = "${JalaliCalendar.faNum(String.format(Locale.US, "%.1f", latestWeightKg))} kg",
                             style = MaterialTheme.typography.labelMedium,
                             color = DojoInk,
                             fontWeight = FontWeight.Bold,

@@ -4,18 +4,28 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
+import android.os.Build
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+
+private fun NetworkCapabilities.hasUsableInternet(): Boolean {
+    val hasInternet = hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+    val notSuspended = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+        hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_SUSPENDED)
+    } else {
+        true
+    }
+    return hasInternet && notSuspended
+}
 
 fun isCurrentlyConnected(context: Context): Boolean {
     val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
         ?: return false
     val network = cm.activeNetwork ?: return false
     val caps = cm.getNetworkCapabilities(network) ?: return false
-    return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
-        caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+    return caps.hasUsableInternet()
 }
 
 fun observeConnectivity(context: Context): Flow<Boolean> = callbackFlow {
@@ -35,7 +45,7 @@ fun observeConnectivity(context: Context): Flow<Boolean> = callbackFlow {
     val callback = object : ConnectivityManager.NetworkCallback() {
         override fun onAvailable(network: Network) {
             val caps = cm.getNetworkCapabilities(network)
-            if (caps?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true) {
+            if (caps?.hasUsableInternet() == true) {
                 activeNetworks.add(network)
                 emitCurrent()
             }
@@ -45,15 +55,12 @@ fun observeConnectivity(context: Context): Flow<Boolean> = callbackFlow {
             network: Network,
             networkCapabilities: NetworkCapabilities
         ) {
-            val hasInternet =
-                networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
-                    networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
-            if (hasInternet) {
+            if (networkCapabilities.hasUsableInternet()) {
                 activeNetworks.add(network)
             } else {
                 activeNetworks.remove(network)
             }
-            trySend(activeNetworks.isNotEmpty())
+            trySend(activeNetworks.isNotEmpty() || isCurrentlyConnected(context))
         }
 
         override fun onLost(network: Network) {
