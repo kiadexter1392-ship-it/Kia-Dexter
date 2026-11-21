@@ -115,6 +115,7 @@ private fun AppNavigation() {
     val networkRestoredMsg = stringResource(R.string.error_network_restored)
     val retryActionLabel = stringResource(R.string.action_retry)
     val googleSuccessMsg = stringResource(R.string.auth_portal_google_success)
+    val googleCancelledMsg = stringResource(R.string.auth_portal_google_cancelled)
 
     var isCheckingAutoSignIn by remember { mutableStateOf(auth.currentUser == null) }
     var isGoogleSigningIn by remember { mutableStateOf(false) }
@@ -274,6 +275,14 @@ private fun AppNavigation() {
             scope = scope,
             onAuthCancelled = {
                 isGoogleSigningIn = false
+                googleAuthError = googleCancelledMsg
+                scope.launch {
+                    snackbarHostState.currentSnackbarData?.dismiss()
+                    snackbarHostState.showSnackbar(
+                        message = googleCancelledMsg,
+                        duration = SnackbarDuration.Long
+                    )
+                }
             }
         )
     }

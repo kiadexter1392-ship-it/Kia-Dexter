@@ -78,6 +78,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -316,10 +317,27 @@ private val GLASS_THEME_AND_VIEWPORT_JS = """
       host.appendChild(wrap);
       var btn = document.getElementById('dojo-google-auth-btn');
       if(btn){
-        btn.addEventListener('click', function(){
+        btn.addEventListener('click', function(ev){
+          if(ev && ev.preventDefault) ev.preventDefault();
           if(window.__dojoGoogleState && window.__dojoGoogleState.signingIn) return;
-          if(window.AndroidDojoBridge && typeof window.AndroidDojoBridge.requestGoogleSignIn === 'function'){
-            window.AndroidDojoBridge.requestGoogleSignIn();
+          var errBox = document.getElementById('dojo-google-auth-error');
+          var lbl = document.getElementById('dojo-google-auth-label');
+          if(errBox) errBox.style.display = 'none';
+          try{
+            if(window.AndroidDojoBridge && window.AndroidDojoBridge.requestGoogleSignIn){
+              if(lbl) lbl.textContent = 'در حال باز کردن حساب گوگل...';
+              window.AndroidDojoBridge.requestGoogleSignIn();
+            }else{
+              if(errBox){
+                errBox.style.display = 'block';
+                errBox.textContent = 'ارتباط دکمه با برنامه برقرار نیست.';
+              }
+            }
+          }catch(e){
+            if(errBox){
+              errBox.style.display = 'block';
+              errBox.textContent = String((e && e.message) || e || 'خطا در اجرای دکمه گوگل');
+            }
           }
         });
       }
@@ -935,6 +953,7 @@ fun DojoPortalScreen(
     onToast: (String) -> Unit
 ) {
     val scope = rememberCoroutineScope()
+    val latestOnGoogleSignInClick by rememberUpdatedState(onGoogleSignInClick)
 
     var loadProgress by remember { mutableIntStateOf(0) }
     var canGoBack by remember { mutableStateOf(false) }
@@ -1043,7 +1062,7 @@ fun DojoPortalScreen(
                                     webViewProvider = { webViewRef },
                                     onLoginScreenChanged = { active -> isLoginView = active },
                                     onAuthenticatedChanged = { authed -> isAuthenticated = authed },
-                                    onGoogleSignInRequested = onGoogleSignInClick,
+                                    onGoogleSignInRequested = { latestOnGoogleSignInClick() },
                                     onError = { msg -> scope.launch { onToast(msg) } }
                                 ),
                                 "AndroidDojoBridge"
